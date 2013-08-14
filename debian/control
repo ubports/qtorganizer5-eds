@@ -1,0 +1,22 @@
+Source: qtorganizer5-eds
+Section: utils
+Priority: optional
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Build-Depends: cmake (>= 2.8.9),
+               debhelper (>= 9),               
+               qt5-default,
+               qt5-qmake,
+               qtbase5-dev,
+               qtpim5-dev,
+Standards-Version: 3.9.4
+Homepage: https://launchpad.net/qtorganizer5-eds
+Vcs-Bzr: https://code.launchpad.net/~phablet-team/qtorganizer5-eds/trunk
+Vcs-Browser: http://bazaar.launchpad.net/~phablet-team/qtorganizer5-eds/trunk/files
+
+Package: qtorganizer5-eds
+Architecture: any
+Multi-Arch: same
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
+Description: QtOrganizer engine for EDS calendar.
+ A QOrganizerEngine implementation using eds.
