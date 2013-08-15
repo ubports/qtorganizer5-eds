@@ -1,3 +1,9 @@
+qtorganizer5-eds (0.1.0-0ubuntu2) UNRELEASED; urgency=low
+
+  * Tiny package cleanups, add COPYING file
+
+ -- Michael Terry <mterry@ubuntu.com>  Thu, 15 Aug 2013 16:40:05 -0400
+
 qtorganizer5-eds (0.1.0-0ubuntu1) saucy; urgency=low
 
   * Initial release
