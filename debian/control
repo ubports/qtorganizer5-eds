@@ -3,7 +3,9 @@ Section: utils
 Priority: optional
 Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 Build-Depends: cmake (>= 2.8.9),
-               debhelper (>= 9),               
+               debhelper (>= 9), 
+               libecal1.2-dev,
+               libedataserver1.2-dev,
                qt5-default,
                qt5-qmake,
                qtbase5-dev,
