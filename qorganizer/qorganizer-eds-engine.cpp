@@ -36,6 +36,11 @@
 #include <QtOrganizer/QOrganizerItemSaveRequest>
 #include <QtOrganizer/QOrganizerItemRemoveRequest>
 #include <QtOrganizer/QOrganizerCollectionFetchRequest>
+#include <QtOrganizer/QOrganizerEvent>
+#include <QtOrganizer/QOrganizerTodo>
+#include <QtOrganizer/QOrganizerTodoTime>
+#include <QtOrganizer/QOrganizerJournal>
+#include <QtOrganizer/QOrganizerJournalTime>
 
 #include <glib.h>
 #include <libecal/libecal.h>
@@ -641,8 +646,6 @@ void QOrganizerEDSEngine::loadCollections()
     m_collections.clear();
     m_collectionsMap.clear();
 
-
-
     GError *error = 0;
     ESourceRegistry *registry = e_source_registry_new_sync(0, &error);
     if (error) {
@@ -678,16 +681,219 @@ void QOrganizerEDSEngine::loadCollections()
     qDebug() << m_collections.count() << "Collection loaded";
 }
 
+QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value)
+{
+    struct tm tmTime = icaltimetype_to_tm(&value);
+    g_date_time_new_from_unix_local(mktime(&tmTime));
+    return QDateTime::fromTime_t(mktime(&tmTime));
+}
+
+void QOrganizerEDSEngine::parseStartTime(ECalComponent *comp, QOrganizerItem *item)
+{
+    ECalComponentDateTime dt;
+    e_cal_component_get_dtstart(comp, &dt);
+    if (dt.value) {
+        QOrganizerEventTime etr = item->detail(QOrganizerItemDetail::TypeEventTime);
+        etr.setStartDateTime(fromIcalTime(*dt.value));
+        item->saveDetail(&etr);
+    }
+    e_cal_component_free_datetime(&dt);
+}
+
+void QOrganizerEDSEngine::parseEndTime(ECalComponent *comp, QOrganizerItem *item)
+{
+    ECalComponentDateTime dt;
+    e_cal_component_get_dtend(comp, &dt);
+    if (dt.value) {
+        QOrganizerEventTime etr = item->detail(QOrganizerItemDetail::TypeEventTime);
+        etr.setEndDateTime(fromIcalTime(*dt.value));
+        item->saveDetail(&etr);
+    }
+    e_cal_component_free_datetime(&dt);
+}
+
+void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *item)
+{
+    // recurence
+    if (e_cal_component_has_rdates(comp)) {
+        QSet<QDate> dates;
+        GSList *periodList = 0;
+        e_cal_component_get_rdate_list(comp, &periodList);
+        for(GSList *i = periodList; i != 0; i = i->next) {
+            ECalComponentPeriod *period = (ECalComponentPeriod*) i->data;
+            QDateTime dt = fromIcalTime(period->start);
+            dates.insert(dt.date());
+            //TODO: period.end, period.duration
+        }
+        e_cal_component_free_period_list(periodList);
+
+        QOrganizerItemRecurrence rec = item->detail(QOrganizerItemDetail::TypeRecurrence);
+        rec.setRecurrenceDates(dates);
+        item->saveDetail(&rec);
+    }
+
+    if (e_cal_component_has_exdates(comp)) {
+        QSet<QDate> dates;
+        GSList *exdateList = 0;
+        e_cal_component_get_exdate_list(comp, &exdateList);
+        for(GSList *i = exdateList; i != 0; i = i->next) {
+            ECalComponentDateTime* dateTime = (ECalComponentDateTime*) i->data;
+            QDateTime dt = fromIcalTime(*dateTime->value);
+            dates.insert(dt.date());
+        }
+        e_cal_component_free_exdate_list(exdateList);
+
+        QOrganizerItemRecurrence irec = item->detail(QOrganizerItemDetail::TypeRecurrence);
+        irec.setExceptionDates(dates);
+        item->saveDetail(&irec);
+    }
+
+    // TODO: exeptions rules
+}
+
+void QOrganizerEDSEngine::parsePriority(ECalComponent *comp, QOrganizerItem *item)
+{
+    gint *priority = 0;
+    e_cal_component_get_priority(comp, &priority);
+    if (priority) {
+        QOrganizerItemPriority iPriority = item->detail(QOrganizerItemDetail::TypePriority);
+        if ((*priority >= QOrganizerItemPriority::UnknownPriority) &&
+            (*priority <= QOrganizerItemPriority::LowPriority)) {
+            iPriority.setPriority((QOrganizerItemPriority::Priority) *priority);
+        } else {
+            iPriority.setPriority(QOrganizerItemPriority::UnknownPriority);
+        }
+        e_cal_component_free_priority(priority);
+        item->saveDetail(&iPriority);
+    }
+}
+
+void QOrganizerEDSEngine::parseLocation(ECalComponent *comp, QOrganizerItem *item)
+{
+    const gchar *location;
+    e_cal_component_get_location(comp, &location);
+    if (location) {
+        QOrganizerItemLocation ld = item->detail(QOrganizerItemDetail::TypeLocation);
+        ld.setLabel(QString::fromUtf8(location));
+        item->saveDetail(&ld);
+    }
+}
+
+void QOrganizerEDSEngine::parseDueDate(ECalComponent *comp, QOrganizerItem *item)
+{
+    ECalComponentDateTime due;
+    e_cal_component_get_due(comp, &due);
+    if (due.value) {
+        QOrganizerTodoTime ttr = item->detail(QOrganizerItemDetail::TypeTodoTime);
+        ttr.setDueDateTime(fromIcalTime(*due.value));
+        item->saveDetail(&ttr);
+    }
+    e_cal_component_free_datetime(&due);
+}
+
+void QOrganizerEDSEngine::parseProgress(ECalComponent *comp, QOrganizerItem *item)
+{
+    gint percentage = e_cal_component_get_percent_as_int(comp);
+    if (percentage >= 0 && percentage <= 100) {
+        QOrganizerTodoProgress tp = item->detail(QOrganizerItemDetail::TypeTodoProgress);
+        tp.setPercentageComplete(percentage);
+        item->saveDetail(&tp);
+    }
+}
+
+void QOrganizerEDSEngine::parseStatus(ECalComponent *comp, QOrganizerItem *item)
+{
+    icalproperty_status status;
+    e_cal_component_get_status(comp, &status);
+
+    QOrganizerTodoProgress tp;
+    switch(status) {
+        case ICAL_STATUS_NONE:
+            tp.setStatus(QOrganizerTodoProgress::StatusNotStarted);
+            break;
+        case ICAL_STATUS_INPROCESS:
+            tp.setStatus(QOrganizerTodoProgress::StatusInProgress);
+            break;
+        case ICAL_STATUS_COMPLETED:
+            tp.setStatus(QOrganizerTodoProgress::StatusComplete);
+            break;
+        case ICAL_STATUS_CANCELLED:
+        default:
+            //TODO: not supported
+            break;
+    }
+    item->saveDetail(&tp);
+}
+
+QOrganizerItem *QOrganizerEDSEngine::parseEvent(ECalComponent *comp)
+{
+    QOrganizerEvent *event = new QOrganizerEvent();
+    parseStartTime(comp, event);
+    parseEndTime(comp, event);
+    parseRecurrence(comp, event);
+    parsePriority(comp, event);
+    parseLocation(comp, event);
+    return event;
+}
+
+QOrganizerItem *QOrganizerEDSEngine::parseToDo(ECalComponent *comp)
+{
+    QOrganizerTodo *todo = new QOrganizerTodo();
+    parseStartTime(comp, todo);
+    parseDueDate(comp, todo);
+    parseRecurrence(comp, todo);
+    parsePriority(comp, todo);
+    parseProgress(comp, todo);
+    parseStatus(comp, todo);
+
+    //TODO: finishedDateTime
+    return todo;
+}
+
+QOrganizerItem *QOrganizerEDSEngine::parseJournal(ECalComponent *comp)
+{
+    QOrganizerJournal *journal = new QOrganizerJournal();
+
+    ECalComponentDateTime dt;
+    e_cal_component_get_dtstart(comp, &dt);
+    if (dt.value) {
+        QOrganizerJournalTime jtime;
+        jtime.setEntryDateTime(fromIcalTime(*dt.value));
+        journal->saveDetail(&jtime);
+    }
+    e_cal_component_free_datetime(&dt);
+
+    return journal;
+}
+
 QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(QOrganizerEDSCollectionEngineId *collection, GSList *events)
 {
     QList<QOrganizerItem> items;
     for(int i=0, iMax=g_slist_length(events); i < iMax; i++) {
-        QOrganizerItem item;
+        QOrganizerItem *item;
         ECalComponent *comp = E_CAL_COMPONENT(g_slist_nth_data(events, i));
 
+
         //type
-        // TODO: check others types
-        item.setType(QOrganizerItemType::TypeEvent);
+        ECalComponentVType vType = e_cal_component_get_vtype(comp);
+        switch(vType) {
+            case E_CAL_COMPONENT_EVENT:
+                item = parseEvent(comp);
+                break;
+            case E_CAL_COMPONENT_TODO:
+                item = parseToDo(comp);
+                break;
+            case E_CAL_COMPONENT_JOURNAL:
+                item = parseJournal(comp);
+                break;
+            case E_CAL_COMPONENT_FREEBUSY:
+                qWarning() << "Component FREEBUSY not supported;";
+                continue;
+            case E_CAL_COMPONENT_TIMEZONE:
+                qWarning() << "Component TIMEZONE not supported;";
+            case E_CAL_COMPONENT_NO_TYPE:
+                continue;
+        }
 
         //id
         const gchar *uid = 0;
@@ -697,51 +903,23 @@ QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(QOrganizerEDSCollectionEn
         QOrganizerEDSEngineId *eid = new QOrganizerEDSEngineId(collection->m_collectionId,
                                                                QString::fromUtf8(uid),
                                                                collection->managerUri());
-        item.setId(QOrganizerItemId(eid));
-        item.setCollectionId(cId);
-        qDebug() << ">>>>>>>>>>>>>>>>>>Loaded item id: " << item.id().toString();
+        item->setId(QOrganizerItemId(eid));
+        item->setCollectionId(cId);
+        qDebug() << ">>>>>>>>>>>>>>>>>>Loaded item id: " << item->id().toString();
 
         //summary
         ECalComponentText summary;
         e_cal_component_get_summary(comp, &summary);
         if (summary.value) {
-            item.setDisplayLabel(QString::fromUtf8(summary.value));
+            item->setDisplayLabel(QString::fromUtf8(summary.value));
         }
-
-        //location
-        const gchar *location;
-        e_cal_component_get_location(comp, &location);
-        if (location) {
-            QOrganizerItemLocation qLocation;
-            qLocation.setLabel(QString::fromUtf8(location));
-            item.saveDetail(&qLocation);
-        }
-
-        //time
-        QOrganizerEventTime eventTime;
-        ECalComponentDateTime dt;
-        e_cal_component_get_dtstart(comp, &dt);
-        if (dt.value) {
-            struct tm tmTime = icaltimetype_to_tm(dt.value);
-            g_date_time_new_from_unix_local(mktime(&tmTime));
-            eventTime.setStartDateTime(QDateTime::fromTime_t(mktime(&tmTime)));
-            e_cal_component_free_datetime(&dt);
-        }
-        e_cal_component_get_dtend(comp, &dt);
-        if (dt.value) {
-            struct tm tmTime = icaltimetype_to_tm(dt.value);
-            g_date_time_new_from_unix_local(mktime(&tmTime));
-            eventTime.setEndDateTime(QDateTime::fromTime_t(mktime(&tmTime)));
-            e_cal_component_free_datetime(&dt);
-        }
-        item.saveDetail(&eventTime);
 
         //comments
         GSList *comments = 0;
         e_cal_component_get_comment_list(comp, &comments);
         for(int ci=0, ciMax=g_slist_length(comments); ci < ciMax; ci++) {
             ECalComponentText *txt = static_cast<ECalComponentText*>(g_slist_nth_data(comments, ci));
-            item.addComment(QString::fromUtf8(txt->value));
+            item->addComment(QString::fromUtf8(txt->value));
         }
         e_cal_component_free_text_list(comments);
 
@@ -749,9 +927,10 @@ QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(QOrganizerEDSCollectionEn
         GSList *categories = 0;
         e_cal_component_get_categories_list(comp, &categories);
         for(int ci=0, ciMax=g_slist_length(comments); ci < ciMax; ci++) {
-            item.addTag(QString::fromUtf8(static_cast<gchar*>(g_slist_nth_data(categories, ci))));
+            item->addTag(QString::fromUtf8(static_cast<gchar*>(g_slist_nth_data(categories, ci))));
         }
         e_cal_component_free_categories_list(categories);
+
 
 //        //Attendee
 //        GList *attendeeList = 0;
@@ -769,9 +948,161 @@ QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(QOrganizerEDSCollectionEn
 //            item.saveDetail(&qAttendee);
 //        }
 
-        items << item;
+        items << *item;
+        delete item;
     }
     return items;
+}
+
+void QOrganizerEDSEngine::parseStartTime(const QOrganizerItem &item, ECalComponent *comp)
+{
+    QOrganizerEventTime etr = item.detail(QOrganizerItemDetail::TypeEventTime);
+    if (!etr.isEmpty()) {
+        ECalComponentDateTime dt;
+        struct icaltimetype itt = icaltime_from_timet(etr.startDateTime().toTime_t(), FALSE);
+        dt.value = &itt;
+        e_cal_component_set_dtstart(comp, &dt);
+    }
+}
+
+void QOrganizerEDSEngine::parseEndTime(const QOrganizerItem &item, ECalComponent *comp)
+{
+    QOrganizerEventTime etr = item.detail(QOrganizerItemDetail::TypeEventTime);
+    if (!etr.isEmpty()) {
+        ECalComponentDateTime dt;
+        struct icaltimetype itt = icaltime_from_timet(etr.endDateTime().toTime_t(), FALSE);
+        dt.value = &itt;
+        e_cal_component_set_dtend(comp, &dt);;
+    }
+}
+
+void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalComponent *comp)
+{
+    QOrganizerItemRecurrence rec = item.detail(QOrganizerItemDetail::TypeRecurrence);
+    if (!rec.isEmpty()) {
+        GSList *periodList = 0;
+        Q_FOREACH(QDate dt, rec.recurrenceDates()) {
+            ECalComponentPeriod *period = g_new0(ECalComponentPeriod, 1);
+            period->start = icaltime_from_timet(QDateTime(dt).toTime_t(), TRUE);
+            periodList = g_slist_append(periodList, period);
+            //TODO: period.end, period.duration
+        }
+        e_cal_component_set_rdate_list(comp, periodList);
+        e_cal_component_free_period_list(periodList);
+
+        GSList *exdateList = 0;
+        Q_FOREACH(QDate dt, rec.exceptionDates()) {
+            ECalComponentDateTime dateTime;
+            struct icaltimetype itt = icaltime_from_timet(QDateTime(dt).toTime_t(), TRUE);
+            dateTime.value = &itt;
+            exdateList = g_slist_append(exdateList, &dateTime);
+        }
+        e_cal_component_set_exdate_list(comp, exdateList);
+        e_cal_component_free_exdate_list(exdateList);
+    }
+    // TODO: exeptions rules
+}
+
+void QOrganizerEDSEngine::parsePriority(const QOrganizerItem &item, ECalComponent *comp)
+{
+    QOrganizerItemPriority priority = item.detail(QOrganizerItemDetail::TypePriority);
+    if (!priority.isEmpty()) {
+        gint iPriority = (gint) priority.priority();
+        e_cal_component_set_priority(comp, &iPriority);
+    }
+}
+
+void QOrganizerEDSEngine::parseLocation(const QOrganizerItem &item, ECalComponent *comp)
+{
+    QOrganizerItemLocation ld = item.detail(QOrganizerItemDetail::TypeLocation);
+    if (!ld.isEmpty()) {
+        e_cal_component_set_location(comp, ld.label().toUtf8().data());
+    }
+}
+
+void QOrganizerEDSEngine::parseDueDate(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp)
+{
+    QOrganizerTodoTime ttr = item.detail(QOrganizerItemDetail::TypeTodoTime);
+    if (!ttr.isEmpty()) {
+        ECalComponentDateTime due;
+        struct icaltimetype itt = icaltime_from_timet(ttr.dueDateTime().toTime_t(), FALSE);
+        due.value = &itt;
+        e_cal_component_set_due(comp, &due);
+    }
+}
+
+void QOrganizerEDSEngine::parseProgress(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp)
+{
+    QOrganizerTodoProgress tp = item.detail(QOrganizerItemDetail::TypeTodoProgress);
+    if (!tp.isEmpty()) {
+        e_cal_component_set_percent_as_int(comp, tp.percentageComplete());
+    }
+}
+
+void QOrganizerEDSEngine::parseStatus(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp)
+{
+    QOrganizerTodoProgress tp = item.detail(QOrganizerItemDetail::TypeTodoProgress);
+    if (!tp.isEmpty()) {
+        switch(tp.status()) {
+            case QOrganizerTodoProgress::StatusNotStarted:
+                e_cal_component_set_status(comp, ICAL_STATUS_NONE);
+                break;
+            case QOrganizerTodoProgress::StatusInProgress:
+                e_cal_component_set_status(comp, ICAL_STATUS_INPROCESS);
+                break;
+            case QOrganizerTodoProgress::StatusComplete:
+                e_cal_component_set_status(comp, ICAL_STATUS_COMPLETED);
+                break;
+            default:
+                e_cal_component_set_status(comp, ICAL_STATUS_CANCELLED);
+                break;
+        }
+    }
+}
+
+ECalComponent *QOrganizerEDSEngine::parseEventItem(const QOrganizerItem &item)
+{
+    ECalComponent *comp = e_cal_component_new();
+    e_cal_component_set_new_vtype(comp, E_CAL_COMPONENT_EVENT);
+
+    parseStartTime(item, comp);
+    parseEndTime(item, comp);
+    parseRecurrence(item, comp);
+    parsePriority(item, comp);
+    parseLocation(item, comp);
+    return comp;
+
+}
+
+ECalComponent *QOrganizerEDSEngine::parseTodoItem(const QOrganizerItem &item)
+{
+    ECalComponent *comp = e_cal_component_new();
+    e_cal_component_set_new_vtype(comp, E_CAL_COMPONENT_TODO);
+
+    parseStartTime(item, comp);
+    parseDueDate(item, comp);
+    parseRecurrence(item, comp);
+    parsePriority(item, comp);
+    parseProgress(item, comp);
+    parseStatus(item, comp);
+
+    return comp;
+}
+
+ECalComponent *QOrganizerEDSEngine::parseJournalItem(const QOrganizerItem &item)
+{
+    ECalComponent *comp = e_cal_component_new();
+    e_cal_component_set_new_vtype(comp, E_CAL_COMPONENT_JOURNAL);
+
+    QOrganizerJournalTime jtime = item.detail(QOrganizerItemDetail::TypeJournalTime);
+    if (!jtime.isEmpty()) {
+        ECalComponentDateTime *dt = g_new0(ECalComponentDateTime, 1);
+        *dt->value = icaltime_from_timet(jtime.entryDateTime().toTime_t(), FALSE);
+        e_cal_component_set_dtstart(comp, dt);
+        e_cal_component_free_datetime(dt);
+    }
+
+    return comp;
 }
 
 GSList *QOrganizerEDSEngine::parseItems(QList<QOrganizerItem> items)
@@ -779,8 +1110,29 @@ GSList *QOrganizerEDSEngine::parseItems(QList<QOrganizerItem> items)
     GSList *comps = 0;
 
     Q_FOREACH(QOrganizerItem item, items) {
-        ECalComponent *comp = e_cal_component_new();
-        e_cal_component_set_new_vtype(comp, E_CAL_COMPONENT_EVENT);
+        ECalComponent *comp = 0;
+
+        switch(item.type()) {
+            case QOrganizerItemType::TypeEvent:
+                comp = parseEventItem(item);
+                break;
+            case QOrganizerItemType::TypeTodo:
+                comp = parseTodoItem(item);
+                break;
+            case QOrganizerItemType::TypeJournal:
+                comp = parseJournalItem(item);
+                break;
+            case QOrganizerItemType::TypeEventOccurrence:
+                qWarning() << "Component TypeEventOccurrence not supported;";
+                continue;
+            case QOrganizerItemType::TypeTodoOccurrence:
+                qWarning() << "Component TypeTodoOccurrence not supported;";
+                continue;
+            case QOrganizerItemType::TypeNote:
+                qWarning() << "Component TypeNote not supported;";
+            case QOrganizerItemType::TypeUndefined:
+                continue;
+        }
 
         // id
         if (!item.id().isNull()) {
@@ -795,30 +1147,6 @@ GSList *QOrganizerEDSEngine::parseItems(QList<QOrganizerItem> items)
             txt.altrep = "";
             txt.value = item.displayLabel().toUtf8().data();
             e_cal_component_set_summary(comp, &txt);
-        }
-
-        //location
-        QOrganizerItemLocation qLocation = item.detail(QOrganizerItemDetail::TypeLocation);
-        if (!qLocation.isEmpty()) {
-            e_cal_component_set_location(comp, qLocation.label().toUtf8().data());
-        }
-
-        //time
-        QOrganizerEventTime eventTime = item.detail(QOrganizerItemDetail::TypeEventTime);
-        if (!eventTime.isEmpty()) {
-            struct icaltimetype itt;
-            ECalComponentDateTime dt;
-            dt.tzid = 0;
-
-            //starta
-            itt = icaltime_from_timet(eventTime.startDateTime().toTime_t(), FALSE);
-            dt.value = &itt;
-            e_cal_component_set_dtstart(comp, &dt);
-
-            //end
-            itt = icaltime_from_timet(eventTime.endDateTime().toTime_t(), FALSE);
-            dt.value = &itt;
-            e_cal_component_set_dtend(comp, &dt);
         }
 
         //comments
@@ -840,7 +1168,6 @@ GSList *QOrganizerEDSEngine::parseItems(QList<QOrganizerItem> items)
         }
         e_cal_component_set_categories_list(comp, categories);
         e_cal_component_free_text_list(categories);
-
 
         comps = g_slist_append(comps,
                                icalcomponent_new_clone(e_cal_component_get_icalcomponent(comp)));

@@ -138,6 +138,34 @@ private:
     static QList<QtOrganizer::QOrganizerItem> parseEvents(QOrganizerEDSCollectionEngineId *collection, GSList *events);
     static GSList *parseItems(QList<QtOrganizer::QOrganizerItem> items);
 
+    static QDateTime fromIcalTime(struct icaltimetype value);
+    static void parseStartTime(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseEndTime(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseRecurrence(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parsePriority(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseLocation(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseDueDate(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseProgress(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseStatus(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+
+    static QtOrganizer::QOrganizerItem *parseEvent(ECalComponent *comp);
+    static QtOrganizer::QOrganizerItem *parseToDo(ECalComponent *comp);
+    static QtOrganizer::QOrganizerItem *parseJournal(ECalComponent *comp);
+
+
+    static void parseStartTime(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseEndTime(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseRecurrence(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parsePriority(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseLocation(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseDueDate(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseProgress(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseStatus(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+
+    static ECalComponent *parseEventItem(const QtOrganizer::QOrganizerItem &item);
+    static ECalComponent *parseTodoItem(const QtOrganizer::QOrganizerItem &item);
+    static ECalComponent *parseJournalItem(const QtOrganizer::QOrganizerItem &item);
+
     // glib callback
     void itemsAsync(QtOrganizer::QOrganizerItemFetchRequest *req);
     static void itemsAsyncStart(FetchRequestData *data);
