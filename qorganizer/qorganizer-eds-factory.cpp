@@ -7,7 +7,7 @@ using namespace QtOrganizer;
 
 QOrganizerManagerEngine* QOrganizerEDSFactory::engine(const QMap<QString, QString>& parameters, QOrganizerManager::Error* error)
 {
-    qDebug() << Q_FUNC_INFO << "eds2";
+    qDebug() << Q_FUNC_INFO << "eds";
     Q_UNUSED(error);
 
     return QOrganizerEDSEngine::createEDSEngine(parameters);

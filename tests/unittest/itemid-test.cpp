@@ -25,6 +25,7 @@
 
 #include "qorganizer-eds-engineid.h"
 
+
 using namespace QtOrganizer;
 
 class ItemIdTest : public QObject
@@ -32,10 +33,9 @@ class ItemIdTest : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
-
     void testRetriveItemId()
     {
-        QOrganizerItemId id = QOrganizerItemId::fromString("qtorganizer:eds::system-calendar&#58;20130814T212003Z-13580-1000-1995-22@ubuntu");
+        QString id("qtorganizer:eds::system-calendar&#58;20130814T212003Z-13580-1000-1995-22@ubuntu");
         QCOMPARE(QOrganizerEDSEngineId::toComponentId(id), QStringLiteral("20130814T212003Z-13580-1000-1995-22@ubuntu"));
     }
 };

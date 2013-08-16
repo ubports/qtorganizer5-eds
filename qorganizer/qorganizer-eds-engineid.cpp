@@ -113,6 +113,12 @@ QDebug& QOrganizerEDSEngineId::debugStreamOut(QDebug& dbg) const
 
 QString QOrganizerEDSEngineId::toComponentId(const QtOrganizer::QOrganizerItemId &itemId)
 {
-    return itemId.toString().split("&#58;").last();
+    return toComponentId(itemId.toString());
 }
+
+QString QOrganizerEDSEngineId::toComponentId(const QString &itemId)
+{
+    return itemId.split("&#58;").last();
+}
+
 #endif

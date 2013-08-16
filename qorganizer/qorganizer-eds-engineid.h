@@ -50,6 +50,7 @@ public:
 #endif
 
     static QString toComponentId(const QtOrganizer::QOrganizerItemId &itemId);
+    static QString toComponentId(const QString &itemId);
 
 private:
     QString m_managerUri;
