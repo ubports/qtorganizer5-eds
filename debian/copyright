@@ -1,7 +1,7 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: address-book-service
+Upstream-Name: qtorganizer5-eds
 Upstream-Contact:  Renato Araujo Oliveira Filho <renato.filho@canonical.com>
-Source: https://launchpad.net/address-book-service
+Source: https://launchpad.net/qtorganizer5-eds
 
 Files: *
 Copyright: 2013 Canonical Ltd.
