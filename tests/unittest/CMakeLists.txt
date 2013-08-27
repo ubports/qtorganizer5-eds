@@ -39,3 +39,5 @@ if(NOT CTEST_TESTING_TIMEOUT)
 endif()
 
 declare_test(itemid-test)
+declare_test(parseecal-test)
+#declare_test(parseitem-test

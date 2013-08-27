@@ -683,39 +683,39 @@ void QOrganizerEDSEngine::loadCollections()
 
 QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value)
 {
-    struct tm tmTime = icaltimetype_to_tm(&value);
-    g_date_time_new_from_unix_local(mktime(&tmTime));
-    return QDateTime::fromTime_t(mktime(&tmTime));
+    uint tmTime = icaltime_as_timet(value);
+    return QDateTime::fromTime_t(tmTime);
 }
 
 void QOrganizerEDSEngine::parseStartTime(ECalComponent *comp, QOrganizerItem *item)
 {
-    ECalComponentDateTime dt;
-    e_cal_component_get_dtstart(comp, &dt);
-    if (dt.value) {
+    ECalComponentDateTime *dt = g_new0(ECalComponentDateTime, 1);
+    e_cal_component_get_dtstart(comp, dt);
+    if (dt->value) {
         QOrganizerEventTime etr = item->detail(QOrganizerItemDetail::TypeEventTime);
-        etr.setStartDateTime(fromIcalTime(*dt.value));
+        etr.setStartDateTime(fromIcalTime(*dt->value));
         item->saveDetail(&etr);
     }
-    e_cal_component_free_datetime(&dt);
+    e_cal_component_free_datetime(dt);
 }
 
 void QOrganizerEDSEngine::parseEndTime(ECalComponent *comp, QOrganizerItem *item)
 {
-    ECalComponentDateTime dt;
-    e_cal_component_get_dtend(comp, &dt);
-    if (dt.value) {
+    ECalComponentDateTime *dt = g_new0(ECalComponentDateTime, 1);
+    e_cal_component_get_dtend(comp, dt);
+    if (dt->value) {
         QOrganizerEventTime etr = item->detail(QOrganizerItemDetail::TypeEventTime);
-        etr.setEndDateTime(fromIcalTime(*dt.value));
+        etr.setEndDateTime(fromIcalTime(*dt->value));
         item->saveDetail(&etr);
     }
-    e_cal_component_free_datetime(&dt);
+    e_cal_component_free_datetime(dt);
 }
 
 void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *item)
 {
     // recurence
     if (e_cal_component_has_rdates(comp)) {
+        qDebug() << "HAs rdates";
         QSet<QDate> dates;
         GSList *periodList = 0;
         e_cal_component_get_rdate_list(comp, &periodList);
@@ -733,6 +733,7 @@ void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *i
     }
 
     if (e_cal_component_has_exdates(comp)) {
+        qDebug() << "HAs extdates";
         QSet<QDate> dates;
         GSList *exdateList = 0;
         e_cal_component_get_exdate_list(comp, &exdateList);
@@ -747,6 +748,115 @@ void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *i
         irec.setExceptionDates(dates);
         item->saveDetail(&irec);
     }
+
+    // rules
+    GSList *ruleList = 0;
+    e_cal_component_get_rrule_list(comp, &ruleList);
+    if (ruleList) {
+        QSet<QOrganizerRecurrenceRule> qRules;
+
+        for(GSList *i = ruleList; i != 0; i = i->next) {
+            struct icalrecurrencetype *rule = (struct icalrecurrencetype*) i->data;
+            QOrganizerRecurrenceRule qRule;
+            switch (rule->freq) {
+                case ICAL_SECONDLY_RECURRENCE:
+                case ICAL_MINUTELY_RECURRENCE:
+                case ICAL_HOURLY_RECURRENCE:
+                    qWarning() << "Recurrence frequency not supported";
+                    break;
+                case ICAL_DAILY_RECURRENCE:
+                {
+                    qRule.setFrequency(QOrganizerRecurrenceRule::Daily);
+                    break;
+                }
+                case ICAL_WEEKLY_RECURRENCE:
+                    qRule.setFrequency(QOrganizerRecurrenceRule::Weekly);
+                    break;
+                case ICAL_MONTHLY_RECURRENCE:
+                    qRule.setFrequency(QOrganizerRecurrenceRule::Monthly);
+                    break;
+                case ICAL_YEARLY_RECURRENCE:
+                    qRule.setFrequency(QOrganizerRecurrenceRule::Yearly);
+                    break;
+                case ICAL_NO_RECURRENCE:
+                    break;
+            }
+
+            if (rule->count > 0) {
+                qRule.setLimit(rule->count);
+            } else {
+                QDateTime dt = fromIcalTime(rule->until);
+                if (dt.isValid()) {
+                    qRule.setLimit(dt.date());
+                } else {
+                    qRule.clearLimit();
+                }
+            }
+
+            QSet<Qt::DayOfWeek> daysOfWeek;
+            for (int d=0; d < Qt::Sunday; d++) {
+                short day = rule->by_day[d];
+                if (day != ICAL_RECURRENCE_ARRAY_MAX) {
+                    daysOfWeek.insert(static_cast<Qt::DayOfWeek>(icalrecurrencetype_day_day_of_week(day)));
+                }
+            }
+            qRule.setDaysOfWeek(daysOfWeek);
+
+            QSet<int> daysOfMonth;
+            for (int d=0; d < ICAL_BY_MONTHDAY_SIZE; d++) {
+                short day = rule->by_month_day[d];
+                if (day != ICAL_RECURRENCE_ARRAY_MAX) {
+                    daysOfMonth.insert(day);
+                }
+            }
+            qRule.setDaysOfMonth(daysOfMonth);
+
+            QSet<int> daysOfYear;
+            for (int d=0; d < ICAL_BY_YEARDAY_SIZE; d++) {
+                short day = rule->by_year_day[d];
+                if (day != ICAL_RECURRENCE_ARRAY_MAX) {
+                    daysOfYear.insert(day);
+                }
+            }
+            qRule.setDaysOfYear(daysOfYear);
+
+            for (int d=0; d < ICAL_BY_WEEKNO_SIZE; d++) {
+                short day = rule->by_week_no[d];
+                if (day != ICAL_RECURRENCE_ARRAY_MAX) {
+                    qWarning() << "Recurrence by week number is not supported";
+                    break;
+                }
+            }
+
+            QSet<QOrganizerRecurrenceRule::Month> monthOfYear;
+            for (int d=0; d < ICAL_BY_MONTH_SIZE; d++) {
+                short day = rule->by_month[d];
+                if (day != ICAL_RECURRENCE_ARRAY_MAX) {
+                    monthOfYear.insert(static_cast<QOrganizerRecurrenceRule::Month>(day));
+                }
+            }
+            qRule.setMonthsOfYear(monthOfYear);
+
+            QSet<int> positions;
+            for (int d=0; d < ICAL_BY_SETPOS_SIZE; d++) {
+                short day = rule->by_set_pos[d];
+                if (day != ICAL_RECURRENCE_ARRAY_MAX) {
+                    positions.insert(day);
+                }
+            }
+            qRule.setPositions(positions);
+
+            qRule.setInterval(rule->interval);
+            qRules << qRule;
+        }
+
+        if (!qRules.isEmpty()) {
+            QOrganizerItemRecurrence irec = item->detail(QOrganizerItemDetail::TypeRecurrence);
+            irec.setRecurrenceRules(qRules);
+        }
+
+    }
+    // TODO: free ruleList;
 
     // TODO: exeptions rules
 }
@@ -905,7 +1015,6 @@ QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(QOrganizerEDSCollectionEn
                                                                collection->managerUri());
         item->setId(QOrganizerItemId(eid));
         item->setCollectionId(cId);
-        qDebug() << ">>>>>>>>>>>>>>>>>>Loaded item id: " << item->id().toString();
 
         //summary
         ECalComponentText summary;
@@ -992,15 +1101,94 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
 
         GSList *exdateList = 0;
         Q_FOREACH(QDate dt, rec.exceptionDates()) {
-            ECalComponentDateTime dateTime;
+            ECalComponentDateTime *dateTime = g_new0(ECalComponentDateTime, 1);
             struct icaltimetype itt = icaltime_from_timet(QDateTime(dt).toTime_t(), TRUE);
-            dateTime.value = &itt;
-            exdateList = g_slist_append(exdateList, &dateTime);
+            dateTime->value = &itt;
+            exdateList = g_slist_append(exdateList, dateTime);
         }
         e_cal_component_set_exdate_list(comp, exdateList);
         e_cal_component_free_exdate_list(exdateList);
+
+        GSList *ruleList = 0;
+        Q_FOREACH(QOrganizerRecurrenceRule qRule, rec.recurrenceRules()) {
+            struct icalrecurrencetype *rule = g_new0(struct icalrecurrencetype, 1);
+            switch(qRule.frequency()) {
+                case QOrganizerRecurrenceRule::Daily:
+                    rule->freq = ICAL_DAILY_RECURRENCE;
+                    break;
+                case QOrganizerRecurrenceRule::Weekly:
+                    rule->freq = ICAL_WEEKLY_RECURRENCE;
+                    break;
+                case QOrganizerRecurrenceRule::Monthly:
+                    rule->freq = ICAL_MONTHLY_RECURRENCE;
+                    break;
+                case QOrganizerRecurrenceRule::Yearly:
+                    rule->freq = ICAL_YEARLY_RECURRENCE;
+                    break;
+                case QOrganizerRecurrenceRule::Invalid:
+                    rule->freq = ICAL_NO_RECURRENCE;
+                    break;
+            }
+
+            if (qRule.limitDate().isValid()) {
+                rule->until = icaltime_from_timet(QDateTime(qRule.limitDate()).toTime_t(), TRUE);
+                rule->count = ICAL_RECURRENCE_ARRAY_MAX;
+            } else {
+                rule->count = qRule.limitCount();
+            }
+
+            //FIXME: check the correct rules for days of week
+            QSet<Qt::DayOfWeek> daysOfWeek = qRule.daysOfWeek();
+            for (int d=0; d < ICAL_BY_DAY_SIZE; d++) {
+                if (daysOfWeek.contains(static_cast<Qt::DayOfWeek>(d))) {
+                    rule->by_day[d] = d;
+                } else {
+                    rule->by_day[d] = ICAL_RECURRENCE_ARRAY_MAX;
+                }
+            }
+
+            QSet<int> daysOfMonth = qRule.daysOfMonth();
+            for (int d=0; d < ICAL_BY_MONTHDAY_SIZE; d++) {
+                if (daysOfMonth.contains(d)) {
+                    rule->by_month_day[d] = d;
+                } else {
+                    rule->by_month_day[d] = ICAL_RECURRENCE_ARRAY_MAX;
+                }
+            }
+
+            QSet<int> daysOfYear = qRule.daysOfYear();
+            for (int d=0; d < ICAL_BY_YEARDAY_SIZE; d++) {
+                if (daysOfYear.contains(d)) {
+                    rule->by_year_day[d] = d;
+                } else {
+                    rule->by_year_day[d] = ICAL_RECURRENCE_ARRAY_MAX;
+                }
+            }
+
+            QSet<QOrganizerRecurrenceRule::Month> monthOfYear = qRule.monthsOfYear();
+            for (int d=0; d < ICAL_BY_YEARDAY_SIZE; d++) {
+                if (daysOfYear.contains(d)) {
+                    rule->by_month[d] = d;
+                } else {
+                    rule->by_month[d] = ICAL_RECURRENCE_ARRAY_MAX;
+                }
+            }
+
+            QSet<int> positions = qRule.positions();
+            for (int d=0; d < ICAL_BY_SETPOS_SIZE; d++) {
+                if (positions.contains(d)) {
+                    rule->by_set_pos[d] = d;
+                } else {
+                    rule->by_set_pos[d] = ICAL_RECURRENCE_ARRAY_MAX;
+                }
+            }
+
+            rule->interval = qRule.interval();
+            ruleList = g_slist_append(ruleList, rule);
+        }
+        e_cal_component_set_rrule_list(comp, ruleList);
+        //TODO: free ruleList
     }
-    // TODO: exeptions rules
 }
 
 void QOrganizerEDSEngine::parsePriority(const QOrganizerItem &item, ECalComponent *comp)

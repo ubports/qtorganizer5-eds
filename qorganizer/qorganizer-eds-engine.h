@@ -152,7 +152,6 @@ private:
     static QtOrganizer::QOrganizerItem *parseToDo(ECalComponent *comp);
     static QtOrganizer::QOrganizerItem *parseJournal(ECalComponent *comp);
 
-
     static void parseStartTime(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseEndTime(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseRecurrence(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);

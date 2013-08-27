@@ -60,7 +60,12 @@ void FetchRequestData::finish(QOrganizerManager::Error error)
 
 void FetchRequestData::appendResults(QList<QOrganizerItem> results)
 {
-    m_results += results;
+    QOrganizerItemFetchRequest *req = request<QOrganizerItemFetchRequest>();
+    Q_FOREACH(QOrganizerItem item, results) {
+        if (QOrganizerManagerEngine::testFilter(req->filter(), item)) {
+            m_results << item;
+        }
+    }
 }
 
 QString FetchRequestData::dateFilter()
