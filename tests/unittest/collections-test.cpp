@@ -44,6 +44,7 @@ private Q_SLOTS:
         QVERIFY(engine->saveCollection(&collection, &error));
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(!collection.id().isNull());
+
     }
 
     void testCreateTaskList()
@@ -59,10 +60,27 @@ private Q_SLOTS:
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(!collection.id().isNull());
 
+        QVERIFY(engine->collections(&error).contains(collection));
+        delete engine;
+
+        // recreate and check if the new collection is listed
+        engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
+        QVERIFY(engine->collections(&error).contains(collection));
+    }
+
+    void testCreateTask()
+    {
+        QOrganizerEDSEngine *engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
+
+        QOrganizerCollection collection;
+        QtOrganizer::QOrganizerManager::Error error;
+        collection.setMetaData(QOrganizerCollection::KeyName, "TEST COLLECTION TASK LIST 2");
+        collection.setExtendedMetaData("collection-type", "Task List");
+
         QOrganizerTodo todo;
         todo.setCollectionId(collection.id());
         todo.setStartDateTime(QDateTime(QDate(2013, 9, 3), QTime(0,30,0)));
-        todo.setDisplayLabel("Todo test");
+        todo.setDisplayLabel("Todo test ");
         todo.setDescription("Todo description");
 
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
@@ -76,6 +94,8 @@ private Q_SLOTS:
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(errorMap.isEmpty());
         QVERIFY(!items[0].id().isNull());
+
+        delete engine;
     }
 };
 

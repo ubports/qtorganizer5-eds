@@ -758,19 +758,24 @@ void QOrganizerEDSEngine::loadCollections()
     }
 
     ESource *defaultSource = e_source_registry_ref_default_address_book(registry);
-    GList *sources = e_source_registry_list_sources(registry, E_SOURCE_EXTENSION_CALENDAR);
+    GList *sources = e_source_registry_list_sources(registry, 0);
     for(int i=0, iMax=g_list_length(sources); i < iMax; i++) {
         ESource *source = E_SOURCE(g_list_nth_data(sources, i));
 
-        //TODO get metadata (color, etc..)
-        QOrganizerEDSCollectionEngineId *edsId = 0;
-        QOrganizerCollection collection = parseSource(source, managerUri(), &edsId);
-        m_collections << collection;
-        m_collectionsMap.insert(collection.id().toString(), edsId);
+        if (e_source_has_extension(source, E_SOURCE_EXTENSION_CALENDAR) ||
+            e_source_has_extension(source, E_SOURCE_EXTENSION_TASK_LIST) ||
+            e_source_has_extension(source, E_SOURCE_EXTENSION_MEMO_LIST))
+        {
+            //TODO get metadata (color, etc..)
+            QOrganizerEDSCollectionEngineId *edsId = 0;
+            QOrganizerCollection collection = parseSource(source, managerUri(), &edsId);
+            m_collections << collection;
+            m_collectionsMap.insert(collection.id().toString(), edsId);
 
-        if (e_source_compare_by_display_name(source, defaultSource) == 0) {
-            qDebug() << "Default Source" << e_source_get_display_name(source);
-            m_defaultCollection = collection;
+            if (e_source_compare_by_display_name(source, defaultSource) == 0) {
+                qDebug() << "Default Source" << e_source_get_display_name(source);
+                m_defaultCollection = collection;
+            }
         }
     }
 
