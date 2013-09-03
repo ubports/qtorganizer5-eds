@@ -98,7 +98,7 @@ void QOrganizerEDSEngine::itemsAsyncStart(FetchRequestData *data)
     QOrganizerEDSCollectionEngineId *collection = data->nextCollection();
     if (collection) {
         e_cal_client_connect(collection->m_esource,
-                             E_CAL_CLIENT_SOURCE_TYPE_EVENTS,
+                             collection->m_sourceType,
                              data->cancellable(),
                              (GAsyncReadyCallback) QOrganizerEDSEngine::itemsAsyncConnected,
                              data);
@@ -159,8 +159,6 @@ void QOrganizerEDSEngine::itemsAsyncListed(GObject *source_object,
     itemsAsyncStart(data);
 }
 
-
-
 QList<QOrganizerItem> QOrganizerEDSEngine::items(const QList<QOrganizerItemId> &itemIds,
                                                  const QOrganizerItemFetchHint &fetchHint,
                                                  QMap<int, QOrganizerManager::Error> *errorMap,
@@ -170,6 +168,8 @@ QList<QOrganizerItem> QOrganizerEDSEngine::items(const QList<QOrganizerItemId> &
     Q_UNUSED(fetchHint)
     Q_UNUSED(itemIds);
     Q_UNUSED(errorMap);
+
+    qDebug() << Q_FUNC_INFO;
 
     QList<QOrganizerItem> items;
     return items;
@@ -185,10 +185,25 @@ QList<QOrganizerItem> QOrganizerEDSEngine::items(const QOrganizerItemFilter &fil
 {
     qDebug() << Q_FUNC_INFO;
     QList<QOrganizerItem> list;
-    return list;
+
+    QOrganizerItemFetchRequest *req = new QOrganizerItemFetchRequest(this);
+    req->setFilter(filter);
+    req->setStartDate(startDateTime);
+    req->setEndDate(endDateTime);
+    req->setMaxCount(maxCount);
+    req->setSorting(sortOrders);
+    req->setFetchHint(fetchHint);
+
+    startRequest(req);
+
+    while(req->state() != QOrganizerAbstractRequest::FinishedState) {
+        QCoreApplication::processEvents();
+    }
+
+    *error = req->error();
+    req->deleteLater();
+    return req->items();
 }
-
-
 
 QList<QOrganizerItemId> QOrganizerEDSEngine::itemIds(const QOrganizerItemFilter &filter,
                                                      const QDateTime &startDateTime,

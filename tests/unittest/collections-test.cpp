@@ -31,7 +31,11 @@ using namespace QtOrganizer;
 class CollectionTest : public QObject
 {
     Q_OBJECT
-
+private:
+    static const QString defaultCollectionName;
+    static const QString defaultTaskCollectionName;
+    static const QString collectionTypePropertyName;
+    static const QString taskListTypeName;
 private Q_SLOTS:
     void testCreateCollection()
     {
@@ -39,7 +43,7 @@ private Q_SLOTS:
 
         QOrganizerCollection collection;
         QtOrganizer::QOrganizerManager::Error error;
-        collection.setMetaData(QOrganizerCollection::KeyName, "TEST COLLECTION");
+        collection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName);
 
         QVERIFY(engine->saveCollection(&collection, &error));
         QCOMPARE(error, QOrganizerManager::NoError);
@@ -53,8 +57,8 @@ private Q_SLOTS:
 
         QOrganizerCollection collection;
         QtOrganizer::QOrganizerManager::Error error;
-        collection.setMetaData(QOrganizerCollection::KeyName, "TEST COLLECTION TASK LIST");
-        collection.setExtendedMetaData("collection-type", "Task List");
+        collection.setMetaData(QOrganizerCollection::KeyName, defaultTaskCollectionName);
+        collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
 
         QSignalSpy createdCollection(engine, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
         QVERIFY(engine->saveCollection(&collection, &error));
@@ -76,18 +80,21 @@ private Q_SLOTS:
 
     void testCreateTask()
     {
+        static QString displayLabelValue = QStringLiteral("Todo test");
+        static QString descriptionValue = QStringLiteral("Todo description");
+
         QOrganizerEDSEngine *engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
         QOrganizerCollection collection;
         QtOrganizer::QOrganizerManager::Error error;
-        collection.setMetaData(QOrganizerCollection::KeyName, "TEST COLLECTION TASK LIST 2");
-        collection.setExtendedMetaData("collection-type", "Task List");
+        collection.setMetaData(QOrganizerCollection::KeyName, defaultTaskCollectionName + "2");
+        collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
 
         QOrganizerTodo todo;
         todo.setCollectionId(collection.id());
         todo.setStartDateTime(QDateTime(QDate(2013, 9, 3), QTime(0,30,0)));
-        todo.setDisplayLabel("Todo test ");
-        todo.setDescription("Todo description");
+        todo.setDisplayLabel(displayLabelValue);
+        todo.setDescription(descriptionValue);
 
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
@@ -107,9 +114,40 @@ private Q_SLOTS:
         QList<QVariant> args = createdItem.takeFirst();
         QCOMPARE(args.count(), 1);
 
+        // check if the item is listead
+        QOrganizerItemSortOrder sort;
+        QOrganizerItemFetchHint hint;
+        QOrganizerItemDetailFilter filter;
+        QOrganizerItemDisplayLabel displayLabel;
+
+        displayLabel.setLabel(displayLabelValue);
+        filter.setDetail(displayLabel);
+
+        items = engine->items(filter,
+                      QDateTime(QDate(2013, 9, 2), QTime(0,0,0)),
+                      QDateTime(QDate(2013, 9, 4), QTime(0,0,0)),
+                      10,
+                      sort,
+                      hint,
+                      &error);
+
+        QCOMPARE(items.count(), 1);
+        QOrganizerTodo result = static_cast<QOrganizerTodo>(items[0]);
+        todo = items[0];
+        QCOMPARE(result.id(), todo.id());
+        QCOMPARE(result.startDateTime(), todo.startDateTime());
+        QCOMPARE(result.displayLabel(), todo.displayLabel());
+        QCOMPARE(result.description(), todo.description());
+
         delete engine;
     }
 };
+
+const QString CollectionTest::defaultCollectionName = QStringLiteral("TEST COLLECTION");
+const QString CollectionTest::defaultTaskCollectionName = QStringLiteral("TEST COLLECTION TASK LIST");
+const QString CollectionTest::collectionTypePropertyName = QStringLiteral("collection-type");
+const QString CollectionTest::taskListTypeName = QStringLiteral("Task List");
+
 
 QTEST_MAIN(CollectionTest)
 
