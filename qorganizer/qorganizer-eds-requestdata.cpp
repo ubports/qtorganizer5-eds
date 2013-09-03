@@ -51,9 +51,9 @@ bool RequestData::isLive() const
     return !m_req.isNull();
 }
 
-EClient *RequestData::client() const
+ECalClient *RequestData::client() const
 {
-    return m_client;
+    return E_CAL_CLIENT(m_client);
 }
 
 QOrganizerEDSEngine *RequestData::parent() const
