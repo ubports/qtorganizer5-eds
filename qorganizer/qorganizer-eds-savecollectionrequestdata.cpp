@@ -49,6 +49,11 @@ void SaveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error err
                                                          m_errorMap,
                                                          QOrganizerAbstractRequest::FinishedState);
 
+    QList<QOrganizerCollectionId> added;
+    Q_FOREACH(QOrganizerCollection col, m_results) {
+        added.append(col.id());
+    }
+    Q_EMIT parent()->collectionsAdded(added);
 }
 
 void SaveCollectionRequestData::commit(QtOrganizer::QOrganizerManager::Error error)
@@ -58,9 +63,11 @@ void SaveCollectionRequestData::commit(QtOrganizer::QOrganizerManager::Error err
     } else {
         ESource *source = E_SOURCE(g_list_nth_data(m_sources, m_currentSource));
         QOrganizerEDSCollectionEngineId *edsId = 0;
+
         QOrganizerCollection collection = QOrganizerEDSEngine::parseSource(source, parent()->managerUri(), &edsId);
         parent()->m_collections << collection;
         parent()->m_collectionsMap.insert(collection.id().toString(), edsId);
+
         m_results.append(collection);
     }
     m_currentSource++;
@@ -69,6 +76,11 @@ void SaveCollectionRequestData::commit(QtOrganizer::QOrganizerManager::Error err
 GList *SaveCollectionRequestData::sources() const
 {
     return m_sources;
+}
+
+QList<QOrganizerCollection> SaveCollectionRequestData::results() const
+{
+    return m_results;
 }
 
 void SaveCollectionRequestData::parseCollections()

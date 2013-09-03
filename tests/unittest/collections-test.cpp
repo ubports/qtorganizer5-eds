@@ -56,9 +56,15 @@ private Q_SLOTS:
         collection.setMetaData(QOrganizerCollection::KeyName, "TEST COLLECTION TASK LIST");
         collection.setExtendedMetaData("collection-type", "Task List");
 
+        QSignalSpy createdCollection(engine, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
         QVERIFY(engine->saveCollection(&collection, &error));
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(!collection.id().isNull());
+
+        //verify signal
+        QCOMPARE(createdCollection.count(), 1);
+        QList<QVariant> args = createdCollection.takeFirst();
+        QCOMPARE(args.count(), 1);
 
         QVERIFY(engine->collections(&error).contains(collection));
         delete engine;
@@ -85,6 +91,7 @@ private Q_SLOTS:
 
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
+        QSignalSpy createdItem(engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
         items << todo;
         bool saveResult = engine->saveItems(&items,
                                             QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
@@ -94,6 +101,11 @@ private Q_SLOTS:
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(errorMap.isEmpty());
         QVERIFY(!items[0].id().isNull());
+
+        //verify signal
+        QCOMPARE(createdItem.count(), 1);
+        QList<QVariant> args = createdItem.takeFirst();
+        QCOMPARE(args.count(), 1);
 
         delete engine;
     }

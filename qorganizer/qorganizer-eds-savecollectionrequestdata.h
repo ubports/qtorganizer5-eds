@@ -32,6 +32,7 @@ public:
     bool isNew(int index) const;
 
     GList *sources() const;
+    QList<QtOrganizer::QOrganizerCollection> results() const;
     ESource *begin() const;
     void commit(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
 
