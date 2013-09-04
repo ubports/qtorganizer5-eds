@@ -48,7 +48,6 @@ private Q_SLOTS:
         QVERIFY(engine->saveCollection(&collection, &error));
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(!collection.id().isNull());
-
     }
 
     void testCreateTaskList()
@@ -140,6 +139,31 @@ private Q_SLOTS:
         QCOMPARE(result.description(), todo.description());
 
         delete engine;
+    }
+
+    void testRemoveCollection()
+    {
+        static QString removableCollectionName = defaultTaskCollectionName + QStringLiteral("_REMOVABLE");
+
+        QOrganizerEDSEngine *engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
+
+        // Create a collection
+        QOrganizerCollection collection;
+        QtOrganizer::QOrganizerManager::Error error;
+        collection.setMetaData(QOrganizerCollection::KeyName, removableCollectionName);
+        QVERIFY(engine->saveCollection(&collection, &error));
+        delete engine;
+
+        QTest::qSleep(1000);
+
+        engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
+        // remove recent created collection
+        QVERIFY(engine->removeCollection(collection.id(), &error));
+
+        // Check if collection is not listed anymore
+        QTest::qSleep(1000);
+        QList<QOrganizerCollection> collections = engine->collections(&error);
+        QVERIFY(!collections.contains(collection));
     }
 };
 

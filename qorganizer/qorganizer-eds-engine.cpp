@@ -24,6 +24,7 @@
 #include "qorganizer-eds-saverequestdata.h"
 #include "qorganizer-eds-removerequestdata.h"
 #include "qorganizer-eds-savecollectionrequestdata.h"
+#include "qorganizer-eds-removecollectionrequestdata.h"
 
 #include <QtCore/qdebug.h>
 #include <QtCore/QPointer>
@@ -39,11 +40,13 @@
 #include <QtOrganizer/QOrganizerItemRemoveRequest>
 #include <QtOrganizer/QOrganizerCollectionFetchRequest>
 #include <QtOrganizer/QOrganizerCollectionSaveRequest>
+#include <QtOrganizer/QOrganizerCollectionRemoveRequest>
 #include <QtOrganizer/QOrganizerEvent>
 #include <QtOrganizer/QOrganizerTodo>
 #include <QtOrganizer/QOrganizerTodoTime>
 #include <QtOrganizer/QOrganizerJournal>
 #include <QtOrganizer/QOrganizerJournalTime>
+
 
 #include <glib.h>
 #include <libecal/libecal.h>
@@ -518,8 +521,21 @@ QOrganizerCollection QOrganizerEDSEngine::collection(const QOrganizerCollectionI
 QList<QOrganizerCollection> QOrganizerEDSEngine::collections(QOrganizerManager::Error* error)
 {
     qDebug() << Q_FUNC_INFO;
-    *error = QOrganizerManager::NoError;
-    return m_collections;
+
+    QOrganizerCollectionFetchRequest *req = new QOrganizerCollectionFetchRequest(this);
+    startRequest(req);
+
+    while(req->state() != QOrganizerAbstractRequest::FinishedState) {
+        QCoreApplication::processEvents();
+    }
+
+    *error = req->error();
+
+    if (*error == QOrganizerManager::NoError) {
+        return req->collections();
+    } else {
+        return QList<QOrganizerCollection>();
+    }
 }
 
 bool QOrganizerEDSEngine::saveCollection(QOrganizerCollection* collection, QOrganizerManager::Error* error)
@@ -610,8 +626,65 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(GObject *source_object,
 bool QOrganizerEDSEngine::removeCollection(const QOrganizerCollectionId& collectionId, QOrganizerManager::Error* error)
 {
     qDebug() << Q_FUNC_INFO;
-    *error = QOrganizerManager::NoError;
-    return true;
+
+    QOrganizerCollectionRemoveRequest *req = new QOrganizerCollectionRemoveRequest(this);
+    req->setCollectionId(collectionId);
+    startRequest(req);
+
+    while(req->state() != QOrganizerAbstractRequest::FinishedState) {
+        QCoreApplication::processEvents();
+    }
+
+    *error = req->error();
+    return(*error == QOrganizerManager::NoError);
+}
+
+void QOrganizerEDSEngine::removeCollectionAsync(QtOrganizer::QOrganizerCollectionRemoveRequest *req)
+{
+    qDebug() << Q_FUNC_INFO;
+
+    if (req->collectionIds().count() == 0) {
+        QOrganizerManagerEngine::updateCollectionRemoveRequest(req,
+                                                             QOrganizerManager::NoError,
+                                                             QMap<int, QOrganizerManager::Error>(),
+                                                             QOrganizerAbstractRequest::FinishedState);
+        return;
+    }
+
+    RemoveCollectionRequestData *requestData = new RemoveCollectionRequestData(this, req);
+    removeCollectionAsyncStart(0, 0, requestData);
+}
+
+void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *source_object,
+                                                     GAsyncResult *res,
+                                                     RemoveCollectionRequestData *data)
+{
+    if (source_object && res) {
+        GError *gError = 0;
+        e_source_remove_finish(E_SOURCE(source_object), res, &gError);
+        if (gError) {
+            qWarning() << "Fail to remove collection" << gError->message;
+            g_error_free(gError);
+            data->commit(QOrganizerManager::InvalidCollectionError);
+        } else {
+            data->commit();
+        }
+    }
+
+    ESource *source = data->begin();
+    if (source) {
+        if (e_source_get_removable(source)) {
+            e_source_remove(source, data->cancellable(),
+                            (GAsyncReadyCallback) QOrganizerEDSEngine::removeCollectionAsyncStart,
+                            data);
+        } else {
+            qWarning() << "Source not removable";
+            data->commit(QOrganizerManager::InvalidCollectionError);
+        }
+    } else {
+        data->finish();
+        delete data;
+    }
 }
 
 void QOrganizerEDSEngine::requestDestroyed(QOrganizerAbstractRequest* req)
@@ -646,6 +719,9 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
             break;
         case QOrganizerAbstractRequest::CollectionSaveRequest:
             saveCollectionAsync(qobject_cast<QOrganizerCollectionSaveRequest*>(req));
+            break;
+        case QOrganizerAbstractRequest::CollectionRemoveRequest:
+            removeCollectionAsync(qobject_cast<QOrganizerCollectionRemoveRequest*>(req));
             break;
         default:
             qDebug() << "No implemented request" << req->type();
@@ -759,6 +835,23 @@ QList<QOrganizerItemType::ItemType> QOrganizerEDSEngine::supportedItemTypes() co
                          << QOrganizerItemType::TypeTodoOccurrence;
 }
 
+void QOrganizerEDSEngine::registerCollection(const QOrganizerCollection &collection, QOrganizerEDSCollectionEngineId *edsId)
+{
+    m_collections << collection;
+    m_collectionsMap.insert(collection.id().toString(), edsId);
+}
+
+void QOrganizerEDSEngine::unregisterCollection(const QOrganizerCollectionId &collectionId)
+{
+    Q_FOREACH(QOrganizerCollection col, m_collections) {
+        if (col.id() == collectionId) {
+            m_collections.removeAll(col);
+        }
+    }
+
+    m_collectionsMap.remove(collectionId.toString());
+}
+
 void QOrganizerEDSEngine::loadCollections()
 {
     m_collections.clear();
@@ -784,8 +877,8 @@ void QOrganizerEDSEngine::loadCollections()
             //TODO get metadata (color, etc..)
             QOrganizerEDSCollectionEngineId *edsId = 0;
             QOrganizerCollection collection = parseSource(source, managerUri(), &edsId);
-            m_collections << collection;
-            m_collectionsMap.insert(collection.id().toString(), edsId);
+
+            registerCollection(collection, edsId);
 
             if (e_source_compare_by_display_name(source, defaultSource) == 0) {
                 qDebug() << "Default Source" << e_source_get_display_name(source);
@@ -800,6 +893,17 @@ void QOrganizerEDSEngine::loadCollections()
         g_object_unref(defaultSource);
     }
     qDebug() << m_collections.count() << "Collection loaded";
+}
+
+ESource *QOrganizerEDSEngine::findSource(const QtOrganizer::QOrganizerCollectionId &id) const
+{
+    if (!id.isNull() && m_collectionsMap.contains(id.toString())) {
+        QOrganizerEDSCollectionEngineId *edsId = m_collectionsMap[id.toString()];
+        Q_ASSERT(edsId);
+        return edsId->m_esource;
+    } else {
+        return 0;
+    }
 }
 
 QOrganizerCollection QOrganizerEDSEngine::parseSource(ESource *source,

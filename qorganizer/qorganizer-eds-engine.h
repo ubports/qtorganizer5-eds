@@ -31,10 +31,12 @@
 #include <QtOrganizer/QOrganizerCollectionId>
 
 #include <libecal/libecal.h>
+
 class FetchRequestData;
 class SaveRequestData;
 class RemoveRequestData;
 class SaveCollectionRequestData;
+class RemoveCollectionRequestData;
 
 class QOrganizerEDSEngine : public QtOrganizer::QOrganizerManagerEngine
 {
@@ -136,6 +138,10 @@ private:
     QList<FetchRequestData*> m_pendingFetchRequest;
 
     void loadCollections();
+    void registerCollection(const QtOrganizer::QOrganizerCollection &collection, QOrganizerEDSCollectionEngineId *edsId);
+    void unregisterCollection(const QtOrganizer::QOrganizerCollectionId &collectionId);
+
+    ESource *findSource(const QtOrganizer::QOrganizerCollectionId &id) const;
 
     static QtOrganizer::QOrganizerCollection parseSource(ESource *source, const QString &managerUri);
     static QtOrganizer::QOrganizerCollection parseSource(ESource *source, const QString &managerUri, QOrganizerEDSCollectionEngineId **edsId);
@@ -190,6 +196,9 @@ private:
     void saveCollectionAsync(QtOrganizer::QOrganizerCollectionSaveRequest *req);
     static void saveCollectionAsyncStart(ESourceRegistry *registry, SaveCollectionRequestData *data);
     static void saveCollectionAsyncCommited(GObject *source_object, GAsyncResult *res, SaveCollectionRequestData *data);
+
+    void removeCollectionAsync(QtOrganizer::QOrganizerCollectionRemoveRequest *req);
+    static void removeCollectionAsyncStart(GObject *source_object, GAsyncResult *res, RemoveCollectionRequestData *data);
 /*
     QList<QtOrganizer::QOrganizerItem> internalItemOccurrences(const QtOrganizer::QOrganizerItem& parentItem,
                                                                const QDateTime& periodStart,
@@ -211,6 +220,7 @@ private:
     */
     friend class FetchRequestData;
     friend class SaveCollectionRequestData;
+    friend class RemoveCollectionRequestData;
 };
 
 #endif

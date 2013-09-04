@@ -65,8 +65,7 @@ void SaveCollectionRequestData::commit(QtOrganizer::QOrganizerManager::Error err
         QOrganizerEDSCollectionEngineId *edsId = 0;
 
         QOrganizerCollection collection = QOrganizerEDSEngine::parseSource(source, parent()->managerUri(), &edsId);
-        parent()->m_collections << collection;
-        parent()->m_collectionsMap.insert(collection.id().toString(), edsId);
+        parent()->registerCollection(collection, edsId);
 
         m_results.append(collection);
     }

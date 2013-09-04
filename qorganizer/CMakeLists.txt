@@ -7,6 +7,7 @@ set(QORGANIZER_BACKEND_SRCS
     qorganizer-eds-fetchrequestdata.cpp
     qorganizer-eds-engine.cpp
     qorganizer-eds-engineid.cpp
+    qorganizer-eds-removecollectionrequestdata.cpp
     qorganizer-eds-removerequestdata.cpp
     qorganizer-eds-requestdata.cpp
     qorganizer-eds-savecollectionrequestdata.cpp
@@ -18,6 +19,7 @@ set(QORGANIZER_BACKEND_HDRS
     qorganizer-eds-fetchrequestdata.h
     qorganizer-eds-engine.h
     qorganizer-eds-engineid.h
+    qorganizer-eds-removecollectionrequestdata.h
     qorganizer-eds-removerequestdata.h
     qorganizer-eds-requestdata.h
     qorganizer-eds-savecollectionrequestdata.h
