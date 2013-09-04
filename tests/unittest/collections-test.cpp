@@ -88,6 +88,7 @@ private Q_SLOTS:
         QtOrganizer::QOrganizerManager::Error error;
         collection.setMetaData(QOrganizerCollection::KeyName, defaultTaskCollectionName + "2");
         collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
+        QVERIFY(engine->saveCollection(&collection, &error));
 
         QOrganizerTodo todo;
         todo.setCollectionId(collection.id());
@@ -116,11 +117,9 @@ private Q_SLOTS:
         // check if the item is listead
         QOrganizerItemSortOrder sort;
         QOrganizerItemFetchHint hint;
-        QOrganizerItemDetailFilter filter;
-        QOrganizerItemDisplayLabel displayLabel;
+        QOrganizerItemCollectionFilter filter;
 
-        displayLabel.setLabel(displayLabelValue);
-        filter.setDetail(displayLabel);
+        filter.setCollectionId(collection.id());
 
         items = engine->items(filter,
                       QDateTime(QDate(2013, 9, 2), QTime(0,0,0)),
