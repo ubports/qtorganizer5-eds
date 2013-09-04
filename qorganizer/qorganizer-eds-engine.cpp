@@ -178,10 +178,7 @@ QList<QOrganizerItem> QOrganizerEDSEngine::items(const QList<QOrganizerItemId> &
     req->setFetchHint(fetchHint);
 
     startRequest(req);
-
-    while(req->state() != QOrganizerAbstractRequest::FinishedState) {
-        QCoreApplication::processEvents();
-    }
+    waitForRequestFinished(req, -1);
 
     if (error) {
         *error = req->error();
@@ -213,10 +210,7 @@ QList<QOrganizerItem> QOrganizerEDSEngine::items(const QOrganizerItemFilter &fil
     req->setFetchHint(fetchHint);
 
     startRequest(req);
-
-    while(req->state() != QOrganizerAbstractRequest::FinishedState) {
-        QCoreApplication::processEvents();
-    }
+    waitForRequestFinished(req, -1);
 
     if (error) {
         *error = req->error();
@@ -413,11 +407,9 @@ bool QOrganizerEDSEngine::saveItems(QList<QtOrganizer::QOrganizerItem> *items,
     QOrganizerItemSaveRequest *req = new QOrganizerItemSaveRequest(this);
     req->setItems(*items);
     req->setDetailMask(detailMask);
-    startRequest(req);
 
-    while(req->state() != QOrganizerAbstractRequest::FinishedState) {
-        QCoreApplication::processEvents();
-    }
+    startRequest(req);
+    waitForRequestFinished(req, -1);
 
     *errorMap = req->errorMap();
     *error = req->error();
@@ -540,11 +532,9 @@ QList<QOrganizerCollection> QOrganizerEDSEngine::collections(QOrganizerManager::
     qDebug() << Q_FUNC_INFO;
 
     QOrganizerCollectionFetchRequest *req = new QOrganizerCollectionFetchRequest(this);
-    startRequest(req);
 
-    while(req->state() != QOrganizerAbstractRequest::FinishedState) {
-        QCoreApplication::processEvents();
-    }
+    startRequest(req);
+    waitForRequestFinished(req, -1);
 
     *error = req->error();
 
@@ -560,11 +550,9 @@ bool QOrganizerEDSEngine::saveCollection(QOrganizerCollection* collection, QOrga
     qDebug() << Q_FUNC_INFO;
     QOrganizerCollectionSaveRequest *req = new QOrganizerCollectionSaveRequest(this);
     req->setCollection(*collection);
-    startRequest(req);
 
-    while(req->state() != QOrganizerAbstractRequest::FinishedState) {
-        QCoreApplication::processEvents();
-    }
+    startRequest(req);
+    waitForRequestFinished(req, -1);
 
     *error = req->error();
     if ((*error == QOrganizerManager::NoError) &&
@@ -646,11 +634,9 @@ bool QOrganizerEDSEngine::removeCollection(const QOrganizerCollectionId& collect
 
     QOrganizerCollectionRemoveRequest *req = new QOrganizerCollectionRemoveRequest(this);
     req->setCollectionId(collectionId);
-    startRequest(req);
 
-    while(req->state() != QOrganizerAbstractRequest::FinishedState) {
-        QCoreApplication::processEvents();
-    }
+    startRequest(req);
+    waitForRequestFinished(req, -1);
 
     *error = req->error();
     return(*error == QOrganizerManager::NoError);
@@ -751,16 +737,19 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
 bool QOrganizerEDSEngine::cancelRequest(QOrganizerAbstractRequest* req)
 {
     qDebug() << Q_FUNC_INFO;
-    Q_UNUSED(req); // we can't cancel since we complete immediately
+    Q_UNUSED(req);
+    //TODO
     return false;
 }
 
 bool QOrganizerEDSEngine::waitForRequestFinished(QOrganizerAbstractRequest* req, int msecs)
 {
     qDebug() << Q_FUNC_INFO;
-    // in our implementation, we always complete any operation we start.
     Q_UNUSED(msecs);
-    Q_UNUSED(req);
+
+    while(req->state() != QOrganizerAbstractRequest::FinishedState) {
+        QCoreApplication::processEvents();
+    }
 
     return true;
 }
