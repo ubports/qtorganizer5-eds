@@ -968,7 +968,6 @@ void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *i
 {
     // recurence
     if (e_cal_component_has_rdates(comp)) {
-        qDebug() << "HAs rdates";
         QSet<QDate> dates;
         GSList *periodList = 0;
         e_cal_component_get_rdate_list(comp, &periodList);
@@ -986,7 +985,6 @@ void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *i
     }
 
     if (e_cal_component_has_exdates(comp)) {
-        qDebug() << "HAs extdates";
         QSet<QDate> dates;
         GSList *exdateList = 0;
 
@@ -1320,15 +1318,12 @@ void QOrganizerEDSEngine::parseStartTime(const QOrganizerItem &item, ECalCompone
 {
     QOrganizerEventTime etr = item.detail(QOrganizerItemDetail::TypeEventTime);
     if (!etr.isEmpty()) {
-        qDebug() << "Start time" << etr.startDateTime();
         ECalComponentDateTime *dt = g_new0(ECalComponentDateTime, 1);
         dt->value = g_new0(struct icaltimetype, 1);
         *dt->value = icaltime_from_timet(etr.startDateTime().toTime_t(), FALSE);
 
         e_cal_component_set_dtstart(comp, dt);
         e_cal_component_free_datetime(dt);
-    } else {
-        qDebug() << "Start time is empty";
     }
 }
 
@@ -1348,15 +1343,12 @@ void QOrganizerEDSEngine::parseTodoStartTime(const QOrganizerItem &item, ECalCom
 {
     QOrganizerTodoTime etr = item.detail(QOrganizerItemDetail::TypeTodoTime);
     if (!etr.isEmpty()) {
-        qDebug() << "Start time" << etr.startDateTime();
         ECalComponentDateTime *dt = g_new0(ECalComponentDateTime, 1);
         dt->value = g_new0(struct icaltimetype, 1);
         *dt->value = icaltime_from_timet(etr.startDateTime().toTime_t(), FALSE);
 
         e_cal_component_set_dtstart(comp, dt);
         e_cal_component_free_datetime(dt);
-    } else {
-        qDebug() << "Start time is empty";
     }
 }
 
@@ -1415,7 +1407,7 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
 
             //FIXME: check the correct rules for days of week
             QSet<Qt::DayOfWeek> daysOfWeek = qRule.daysOfWeek();
-            for (int d=0; d < ICAL_BY_DAY_SIZE; d++) {
+            for (int d=1; d < ICAL_BY_DAY_SIZE; d++) {
                 if (daysOfWeek.contains(static_cast<Qt::DayOfWeek>(d))) {
                     rule->by_day[d] = d;
                 } else {
@@ -1424,7 +1416,7 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
             }
 
             QSet<int> daysOfMonth = qRule.daysOfMonth();
-            for (int d=0; d < ICAL_BY_MONTHDAY_SIZE; d++) {
+            for (int d=1; d < ICAL_BY_MONTHDAY_SIZE; d++) {
                 if (daysOfMonth.contains(d)) {
                     rule->by_month_day[d] = d;
                 } else {
@@ -1433,7 +1425,7 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
             }
 
             QSet<int> daysOfYear = qRule.daysOfYear();
-            for (int d=0; d < ICAL_BY_YEARDAY_SIZE; d++) {
+            for (int d=1; d < ICAL_BY_YEARDAY_SIZE; d++) {
                 if (daysOfYear.contains(d)) {
                     rule->by_year_day[d] = d;
                 } else {
@@ -1442,8 +1434,8 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
             }
 
             QSet<QOrganizerRecurrenceRule::Month> monthOfYear = qRule.monthsOfYear();
-            for (int d=0; d < ICAL_BY_YEARDAY_SIZE; d++) {
-                if (daysOfYear.contains(d)) {
+            for (int d=1; d < ICAL_BY_MONTH_SIZE; d++) {
+                if (monthOfYear.contains(static_cast<QOrganizerRecurrenceRule::Month>(d))) {
                     rule->by_month[d] = d;
                 } else {
                     rule->by_month[d] = ICAL_RECURRENCE_ARRAY_MAX;
@@ -1451,7 +1443,7 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
             }
 
             QSet<int> positions = qRule.positions();
-            for (int d=0; d < ICAL_BY_SETPOS_SIZE; d++) {
+            for (int d=1; d < ICAL_BY_SETPOS_SIZE; d++) {
                 if (positions.contains(d)) {
                     rule->by_set_pos[d] = d;
                 } else {
@@ -1628,7 +1620,6 @@ GSList *QOrganizerEDSEngine::parseItems(ECalClient *client, QList<QOrganizerItem
 
         // id
         if (!item.id().isNull()) {
-            qDebug() << "ITEM HAS ID";
             QOrganizerItemId id = item.id();
             QString cId = QOrganizerEDSEngineId::toComponentId(id);
             e_cal_component_set_uid(comp, cId.toUtf8().data());
