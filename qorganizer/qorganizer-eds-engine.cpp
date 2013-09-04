@@ -739,6 +739,7 @@ bool QOrganizerEDSEngine::cancelRequest(QOrganizerAbstractRequest* req)
     qDebug() << Q_FUNC_INFO;
     Q_UNUSED(req);
     //TODO
+    Q_ASSERT(false);
     return false;
 }
 
@@ -1107,7 +1108,6 @@ void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *i
             QOrganizerItemRecurrence irec = item->detail(QOrganizerItemDetail::TypeRecurrence);
             irec.setRecurrenceRules(qRules);
         }
-
     }
     // TODO: free ruleList;
 
@@ -1637,16 +1637,31 @@ GSList *QOrganizerEDSEngine::parseItems(ECalClient *client, QList<QOrganizerItem
         //summary
         if (!item.displayLabel().isEmpty()) {
             ECalComponentText txt;
-            txt.altrep = "";
-            txt.value = item.displayLabel().toUtf8().data();
+            QByteArray str = item.displayLabel().toUtf8();
+            txt.altrep = 0;
+            txt.value = str.constData();
             e_cal_component_set_summary(comp, &txt);
+        }
+
+        //description
+        if (item.description().isEmpty()) {
+            GSList *descriptions = 0;
+            QByteArray str = item.description().toUtf8();
+            ECalComponentText *txt = g_new0(ECalComponentText, 1);
+
+            txt->value = str.constData();
+            descriptions = g_slist_append(descriptions, txt);
+
+            e_cal_component_set_description_list(comp, descriptions);
+            e_cal_component_free_text_list(descriptions);
         }
 
         //comments
         GSList *comments = 0;
         Q_FOREACH(QString comment, item.comments()) {
+            QByteArray str = comment.toUtf8();
             ECalComponentText *txt = g_new0(ECalComponentText, 1);
-            txt->value = comment.toUtf8().data();
+            txt->value = str.constData();
             comments = g_slist_append(comments, txt);
         }
         e_cal_component_set_comment_list(comp, comments);
@@ -1655,8 +1670,9 @@ GSList *QOrganizerEDSEngine::parseItems(ECalClient *client, QList<QOrganizerItem
         //tags
         GSList *categories = 0;
         Q_FOREACH(QString tag, item.tags()) {
+            QByteArray str = tag.toUtf8();
             ECalComponentText *txt = g_new0(ECalComponentText, 1);
-            txt->value = tag.toUtf8().data();
+            txt->value = str.constData();
             categories = g_slist_append(categories, txt);
         }
         e_cal_component_set_categories_list(comp, categories);
