@@ -114,7 +114,7 @@ private Q_SLOTS:
         QList<QVariant> args = createdItem.takeFirst();
         QCOMPARE(args.count(), 1);
 
-        // check if the item is listead
+        // check if the item is listead inside the correct collection
         QOrganizerItemSortOrder sort;
         QOrganizerItemFetchHint hint;
         QOrganizerItemCollectionFilter filter;
@@ -131,6 +131,20 @@ private Q_SLOTS:
 
         QCOMPARE(items.count(), 1);
         QOrganizerTodo result = static_cast<QOrganizerTodo>(items[0]);
+        todo = items[0];
+        QCOMPARE(result.id(), todo.id());
+        QCOMPARE(result.startDateTime(), todo.startDateTime());
+        QCOMPARE(result.displayLabel(), todo.displayLabel());
+        QCOMPARE(result.description(), todo.description());
+
+
+        // check if the item is listead by id
+        QList<QOrganizerItemId> ids;
+        ids << todo.id();
+
+        items = engine->items(ids, hint, &errorMap, &error);
+        QCOMPARE(items.count(), 1);
+        result = static_cast<QOrganizerTodo>(items[0]);
         todo = items[0];
         QCOMPARE(result.id(), todo.id());
         QCOMPARE(result.startDateTime(), todo.startDateTime());

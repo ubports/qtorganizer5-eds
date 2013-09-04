@@ -46,6 +46,8 @@
 #include <QtOrganizer/QOrganizerTodoTime>
 #include <QtOrganizer/QOrganizerJournal>
 #include <QtOrganizer/QOrganizerJournalTime>
+#include <QtOrganizer/QOrganizerItemIdFetchRequest>
+#include <QtOrganizer/QOrganizerItemIdFilter>
 
 
 #include <glib.h>
@@ -168,14 +170,28 @@ QList<QOrganizerItem> QOrganizerEDSEngine::items(const QList<QOrganizerItemId> &
                                                  QOrganizerManager::Error *error)
 {
     qDebug() << Q_FUNC_INFO;
-    Q_UNUSED(fetchHint)
-    Q_UNUSED(itemIds);
-    Q_UNUSED(errorMap);
+    QOrganizerItemIdFilter filter;
+    filter.setIds(itemIds);
 
-    qDebug() << Q_FUNC_INFO;
+    QOrganizerItemFetchRequest *req = new QOrganizerItemFetchRequest(this);
+    req->setFilter(filter);
+    req->setFetchHint(fetchHint);
 
-    QList<QOrganizerItem> items;
-    return items;
+    startRequest(req);
+
+    while(req->state() != QOrganizerAbstractRequest::FinishedState) {
+        QCoreApplication::processEvents();
+    }
+
+    if (error) {
+        *error = req->error();
+    }
+    // TODO implement correct reply for errorMap
+    if (errorMap) {
+        *errorMap = QMap<int, QOrganizerManager::Error>();
+    }
+    req->deleteLater();
+    return req->items();
 }
 
 QList<QOrganizerItem> QOrganizerEDSEngine::items(const QOrganizerItemFilter &filter,
@@ -187,7 +203,6 @@ QList<QOrganizerItem> QOrganizerEDSEngine::items(const QOrganizerItemFilter &fil
                                                  QOrganizerManager::Error *error)
 {
     qDebug() << Q_FUNC_INFO;
-    QList<QOrganizerItem> list;
 
     QOrganizerItemFetchRequest *req = new QOrganizerItemFetchRequest(this);
     req->setFilter(filter);
@@ -203,7 +218,9 @@ QList<QOrganizerItem> QOrganizerEDSEngine::items(const QOrganizerItemFilter &fil
         QCoreApplication::processEvents();
     }
 
-    *error = req->error();
+    if (error) {
+        *error = req->error();
+    }
     req->deleteLater();
     return req->items();
 }
