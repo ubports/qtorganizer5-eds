@@ -48,7 +48,9 @@
 #include <QtOrganizer/QOrganizerJournalTime>
 #include <QtOrganizer/QOrganizerItemIdFetchRequest>
 #include <QtOrganizer/QOrganizerItemIdFilter>
-
+#include <QtOrganizer/QOrganizerItemReminder>
+#include <QtOrganizer/QOrganizerItemAudibleReminder>
+#include <QtOrganizer/QOrganizerItemVisualReminder>
 
 #include <glib.h>
 #include <libecal/libecal.h>
@@ -703,6 +705,7 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
     if (!req)
         return false;
 
+    updateRequestState(req, QOrganizerAbstractRequest::ActiveState);
     switch (req->type())
     {
         case QOrganizerAbstractRequest::ItemFetchRequest:
@@ -727,6 +730,7 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
             removeCollectionAsync(qobject_cast<QOrganizerCollectionRemoveRequest*>(req));
             break;
         default:
+            updateRequestState(req, QOrganizerAbstractRequest::FinishedState);
             qDebug() << "No implemented request" << req->type();
             break;
     }
@@ -748,7 +752,7 @@ bool QOrganizerEDSEngine::waitForRequestFinished(QOrganizerAbstractRequest* req,
     qDebug() << Q_FUNC_INFO;
     Q_UNUSED(msecs);
 
-    while(req->state() != QOrganizerAbstractRequest::FinishedState) {
+    while(req->state() == QOrganizerAbstractRequest::ActiveState) {
         QCoreApplication::processEvents();
     }
 
@@ -1291,6 +1295,40 @@ QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(QOrganizerEDSCollectionEn
         }
         e_cal_component_free_categories_list(categories);
 
+        //reminders
+        GList *alarms = e_cal_component_get_alarm_uids(comp);
+        for(GList *a = alarms; a != 0; a = a->next) {
+            QOrganizerItemReminder *aDetail = 0;
+
+            ECalComponentAlarm *alarm = (ECalComponentAlarm*)(a->data);
+            ECalComponentAlarmAction aAction;
+
+            e_cal_component_alarm_get_action(alarm, &aAction);
+            switch(aAction)
+            {
+                case E_CAL_COMPONENT_ALARM_DISPLAY:
+                    aDetail = new QOrganizerItemVisualReminder();
+                    break;
+                case E_CAL_COMPONENT_ALARM_AUDIO:
+                // use audio as fallback
+                default:
+                    aDetail = new QOrganizerItemAudibleReminder();
+                    break;
+            }
+
+            ECalComponentAlarmTrigger trigger;
+            e_cal_component_alarm_get_trigger(alarm, &trigger);
+            if (trigger.type == E_CAL_COMPONENT_ALARM_TRIGGER_RELATIVE_START) {
+                aDetail->setSecondsBeforeStart(icaldurationtype_as_int(trigger.u.rel_duration) * -1);
+            }
+
+            ECalComponentAlarmRepeat aRepeat;
+            e_cal_component_alarm_get_repeat(alarm, &aRepeat);
+            aDetail->setRepetition(aRepeat.repetitions, icaldurationtype_as_int(aRepeat.duration));
+
+            item->saveDetail(aDetail);
+            delete aDetail;
+        }
 
 //        //Attendee
 //        GList *attendeeList = 0;
@@ -1673,6 +1711,40 @@ GSList *QOrganizerEDSEngine::parseItems(ECalClient *client, QList<QOrganizerItem
             e_cal_component_commit_sequence(comp);
         } else {
             e_cal_component_abort_sequence(comp);
+        }
+
+        //reminders
+        QList<QOrganizerItemDetail> reminders = item.details(QOrganizerItemDetail::TypeReminder);
+        Q_FOREACH(QOrganizerItemDetail detail, reminders) {
+            QOrganizerItemReminder reminder = static_cast<QOrganizerItemReminder>(detail);
+
+            ECalComponentAlarm *alarm = e_cal_component_alarm_new();
+            switch(reminder.type())
+            {
+                case QOrganizerItemReminder::TypeVisualReminder:
+                    e_cal_component_alarm_set_action(alarm, E_CAL_COMPONENT_ALARM_DISPLAY);
+                    break;
+                case QOrganizerItemReminder::TypeAudibleReminder:
+                default:
+                    // use audio as fallback
+                    e_cal_component_alarm_set_action(alarm, E_CAL_COMPONENT_ALARM_AUDIO);
+                    break;
+            }
+
+            if (reminder.secondsBeforeStart() > 0) {
+                ECalComponentAlarmTrigger trigger;
+                trigger.type = E_CAL_COMPONENT_ALARM_TRIGGER_RELATIVE_START;
+                trigger.u.rel_duration = icaldurationtype_from_int(- reminder.secondsBeforeStart());
+                e_cal_component_alarm_set_trigger(alarm, trigger);
+            }
+
+            ECalComponentAlarmRepeat aRepeat;
+            aRepeat.repetitions = reminder.repetitionCount();
+            aRepeat.duration = icaldurationtype_from_int(reminder.repetitionDelay());
+            e_cal_component_alarm_set_repeat(alarm, aRepeat);
+
+            e_cal_component_add_alarm(comp, alarm);
+            e_cal_component_alarm_free(alarm);
         }
 
         comps = g_slist_append(comps,
