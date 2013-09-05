@@ -148,6 +148,20 @@ private:
     static QList<QtOrganizer::QOrganizerItem> parseEvents(QOrganizerEDSCollectionEngineId *collection, GSList *events);
     static GSList *parseItems(ECalClient *client, QList<QtOrganizer::QOrganizerItem> items);
 
+    // QOrganizerItem -> ECalComponent
+    static void parseSummary(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseDescription(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseComments(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseTags(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseReminders(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+
+    // ECalComponent -> QOrganizerItem
+    static void parseSummary(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseDescription(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseComments(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseTags(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseReminders(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+
     static QDateTime fromIcalTime(struct icaltimetype value);
     static void parseStartTime(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseEndTime(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);

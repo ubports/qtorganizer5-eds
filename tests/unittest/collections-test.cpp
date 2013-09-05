@@ -122,8 +122,8 @@ private Q_SLOTS:
         filter.setCollectionId(collection.id());
 
         items = engine->items(filter,
-                      QDateTime(QDate(2013, 9, 2), QTime(0,0,0)),
-                      QDateTime(QDate(2013, 9, 4), QTime(0,0,0)),
+                      QDateTime(),
+                      QDateTime(),
                       10,
                       sort,
                       hint,
