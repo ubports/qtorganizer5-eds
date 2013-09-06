@@ -154,6 +154,18 @@ private:
     static void parseComments(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseTags(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseReminders(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseStartTime(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseEndTime(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseTodoStartTime(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseRecurrence(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseWeekRecurrence(const QtOrganizer::QOrganizerRecurrenceRule &qRule, struct icalrecurrencetype *rule);
+    static void parseMonthRecurrence(const QtOrganizer::QOrganizerRecurrenceRule &qRule, struct icalrecurrencetype *rule);
+    static void parseYearRecurrence(const QtOrganizer::QOrganizerRecurrenceRule &qRule, struct icalrecurrencetype *rule);
+    static void parsePriority(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseLocation(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseDueDate(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseProgress(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseStatus(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
 
     // ECalComponent -> QOrganizerItem
     static void parseSummary(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
@@ -161,30 +173,22 @@ private:
     static void parseComments(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseTags(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseReminders(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
-
-    static QDateTime fromIcalTime(struct icaltimetype value);
     static void parseStartTime(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseEndTime(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseRecurrence(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseWeekRecurrence(struct icalrecurrencetype *rule, QtOrganizer::QOrganizerRecurrenceRule *qRule);
+    static void parseMonthRecurrence(struct icalrecurrencetype *rule, QtOrganizer::QOrganizerRecurrenceRule *qRule);
+    static void parseYearRecurrence(struct icalrecurrencetype *rule, QtOrganizer::QOrganizerRecurrenceRule *qRule);
     static void parsePriority(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseLocation(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseDueDate(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseProgress(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseStatus(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
 
+    static QDateTime fromIcalTime(struct icaltimetype value);
     static QtOrganizer::QOrganizerItem *parseEvent(ECalComponent *comp);
     static QtOrganizer::QOrganizerItem *parseToDo(ECalComponent *comp);
     static QtOrganizer::QOrganizerItem *parseJournal(ECalComponent *comp);
-
-    static void parseStartTime(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
-    static void parseEndTime(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
-    static void parseTodoStartTime(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
-    static void parseRecurrence(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
-    static void parsePriority(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
-    static void parseLocation(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
-    static void parseDueDate(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
-    static void parseProgress(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
-    static void parseStatus(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
 
     static ECalComponent *createDefaultComponent(ECalClient *client, icalcomponent_kind iKind, ECalComponentVType eType);
     static ECalComponent *parseEventItem(ECalClient *client, const QtOrganizer::QOrganizerItem &item);

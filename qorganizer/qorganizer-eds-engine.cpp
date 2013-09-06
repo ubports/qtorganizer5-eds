@@ -968,6 +968,57 @@ void QOrganizerEDSEngine::parseEndTime(ECalComponent *comp, QOrganizerItem *item
     e_cal_component_free_datetime(dt);
 }
 
+void QOrganizerEDSEngine::parseWeekRecurrence(struct icalrecurrencetype *rule, QtOrganizer::QOrganizerRecurrenceRule *qRule)
+{
+    qRule->setFrequency(QOrganizerRecurrenceRule::Weekly);
+
+    QSet<Qt::DayOfWeek> daysOfWeek;
+    for (int d=0; d < Qt::Sunday; d++) {
+        short day = rule->by_day[d];
+        if (day != ICAL_RECURRENCE_ARRAY_MAX) {
+            daysOfWeek.insert(static_cast<Qt::DayOfWeek>(icalrecurrencetype_day_day_of_week(rule->by_day[d]) - 1));
+        }
+    }
+    qRule->setDaysOfWeek(daysOfWeek);
+}
+
+void QOrganizerEDSEngine::parseMonthRecurrence(struct icalrecurrencetype *rule, QtOrganizer::QOrganizerRecurrenceRule *qRule)
+{
+    qRule->setFrequency(QOrganizerRecurrenceRule::Monthly);
+
+    QSet<int> daysOfMonth;
+    for (int d=0; d < ICAL_BY_MONTHDAY_SIZE; d++) {
+        short day = rule->by_month_day[d];
+        if (day != ICAL_RECURRENCE_ARRAY_MAX) {
+            daysOfMonth.insert(day);
+        }
+    }
+    qRule->setDaysOfMonth(daysOfMonth);
+}
+
+void QOrganizerEDSEngine::parseYearRecurrence(struct icalrecurrencetype *rule, QtOrganizer::QOrganizerRecurrenceRule *qRule)
+{
+    qRule->setFrequency(QOrganizerRecurrenceRule::Yearly);
+
+    QSet<int> daysOfYear;
+    for (int d=0; d < ICAL_BY_YEARDAY_SIZE; d++) {
+        short day = rule->by_year_day[d];
+        if (day != ICAL_RECURRENCE_ARRAY_MAX) {
+            daysOfYear.insert(day);
+        }
+    }
+    qRule->setDaysOfYear(daysOfYear);
+
+    QSet<QOrganizerRecurrenceRule::Month> monthOfYear;
+    for (int d=0; d < ICAL_BY_MONTH_SIZE; d++) {
+        short month = rule->by_month[d];
+        if (month != ICAL_RECURRENCE_ARRAY_MAX) {
+            monthOfYear.insert(static_cast<QOrganizerRecurrenceRule::Month>(month));
+        }
+    }
+    qRule->setMonthsOfYear(monthOfYear);
+}
+
 void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *item)
 {
     // recurence
@@ -1021,22 +1072,21 @@ void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *i
                     qWarning() << "Recurrence frequency not supported";
                     break;
                 case ICAL_DAILY_RECURRENCE:
-                {
                     qRule.setFrequency(QOrganizerRecurrenceRule::Daily);
                     break;
-                }
                 case ICAL_WEEKLY_RECURRENCE:
-                    qRule.setFrequency(QOrganizerRecurrenceRule::Weekly);
+                    parseWeekRecurrence(rule, &qRule);
                     break;
                 case ICAL_MONTHLY_RECURRENCE:
-                    qRule.setFrequency(QOrganizerRecurrenceRule::Monthly);
+                    parseMonthRecurrence(rule, &qRule);
                     break;
                 case ICAL_YEARLY_RECURRENCE:
-                    qRule.setFrequency(QOrganizerRecurrenceRule::Yearly);
+                    parseYearRecurrence(rule, &qRule);
                     break;
                 case ICAL_NO_RECURRENCE:
                     break;
             }
+
 
             if (rule->count > 0) {
                 qRule.setLimit(rule->count);
@@ -1048,50 +1098,7 @@ void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *i
                     qRule.clearLimit();
                 }
             }
-
-            QSet<Qt::DayOfWeek> daysOfWeek;
-            for (int d=0; d < Qt::Sunday; d++) {
-                short day = rule->by_day[d];
-                if (day != ICAL_RECURRENCE_ARRAY_MAX) {
-                    daysOfWeek.insert(static_cast<Qt::DayOfWeek>(icalrecurrencetype_day_day_of_week(day)));
-                }
-            }
-            qRule.setDaysOfWeek(daysOfWeek);
-
-            QSet<int> daysOfMonth;
-            for (int d=0; d < ICAL_BY_MONTHDAY_SIZE; d++) {
-                short day = rule->by_month_day[d];
-                if (day != ICAL_RECURRENCE_ARRAY_MAX) {
-                    daysOfMonth.insert(day);
-                }
-            }
-            qRule.setDaysOfMonth(daysOfMonth);
-
-            QSet<int> daysOfYear;
-            for (int d=0; d < ICAL_BY_YEARDAY_SIZE; d++) {
-                short day = rule->by_year_day[d];
-                if (day != ICAL_RECURRENCE_ARRAY_MAX) {
-                    daysOfYear.insert(day);
-                }
-            }
-            qRule.setDaysOfYear(daysOfYear);
-
-            for (int d=0; d < ICAL_BY_WEEKNO_SIZE; d++) {
-                short day = rule->by_week_no[d];
-                if (day != ICAL_RECURRENCE_ARRAY_MAX) {
-                    qWarning() << "Recurrence by week number is not supported";
-                    break;
-                }
-            }
-
-            QSet<QOrganizerRecurrenceRule::Month> monthOfYear;
-            for (int d=0; d < ICAL_BY_MONTH_SIZE; d++) {
-                short day = rule->by_month[d];
-                if (day != ICAL_RECURRENCE_ARRAY_MAX) {
-                    monthOfYear.insert(static_cast<QOrganizerRecurrenceRule::Month>(day));
-                }
-            }
-            qRule.setMonthsOfYear(monthOfYear);
+            qRule.setInterval(rule->interval);
 
             QSet<int> positions;
             for (int d=0; d < ICAL_BY_SETPOS_SIZE; d++) {
@@ -1102,17 +1109,16 @@ void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *i
             }
             qRule.setPositions(positions);
 
-            qRule.setInterval(rule->interval);
             qRules << qRule;
         }
 
         if (!qRules.isEmpty()) {
             QOrganizerItemRecurrence irec = item->detail(QOrganizerItemDetail::TypeRecurrence);
             irec.setRecurrenceRules(qRules);
+            item->saveDetail(&irec);
         }
     }
     // TODO: free ruleList;
-
     // TODO: exeptions rules
 }
 
@@ -1424,6 +1430,77 @@ void QOrganizerEDSEngine::parseTodoStartTime(const QOrganizerItem &item, ECalCom
     }
 }
 
+void QOrganizerEDSEngine::parseWeekRecurrence(const QOrganizerRecurrenceRule &qRule, struct icalrecurrencetype *rule)
+{
+    static QMap<Qt::DayOfWeek, icalrecurrencetype_weekday>  daysOfWeekMap;
+    if (daysOfWeekMap.isEmpty()) {
+        daysOfWeekMap.insert(Qt::Monday, ICAL_MONDAY_WEEKDAY);
+        daysOfWeekMap.insert(Qt::Thursday, ICAL_THURSDAY_WEEKDAY);
+        daysOfWeekMap.insert(Qt::Wednesday, ICAL_WEDNESDAY_WEEKDAY);
+        daysOfWeekMap.insert(Qt::Tuesday, ICAL_TUESDAY_WEEKDAY);
+        daysOfWeekMap.insert(Qt::Friday, ICAL_FRIDAY_WEEKDAY);
+        daysOfWeekMap.insert(Qt::Saturday, ICAL_SATURDAY_WEEKDAY);
+        daysOfWeekMap.insert(Qt::Sunday, ICAL_SUNDAY_WEEKDAY);
+    }
+
+    QList<Qt::DayOfWeek> daysOfWeek = qRule.daysOfWeek().toList();
+    int c = 0;
+
+    rule->freq = ICAL_WEEKLY_RECURRENCE;
+    for(int d=Qt::Monday; d <= Qt::Sunday; d++) {
+        if (daysOfWeek.contains(static_cast<Qt::DayOfWeek>(d))) {
+            rule->by_day[c++] = daysOfWeekMap[static_cast<Qt::DayOfWeek>(d)];
+        }
+    }
+    for (int d = c; d < ICAL_BY_DAY_SIZE; d++) {
+        rule->by_day[d] = ICAL_RECURRENCE_ARRAY_MAX;
+    }
+}
+
+void QOrganizerEDSEngine::parseMonthRecurrence(const QOrganizerRecurrenceRule &qRule, struct icalrecurrencetype *rule)
+{
+    rule->freq = ICAL_MONTHLY_RECURRENCE;
+
+    QList<int> daysOfMonth = qRule.daysOfMonth().toList();
+    int c = 0;
+    for (int d=1; d < ICAL_BY_MONTHDAY_SIZE; d++) {
+        if (daysOfMonth.contains(d)) {
+            rule->by_month_day[c++] = d;
+        }
+    }
+    for (int d = c; d < ICAL_BY_MONTHDAY_SIZE; d++) {
+        rule->by_month_day[d] = ICAL_RECURRENCE_ARRAY_MAX;
+    }
+}
+
+void QOrganizerEDSEngine::parseYearRecurrence(const QOrganizerRecurrenceRule &qRule, struct icalrecurrencetype *rule)
+{
+    rule->freq = ICAL_YEARLY_RECURRENCE;
+
+    QList<int> daysOfYear = qRule.daysOfYear().toList();
+    int c = 0;
+    for (int d=1; d < ICAL_BY_YEARDAY_SIZE; d++) {
+        if (daysOfYear.contains(d)) {
+            rule->by_year_day[c++] = d;
+        }
+    }
+    for (int d = c; d < ICAL_BY_YEARDAY_SIZE; d++) {
+        rule->by_year_day[d] = ICAL_RECURRENCE_ARRAY_MAX;
+    }
+
+    c = 0;
+    QList<QOrganizerRecurrenceRule::Month> monthOfYear = qRule.monthsOfYear().toList();
+    for (int d=1; d < ICAL_BY_MONTH_SIZE; d++) {
+        if (monthOfYear.contains(static_cast<QOrganizerRecurrenceRule::Month>(d))) {
+            rule->by_month[c++] = d;
+        }
+    }
+    for (int d = c; d < ICAL_BY_YEARDAY_SIZE; d++) {
+        rule->by_month[d] = ICAL_RECURRENCE_ARRAY_MAX;
+    }
+}
+
+
 
 void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalComponent *comp)
 {
@@ -1432,7 +1509,7 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
         GSList *periodList = 0;
         Q_FOREACH(QDate dt, rec.recurrenceDates()) {
             ECalComponentPeriod *period = g_new0(ECalComponentPeriod, 1);
-            period->start = icaltime_from_timet(QDateTime(dt).toTime_t(), TRUE);
+            period->start = icaltime_from_timet(QDateTime(dt).toTime_t(), FALSE);
             periodList = g_slist_append(periodList, period);
             //TODO: period.end, period.duration
         }
@@ -1442,8 +1519,9 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
         GSList *exdateList = 0;
         Q_FOREACH(QDate dt, rec.exceptionDates()) {
             ECalComponentDateTime *dateTime = g_new0(ECalComponentDateTime, 1);
-            struct icaltimetype itt = icaltime_from_timet(QDateTime(dt).toTime_t(), TRUE);
-            dateTime->value = &itt;
+            struct icaltimetype *itt = g_new0(struct icaltimetype, 1);
+            *itt = icaltime_from_timet(QDateTime(dt).toTime_t(), FALSE);
+            dateTime->value = itt;
             exdateList = g_slist_append(exdateList, dateTime);
         }
         e_cal_component_set_exdate_list(comp, exdateList);
@@ -1457,13 +1535,13 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
                     rule->freq = ICAL_DAILY_RECURRENCE;
                     break;
                 case QOrganizerRecurrenceRule::Weekly:
-                    rule->freq = ICAL_WEEKLY_RECURRENCE;
+                    parseWeekRecurrence(qRule, rule);
                     break;
                 case QOrganizerRecurrenceRule::Monthly:
-                    rule->freq = ICAL_MONTHLY_RECURRENCE;
+                    parseMonthRecurrence(qRule, rule);
                     break;
                 case QOrganizerRecurrenceRule::Yearly:
-                    rule->freq = ICAL_YEARLY_RECURRENCE;
+                    parseYearRecurrence(qRule, rule);
                     break;
                 case QOrganizerRecurrenceRule::Invalid:
                     rule->freq = ICAL_NO_RECURRENCE;
@@ -1475,43 +1553,6 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
                 rule->count = ICAL_RECURRENCE_ARRAY_MAX;
             } else {
                 rule->count = qRule.limitCount();
-            }
-
-            //FIXME: check the correct rules for days of week
-            QSet<Qt::DayOfWeek> daysOfWeek = qRule.daysOfWeek();
-            for (int d=1; d < ICAL_BY_DAY_SIZE; d++) {
-                if (daysOfWeek.contains(static_cast<Qt::DayOfWeek>(d))) {
-                    rule->by_day[d] = d;
-                } else {
-                    rule->by_day[d] = ICAL_RECURRENCE_ARRAY_MAX;
-                }
-            }
-
-            QSet<int> daysOfMonth = qRule.daysOfMonth();
-            for (int d=1; d < ICAL_BY_MONTHDAY_SIZE; d++) {
-                if (daysOfMonth.contains(d)) {
-                    rule->by_month_day[d] = d;
-                } else {
-                    rule->by_month_day[d] = ICAL_RECURRENCE_ARRAY_MAX;
-                }
-            }
-
-            QSet<int> daysOfYear = qRule.daysOfYear();
-            for (int d=1; d < ICAL_BY_YEARDAY_SIZE; d++) {
-                if (daysOfYear.contains(d)) {
-                    rule->by_year_day[d] = d;
-                } else {
-                    rule->by_year_day[d] = ICAL_RECURRENCE_ARRAY_MAX;
-                }
-            }
-
-            QSet<QOrganizerRecurrenceRule::Month> monthOfYear = qRule.monthsOfYear();
-            for (int d=1; d < ICAL_BY_MONTH_SIZE; d++) {
-                if (monthOfYear.contains(static_cast<QOrganizerRecurrenceRule::Month>(d))) {
-                    rule->by_month[d] = d;
-                } else {
-                    rule->by_month[d] = ICAL_RECURRENCE_ARRAY_MAX;
-                }
             }
 
             QSet<int> positions = qRule.positions();

@@ -99,6 +99,8 @@ private Q_SLOTS:
         e_cal_component_alarm_get_repeat(alarm, &aRepeat);
         QCOMPARE(aRepeat.repetitions, aReminder.repetitionCount());
         QCOMPARE(icaldurationtype_as_int(aRepeat.duration), aReminder.repetitionDelay());
+
+        g_object_unref(comp);
     }
 
     void testParseRemindersECalComponent2QOrganizerEvent()
@@ -129,6 +131,233 @@ private Q_SLOTS:
         QCOMPARE(vReminder.repetitionCount(), 5);
         QCOMPARE(vReminder.repetitionDelay(), 100);
         QCOMPARE(vReminder.secondsBeforeStart(), 10);
+
+        g_object_unref(comp);
+    }
+
+    void testParseRecurenceQOrganizerEvent2ECalComponent()
+    {
+        // by date
+        QOrganizerEvent event;
+        QOrganizerItemRecurrence rec;
+
+        QList<QDate> rDates;
+        rDates << QDate(2010, 1, 20)
+               << QDate(2011, 2, 21)
+               << QDate(2012, 3, 22);
+
+        rec.setRecurrenceDates(rDates.toSet());
+
+        QList<QDate> rExeptDates;
+        rExeptDates << QDate(2013, 4, 23)
+                    << QDate(2014, 5, 24)
+                    << QDate(2015, 6, 25);
+        rec.setExceptionDates(rExeptDates.toSet());
+
+        QOrganizerRecurrenceRule dailyRule;
+        QList<QOrganizerRecurrenceRule> rrules;
+
+        dailyRule.setFrequency(QOrganizerRecurrenceRule::Daily);
+        dailyRule.setLimit(1000);
+        rrules << dailyRule;
+
+        QOrganizerRecurrenceRule weeklyRule;
+        weeklyRule.setFrequency(QOrganizerRecurrenceRule::Weekly);
+        weeklyRule.setLimit(1001);
+        QList<Qt::DayOfWeek> daysOfWeek;
+        daysOfWeek << Qt::Monday
+                   << Qt::Tuesday
+                   << Qt::Wednesday
+                   << Qt::Thursday
+                   << Qt::Friday;
+        weeklyRule.setDaysOfWeek(daysOfWeek.toSet());
+        weeklyRule.setFirstDayOfWeek(Qt::Sunday);
+        rrules << weeklyRule;
+
+        QOrganizerRecurrenceRule monthlyRule;
+        monthlyRule.setFrequency(QOrganizerRecurrenceRule::Monthly);
+        monthlyRule.setLimit(1002);
+
+        QList<int> daysOfMonth;
+        daysOfMonth << 1
+                    << 15
+                    << 30;
+        monthlyRule.setDaysOfMonth(daysOfMonth.toSet());
+        rrules << monthlyRule;
+
+        QOrganizerRecurrenceRule yearlyRule;
+        yearlyRule.setFrequency(QOrganizerRecurrenceRule::Yearly);
+        yearlyRule.setLimit(1003);
+        QList<int> daysOfYear;
+        daysOfYear << 1
+                    << 10
+                    << 20
+                    << 50
+                    << 300;
+        yearlyRule.setDaysOfYear(daysOfYear.toSet());
+
+
+        QList<QOrganizerRecurrenceRule::Month> monthsOfYear;
+        monthsOfYear << QOrganizerRecurrenceRule::January
+                     << QOrganizerRecurrenceRule::March
+                     << QOrganizerRecurrenceRule::December;
+        yearlyRule.setMonthsOfYear(monthsOfYear.toSet());
+        rrules << yearlyRule;
+
+        rec.setRecurrenceRules(rrules.toSet());
+
+        // save recurrence
+        event.saveDetail(&rec);
+
+        ECalComponent *comp = e_cal_component_new();
+        e_cal_component_set_new_vtype(comp, E_CAL_COMPONENT_EVENT);
+        QOrganizerEDSEngine::parseRecurrence(event, comp);
+
+        // recurrence dates
+        GSList *periodList = 0;
+        e_cal_component_get_rdate_list(comp, &periodList);
+
+        QCOMPARE(g_slist_length(periodList), (guint)3);
+
+        for(GSList *pIter = periodList; pIter != 0; pIter = pIter->next) {
+            ECalComponentPeriod *period = static_cast<ECalComponentPeriod*>(pIter->data);
+            QDate periodDate = QDateTime::fromTime_t(icaltime_as_timet(period->start)).date();
+
+            QVERIFY(rDates.contains(periodDate));
+        }
+        e_cal_component_free_period_list(periodList);
+
+        // exception dates
+        GSList *exDateList = 0;
+        e_cal_component_get_exdate_list(comp, &exDateList);
+        for(GSList *pIter = exDateList; pIter != 0; pIter = pIter->next) {
+            ECalComponentDateTime *exDate = static_cast<ECalComponentDateTime*>(pIter->data);
+            QDate exDateValue = QDateTime::fromTime_t(icaltime_as_timet(*exDate->value)).date();
+            QVERIFY(rExeptDates.contains(exDateValue));
+        }
+        e_cal_component_free_exdate_list(exDateList);
+
+
+        // rules
+        GSList *recurList = 0;
+        e_cal_component_get_rrule_list(comp, &recurList);
+        QCOMPARE(g_slist_length(recurList), (guint) rrules.count());
+
+        for(GSList *recurListIter = recurList; recurListIter != 0; recurListIter = recurListIter->next) {
+            struct icalrecurrencetype *rule = static_cast<struct icalrecurrencetype*>(recurListIter->data);
+
+            switch(rule->freq)
+            {
+            case ICAL_DAILY_RECURRENCE:
+                QCOMPARE(rule->count, dailyRule.limitCount());
+                break;
+            case ICAL_WEEKLY_RECURRENCE:
+                QCOMPARE(rule->count, weeklyRule.limitCount());
+                for (int d = Qt::Monday; d <= Qt::Sunday; d++) {
+                    if (daysOfWeek.contains(static_cast<Qt::DayOfWeek>(d))) {
+                        QVERIFY(rule->by_day[(d-1)] != ICAL_RECURRENCE_ARRAY_MAX);
+                    } else {
+                        QVERIFY(rule->by_day[d-1] == ICAL_RECURRENCE_ARRAY_MAX);
+                    }
+                }
+                break;
+            case ICAL_MONTHLY_RECURRENCE:
+            {
+                QCOMPARE(rule->count, monthlyRule.limitCount());
+
+                QList<int> ruleDays;
+                for (int d=0; d < ICAL_BY_MONTHDAY_SIZE; d++) {
+                    if (rule->by_month_day[d] != ICAL_RECURRENCE_ARRAY_MAX) {
+                        ruleDays << rule->by_month_day[d];
+                    }
+                }
+                QCOMPARE(ruleDays.count(), daysOfMonth.count());
+                Q_FOREACH(int day, ruleDays) {
+                    QVERIFY(daysOfMonth.contains(day));
+                }
+                break;
+            }
+            case ICAL_YEARLY_RECURRENCE:
+            {
+                QCOMPARE(rule->count, yearlyRule.limitCount());
+                QList<int> ruleDays;
+
+                for (int d=0; d < ICAL_BY_YEARDAY_SIZE; d++) {
+                    if (rule->by_year_day[d] != ICAL_RECURRENCE_ARRAY_MAX) {
+
+                        ruleDays << rule->by_year_day[d];
+                    }
+                }
+                QCOMPARE(ruleDays.count(), daysOfYear.count());
+                Q_FOREACH(int day, ruleDays) {
+                    QVERIFY(daysOfYear.contains(day));
+                }
+
+                QList<int> ruleMonths;
+                for (int d=0; d < ICAL_BY_MONTH_SIZE; d++) {
+                    if (rule->by_month[d] != ICAL_RECURRENCE_ARRAY_MAX) {
+                        ruleMonths << rule->by_month[d];
+                    }
+                }
+                QCOMPARE(ruleMonths.count(), monthsOfYear.count());
+                Q_FOREACH(int month, ruleMonths) {
+                    QVERIFY(monthsOfYear.contains(static_cast<QOrganizerRecurrenceRule::Month>(month)));
+                }
+            }
+            default:
+                break;
+            }
+        }
+
+        // invert
+        QOrganizerEvent event2;
+        QOrganizerEDSEngine::parseRecurrence(comp, &event2);
+
+        QCOMPARE(event2.recurrenceDates(), event.recurrenceDates());
+        QCOMPARE(event2.exceptionDates(), event.exceptionDates());
+
+        QList<QOrganizerRecurrenceRule> rrules2 = event2.recurrenceRules().toList();
+        QCOMPARE(rrules2.count(), rrules.count());
+
+        Q_FOREACH(QOrganizerRecurrenceRule rule2, rrules2) {
+            switch(rule2.frequency()) {
+            case QOrganizerRecurrenceRule::Daily:
+                QCOMPARE(rule2.limitCount(), dailyRule.limitCount());
+                break;
+            case QOrganizerRecurrenceRule::Weekly:
+            {
+                QCOMPARE(rule2.limitCount(), weeklyRule.limitCount());
+                QList<Qt::DayOfWeek> daysOfWeek2 = rule2.daysOfWeek().toList();
+                qSort(daysOfWeek2);
+                QCOMPARE(daysOfWeek2, daysOfWeek);
+                break;
+            }
+            case QOrganizerRecurrenceRule::Monthly:
+            {
+                QCOMPARE(rule2.limitCount(), monthlyRule.limitCount());
+                QList<int> daysOfMonth2 = rule2.daysOfMonth().toList();
+                qSort(daysOfMonth2);
+                QCOMPARE(daysOfMonth2, daysOfMonth);
+                break;
+            }
+            case QOrganizerRecurrenceRule::Yearly:
+            {
+                QCOMPARE(rule2.limitCount(), yearlyRule.limitCount());
+                QList<int> daysOfYear2 = rule2.daysOfYear().toList();
+                qSort(daysOfYear2);
+                QCOMPARE(daysOfYear2, daysOfYear);
+
+                QList<QOrganizerRecurrenceRule::Month> monthsOfYear2 = rule2.monthsOfYear().toList();
+                qSort(monthsOfYear2);
+                QCOMPARE(monthsOfYear2, monthsOfYear);
+                break;
+            }
+            default:
+                QVERIFY(false);
+            }
+        }
+
+        g_object_unref(comp);
     }
 };
 
