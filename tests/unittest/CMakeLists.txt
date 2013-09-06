@@ -41,4 +41,4 @@ endif()
 declare_test(itemid-test)
 declare_test(parseecal-test)
 declare_test(collections-test)
-#declare_test(parseitem-test
+declare_test(event-test)

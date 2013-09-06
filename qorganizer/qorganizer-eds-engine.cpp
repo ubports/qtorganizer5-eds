@@ -1772,6 +1772,8 @@ void QOrganizerEDSEngine::parseReminders(const QOrganizerItem &item, ECalCompone
     QList<QOrganizerItemDetail> reminders = item.details(QOrganizerItemDetail::TypeAudibleReminder);
     reminders += item.details(QOrganizerItemDetail::TypeVisualReminder);
 
+    qDebug() << "Item reminders" << reminders;
+
     Q_FOREACH(const QOrganizerItemDetail &detail, reminders) {
         const QOrganizerItemReminder *reminder = static_cast<const QOrganizerItemReminder*>(&detail);
 
