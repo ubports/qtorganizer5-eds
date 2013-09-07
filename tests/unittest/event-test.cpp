@@ -58,12 +58,18 @@ private Q_SLOTS:
         todo.setDisplayLabel(displayLabelValue);
         todo.setDescription(descriptionValue);
 
-        QOrganizerItemAudibleReminder aReminder;
+        QOrganizerItemVisualReminder vReminder;
+        vReminder.setDataUrl(QUrl("http://www.alarms.com"));
+        vReminder.setMessage("Test visual reminder");
 
-        // Check audible reminder
-        aReminder.setRepetition(10, 30);
+        QOrganizerItemAudibleReminder aReminder;
         aReminder.setSecondsBeforeStart(10);
+        aReminder.setRepetition(10, 20);
+        aReminder.setDataUrl(QUrl("file://home/user/My Musics/play as alarm.wav"));
+
+
         todo.saveDetail(&aReminder);
+        todo.saveDetail(&vReminder);
 
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
@@ -95,11 +101,29 @@ private Q_SLOTS:
                       hint,
                       &error);
         QCOMPARE(items.count(), 1);
+
+        // audible
         QList<QOrganizerItemDetail> reminders = items[0].details(QOrganizerItemDetail::TypeAudibleReminder);
         QCOMPARE(reminders.size(), 1);
 
         QOrganizerItemAudibleReminder aReminder2 = reminders[0];
-        QCOMPARE(aReminder2, aReminder);
+        QCOMPARE(aReminder2.secondsBeforeStart(), aReminder.secondsBeforeStart());
+        QCOMPARE(aReminder2.repetitionCount(), aReminder.repetitionCount());
+        QCOMPARE(aReminder2.repetitionDelay(), aReminder.repetitionDelay());
+        QCOMPARE(aReminder2.dataUrl(), aReminder.dataUrl());
+        //QCOMPARE(aReminder2, aReminder);
+
+        // visual
+        reminders = items[0].details(QOrganizerItemDetail::TypeVisualReminder);
+        QCOMPARE(reminders.size(), 1);
+
+        QOrganizerItemVisualReminder vReminder2 = reminders[0];
+        //vReminder.setRepetition(1, 0);
+        QCOMPARE(vReminder2.secondsBeforeStart(), vReminder.secondsBeforeStart());
+        QCOMPARE(vReminder2.repetitionCount(), vReminder.repetitionCount());
+        QCOMPARE(vReminder2.repetitionDelay(), vReminder.repetitionDelay());
+        QCOMPARE(vReminder2.dataUrl(), vReminder.dataUrl());
+        QCOMPARE(vReminder2.message(), vReminder.message());
     }
 };
 

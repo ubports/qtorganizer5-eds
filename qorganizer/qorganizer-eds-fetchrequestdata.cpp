@@ -64,8 +64,6 @@ void FetchRequestData::appendResults(QList<QOrganizerItem> results)
     Q_FOREACH(QOrganizerItem item, results) {
         if (QOrganizerManagerEngine::testFilter(req->filter(), item)) {
             m_results << item;
-        } else {
-            qDebug() << "Item does not match with filter" << item;
         }
     }
 }

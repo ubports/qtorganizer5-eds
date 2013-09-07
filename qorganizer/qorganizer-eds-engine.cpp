@@ -160,7 +160,6 @@ void QOrganizerEDSEngine::itemsAsyncListed(GObject *source_object,
         delete data;
         return;
     } else {
-        qDebug() << "Query size:" << g_slist_length(events);
         data->appendResults(parseEvents(data->collection(), events));
     }
     itemsAsyncStart(data);
@@ -1285,6 +1284,53 @@ void QOrganizerEDSEngine::parseTags(ECalComponent *comp, QtOrganizer::QOrganizer
     e_cal_component_free_categories_list(categories);
 }
 
+QByteArray QOrganizerEDSEngine::dencodeAttachment(ECalComponentAlarm *alarm)
+{
+    QByteArray attachment;
+
+    icalattach *attach = 0;
+    e_cal_component_alarm_get_attach(alarm, &attach);
+    if (attach) {
+        attachment = QByteArray::fromBase64(icalattach_get_url(attach));
+        icalattach_unref(attach);
+    }
+
+    return attachment;
+}
+
+
+void QOrganizerEDSEngine::parseVisualReminderAttachment(ECalComponentAlarm *alarm, QOrganizerItemReminder *aDetail)
+{
+    QByteArray attach = dencodeAttachment(alarm);
+    if (!attach.isEmpty()) {
+        QUrl url;
+        QString txt;
+
+        QDataStream attachStream(&attach, QIODevice::ReadOnly);
+
+        attachStream >> url;
+        attachStream >> txt;
+
+        aDetail->setValue(QOrganizerItemVisualReminder::FieldDataUrl, QVariant(url));
+        aDetail->setValue(QOrganizerItemVisualReminder::FieldMessage, QVariant(txt));
+    }
+}
+
+
+void QOrganizerEDSEngine::parseAudibleReminderAttachment(ECalComponentAlarm *alarm, QOrganizerItemReminder *aDetail)
+{
+    QByteArray attach = dencodeAttachment(alarm);
+    if (!attach.isEmpty()) {
+        QUrl url;
+
+        QDataStream attachStream(&attach, QIODevice::ReadOnly);
+
+        attachStream >> url;
+
+        aDetail->setValue(QOrganizerItemAudibleReminder::FieldDataUrl, QVariant(url));
+    }
+}
+
 void QOrganizerEDSEngine::parseReminders(ECalComponent *comp, QtOrganizer::QOrganizerItem *item)
 {
     GList *alarms = e_cal_component_get_alarm_uids(comp);
@@ -1302,11 +1348,13 @@ void QOrganizerEDSEngine::parseReminders(ECalComponent *comp, QtOrganizer::QOrga
         {
             case E_CAL_COMPONENT_ALARM_DISPLAY:
                 aDetail = new QOrganizerItemVisualReminder();
+                parseVisualReminderAttachment(alarm, aDetail);
                 break;
             case E_CAL_COMPONENT_ALARM_AUDIO:
             // use audio as fallback
             default:
                 aDetail = new QOrganizerItemAudibleReminder();
+                parseAudibleReminderAttachment(alarm, aDetail);
                 break;
         }
 
@@ -1765,14 +1813,47 @@ void QOrganizerEDSEngine::parseTags(const QOrganizerItem &item, ECalComponent *c
     }
 }
 
+void QOrganizerEDSEngine::encodeAttachment(QByteArray data, ECalComponentAlarm *alarm)
+{
+    gchar *b64Bytes = strdup(data.toBase64());
+    icalattach *attach = icalattach_new_from_url(b64Bytes);
+
+    e_cal_component_alarm_set_attach(alarm, attach);
+
+    icalattach_unref(attach);
+}
+
+void QOrganizerEDSEngine::parseVisualReminderAttachment(const QOrganizerItemDetail &detail, ECalComponentAlarm *alarm)
+{
+    QByteArray attachBytes;
+
+    {
+        QDataStream attachData(&attachBytes, QIODevice::WriteOnly);
+
+        attachData << detail.value(QOrganizerItemVisualReminder::FieldDataUrl).toUrl();
+        attachData << detail.value(QOrganizerItemVisualReminder::FieldMessage).toString();
+    }
+
+    encodeAttachment(attachBytes, alarm);
+}
+
+void QOrganizerEDSEngine::parseAudibleReminderAttachment(const QOrganizerItemDetail &detail, ECalComponentAlarm *alarm)
+{
+    QByteArray attachBytes;
+
+    {
+        QDataStream attachData(&attachBytes, QIODevice::WriteOnly);
+        attachData << detail.value(QOrganizerItemAudibleReminder::FieldDataUrl).toUrl();
+    }
+
+    encodeAttachment(attachBytes, alarm);
+}
 
 void QOrganizerEDSEngine::parseReminders(const QOrganizerItem &item, ECalComponent *comp)
 {
     //reminders
     QList<QOrganizerItemDetail> reminders = item.details(QOrganizerItemDetail::TypeAudibleReminder);
     reminders += item.details(QOrganizerItemDetail::TypeVisualReminder);
-
-    qDebug() << "Item reminders" << reminders;
 
     Q_FOREACH(const QOrganizerItemDetail &detail, reminders) {
         const QOrganizerItemReminder *reminder = static_cast<const QOrganizerItemReminder*>(&detail);
@@ -1782,11 +1863,13 @@ void QOrganizerEDSEngine::parseReminders(const QOrganizerItem &item, ECalCompone
         {
             case QOrganizerItemReminder::TypeVisualReminder:
                 e_cal_component_alarm_set_action(alarm, E_CAL_COMPONENT_ALARM_DISPLAY);
+                parseVisualReminderAttachment(detail, alarm);
                 break;
             case QOrganizerItemReminder::TypeAudibleReminder:
             default:
                 // use audio as fallback
                 e_cal_component_alarm_set_action(alarm, E_CAL_COMPONENT_ALARM_AUDIO);
+                parseAudibleReminderAttachment(detail, alarm);
                 break;
         }
 
@@ -1798,7 +1881,8 @@ void QOrganizerEDSEngine::parseReminders(const QOrganizerItem &item, ECalCompone
         }
 
         ECalComponentAlarmRepeat aRepeat;
-        aRepeat.repetitions = reminder->repetitionCount();
+        // TODO: check if this is really necessary
+        aRepeat.repetitions = reminder->repetitionCount(); //qMax(reminder->repetitionCount(), 1);
         aRepeat.duration = icaldurationtype_from_int(reminder->repetitionDelay());
         e_cal_component_alarm_set_repeat(alarm, aRepeat);
 

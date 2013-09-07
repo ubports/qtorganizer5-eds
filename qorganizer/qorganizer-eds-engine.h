@@ -29,6 +29,7 @@
 #include <QtOrganizer/QOrganizerItemFilter>
 #include <QtOrganizer/QOrganizerItemChangeSet>
 #include <QtOrganizer/QOrganizerCollectionId>
+#include <QtOrganizer/QOrganizerItemReminder>
 
 #include <libecal/libecal.h>
 
@@ -154,6 +155,9 @@ private:
     static void parseComments(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseTags(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseReminders(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void encodeAttachment(QByteArray data, ECalComponentAlarm *alarm);
+    static void parseVisualReminderAttachment(const QtOrganizer::QOrganizerItemDetail &detail, ECalComponentAlarm *alarm);
+    static void parseAudibleReminderAttachment(const QtOrganizer::QOrganizerItemDetail &detail, ECalComponentAlarm *alarm);
     static void parseStartTime(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseEndTime(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseTodoStartTime(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
@@ -173,6 +177,9 @@ private:
     static void parseComments(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseTags(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseReminders(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static QByteArray dencodeAttachment(ECalComponentAlarm *alarm);
+    static void parseAudibleReminderAttachment(ECalComponentAlarm *alarm, QtOrganizer::QOrganizerItemReminder *aDetail);
+    static void parseVisualReminderAttachment(ECalComponentAlarm *alarm, QtOrganizer::QOrganizerItemReminder *aDetail);
     static void parseStartTime(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseEndTime(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseRecurrence(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
