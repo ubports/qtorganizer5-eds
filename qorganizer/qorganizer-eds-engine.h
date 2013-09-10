@@ -29,11 +29,15 @@
 #include <QtOrganizer/QOrganizerItemFilter>
 #include <QtOrganizer/QOrganizerItemChangeSet>
 #include <QtOrganizer/QOrganizerCollectionId>
+#include <QtOrganizer/QOrganizerItemReminder>
 
 #include <libecal/libecal.h>
+
 class FetchRequestData;
 class SaveRequestData;
 class RemoveRequestData;
+class SaveCollectionRequestData;
+class RemoveCollectionRequestData;
 
 class QOrganizerEDSEngine : public QtOrganizer::QOrganizerManagerEngine
 {
@@ -135,36 +139,68 @@ private:
     QList<FetchRequestData*> m_pendingFetchRequest;
 
     void loadCollections();
+    void registerCollection(const QtOrganizer::QOrganizerCollection &collection, QOrganizerEDSCollectionEngineId *edsId);
+    void unregisterCollection(const QtOrganizer::QOrganizerCollectionId &collectionId);
+
+    ESource *findSource(const QtOrganizer::QOrganizerCollectionId &id) const;
+
+    static QtOrganizer::QOrganizerCollection parseSource(ESource *source, const QString &managerUri);
+    static QtOrganizer::QOrganizerCollection parseSource(ESource *source, const QString &managerUri, QOrganizerEDSCollectionEngineId **edsId);
     static QList<QtOrganizer::QOrganizerItem> parseEvents(QOrganizerEDSCollectionEngineId *collection, GSList *events);
-    static GSList *parseItems(QList<QtOrganizer::QOrganizerItem> items);
+    static GSList *parseItems(ECalClient *client, QList<QtOrganizer::QOrganizerItem> items);
 
-    static QDateTime fromIcalTime(struct icaltimetype value);
-    static void parseStartTime(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
-    static void parseEndTime(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
-    static void parseRecurrence(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
-    static void parsePriority(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
-    static void parseLocation(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
-    static void parseDueDate(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
-    static void parseProgress(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
-    static void parseStatus(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
-
-    static QtOrganizer::QOrganizerItem *parseEvent(ECalComponent *comp);
-    static QtOrganizer::QOrganizerItem *parseToDo(ECalComponent *comp);
-    static QtOrganizer::QOrganizerItem *parseJournal(ECalComponent *comp);
-
-
+    // QOrganizerItem -> ECalComponent
+    static void parseSummary(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseDescription(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseComments(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseTags(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseReminders(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void encodeAttachment(QByteArray data, ECalComponentAlarm *alarm);
+    static void parseVisualReminderAttachment(const QtOrganizer::QOrganizerItemDetail &detail, ECalComponentAlarm *alarm);
+    static void parseAudibleReminderAttachment(const QtOrganizer::QOrganizerItemDetail &detail, ECalComponentAlarm *alarm);
     static void parseStartTime(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseEndTime(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseTodoStartTime(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseRecurrence(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseWeekRecurrence(const QtOrganizer::QOrganizerRecurrenceRule &qRule, struct icalrecurrencetype *rule);
+    static void parseMonthRecurrence(const QtOrganizer::QOrganizerRecurrenceRule &qRule, struct icalrecurrencetype *rule);
+    static void parseYearRecurrence(const QtOrganizer::QOrganizerRecurrenceRule &qRule, struct icalrecurrencetype *rule);
     static void parsePriority(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseLocation(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseDueDate(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseProgress(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseStatus(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
 
-    static ECalComponent *parseEventItem(const QtOrganizer::QOrganizerItem &item);
-    static ECalComponent *parseTodoItem(const QtOrganizer::QOrganizerItem &item);
-    static ECalComponent *parseJournalItem(const QtOrganizer::QOrganizerItem &item);
+    // ECalComponent -> QOrganizerItem
+    static void parseSummary(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseDescription(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseComments(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseTags(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseReminders(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static QByteArray dencodeAttachment(ECalComponentAlarm *alarm);
+    static void parseAudibleReminderAttachment(ECalComponentAlarm *alarm, QtOrganizer::QOrganizerItemReminder *aDetail);
+    static void parseVisualReminderAttachment(ECalComponentAlarm *alarm, QtOrganizer::QOrganizerItemReminder *aDetail);
+    static void parseStartTime(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseEndTime(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseRecurrence(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseWeekRecurrence(struct icalrecurrencetype *rule, QtOrganizer::QOrganizerRecurrenceRule *qRule);
+    static void parseMonthRecurrence(struct icalrecurrencetype *rule, QtOrganizer::QOrganizerRecurrenceRule *qRule);
+    static void parseYearRecurrence(struct icalrecurrencetype *rule, QtOrganizer::QOrganizerRecurrenceRule *qRule);
+    static void parsePriority(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseLocation(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseDueDate(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseProgress(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseStatus(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+
+    static QDateTime fromIcalTime(struct icaltimetype value);
+    static QtOrganizer::QOrganizerItem *parseEvent(ECalComponent *comp);
+    static QtOrganizer::QOrganizerItem *parseToDo(ECalComponent *comp);
+    static QtOrganizer::QOrganizerItem *parseJournal(ECalComponent *comp);
+
+    static ECalComponent *createDefaultComponent(ECalClient *client, icalcomponent_kind iKind, ECalComponentVType eType);
+    static ECalComponent *parseEventItem(ECalClient *client, const QtOrganizer::QOrganizerItem &item);
+    static ECalComponent *parseTodoItem(ECalClient *client, const QtOrganizer::QOrganizerItem &item);
+    static ECalComponent *parseJournalItem(ECalClient *client, const QtOrganizer::QOrganizerItem &item);
 
     // glib callback
     void itemsAsync(QtOrganizer::QOrganizerItemFetchRequest *req);
@@ -181,6 +217,13 @@ private:
     static void removeItemsAsyncStart(RemoveRequestData *data);
     static void removeItemsAsyncConnected(GObject *source_object, GAsyncResult *res, RemoveRequestData *data);
     static void removeItemsAsyncRemoved(GObject *source_object, GAsyncResult *res, RemoveRequestData *data);
+
+    void saveCollectionAsync(QtOrganizer::QOrganizerCollectionSaveRequest *req);
+    static void saveCollectionAsyncStart(ESourceRegistry *registry, SaveCollectionRequestData *data);
+    static void saveCollectionAsyncCommited(GObject *source_object, GAsyncResult *res, SaveCollectionRequestData *data);
+
+    void removeCollectionAsync(QtOrganizer::QOrganizerCollectionRemoveRequest *req);
+    static void removeCollectionAsyncStart(GObject *source_object, GAsyncResult *res, RemoveCollectionRequestData *data);
 /*
     QList<QtOrganizer::QOrganizerItem> internalItemOccurrences(const QtOrganizer::QOrganizerItem& parentItem,
                                                                const QDateTime& periodStart,
@@ -200,7 +243,9 @@ private:
                                                      bool forExport) const;
     QtOrganizer::QOrganizerItem item(const QtOrganizer::QOrganizerItemId& organizeritemId) const;
     */
-        friend class FetchRequestData;
+    friend class FetchRequestData;
+    friend class SaveCollectionRequestData;
+    friend class RemoveCollectionRequestData;
 };
 
 #endif

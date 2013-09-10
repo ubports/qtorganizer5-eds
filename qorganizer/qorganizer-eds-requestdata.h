@@ -35,7 +35,7 @@ public:
     GCancellable* cancellable() const;
     bool isLive() const;
     void setClient(EClient *client);
-    EClient *client() const;
+    ECalClient *client() const;
     virtual void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError) = 0;
     QOrganizerEDSEngine *parent() const;
     virtual void cancel();

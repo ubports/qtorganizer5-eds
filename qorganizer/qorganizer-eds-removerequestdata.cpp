@@ -56,7 +56,6 @@ GSList *RemoveRequestData::takeItemsIds(QOrganizerCollectionId collectionId)
             ECalComponentId *id = g_new0(ECalComponentId, 1);
 
             id->uid = g_strdup(QOrganizerEDSEngineId::toComponentId(item.id()).toUtf8().data());
-            qDebug() << "Remove item:" << id->uid;
             ids = g_slist_append(ids, id);
 
             m_pendingItems.removeAll(item);
@@ -102,9 +101,7 @@ QOrganizerCollectionId RemoveRequestData::begin()
         QSet<QtOrganizer::QOrganizerCollectionId>::const_iterator i = m_pendingCollections.constBegin();
         m_pendingCollections.remove(*i);
         m_currentCollectionId = *i;
-        qDebug() << "Will get item for sourcE:" << m_currentCollectionId.isNull() << m_currentCollectionId;
         m_currentCompIds = takeItemsIds(m_currentCollectionId);
-        qDebug() << "DONE Will get item for sourcE:" << m_currentCollectionId.isNull() << m_currentCollectionId;
         return m_currentCollectionId;
     }
     return QOrganizerCollectionId();

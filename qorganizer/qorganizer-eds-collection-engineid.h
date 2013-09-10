@@ -22,6 +22,7 @@
 #include <QtOrganizer/QOrganizerCollectionEngineId>
 
 #include <libedataserver/libedataserver.h>
+#include <libecal/libecal.h>
 
 class QOrganizerEDSCollectionEngineId : public QtOrganizer::QOrganizerCollectionEngineId
 {
@@ -39,6 +40,7 @@ public:
 
     QString toString() const;
 
+
     uint hash() const;
 
 #ifndef QT_NO_DEBUG_STREAM
@@ -49,6 +51,7 @@ private:
     QString m_collectionId;
     QString m_managerUri;
     ESource *m_esource;
+    ECalClientSourceType m_sourceType;
 
     QOrganizerEDSCollectionEngineId(ESource *source, const QString &managerUri);
 

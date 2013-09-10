@@ -18,12 +18,24 @@
 
 #include "qorganizer-eds-collection-engineid.h"
 
+
+
 QOrganizerEDSCollectionEngineId::QOrganizerEDSCollectionEngineId(ESource *source,
                                                                  const QString &managerUri)
     : m_managerUri(managerUri), m_esource(source)
 {
     g_object_ref(m_esource);
     m_collectionId = QString::fromUtf8(e_source_get_uid(m_esource));
+    if (e_source_has_extension(m_esource, E_SOURCE_EXTENSION_CALENDAR)) {
+        m_sourceType = E_CAL_CLIENT_SOURCE_TYPE_EVENTS;
+    } else if (e_source_has_extension(m_esource, E_SOURCE_EXTENSION_TASK_LIST)) {
+        m_sourceType = E_CAL_CLIENT_SOURCE_TYPE_TASKS;
+    } else if (e_source_has_extension(m_esource, E_SOURCE_EXTENSION_MEMO_LIST)) {
+        m_sourceType = E_CAL_CLIENT_SOURCE_TYPE_MEMOS;
+    } else {
+        qWarning() << "Source extension not supported";
+        Q_ASSERT(false);
+    }
 }
 
 QOrganizerEDSCollectionEngineId::QOrganizerEDSCollectionEngineId()

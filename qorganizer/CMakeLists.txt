@@ -7,8 +7,10 @@ set(QORGANIZER_BACKEND_SRCS
     qorganizer-eds-fetchrequestdata.cpp
     qorganizer-eds-engine.cpp
     qorganizer-eds-engineid.cpp
+    qorganizer-eds-removecollectionrequestdata.cpp
     qorganizer-eds-removerequestdata.cpp
     qorganizer-eds-requestdata.cpp
+    qorganizer-eds-savecollectionrequestdata.cpp
     qorganizer-eds-saverequestdata.cpp
 )
 
@@ -17,8 +19,10 @@ set(QORGANIZER_BACKEND_HDRS
     qorganizer-eds-fetchrequestdata.h
     qorganizer-eds-engine.h
     qorganizer-eds-engineid.h
+    qorganizer-eds-removecollectionrequestdata.h
     qorganizer-eds-removerequestdata.h
     qorganizer-eds-requestdata.h
+    qorganizer-eds-savecollectionrequestdata.h
     qorganizer-eds-saverequestdata.h
 )
 
@@ -52,7 +56,6 @@ target_link_libraries(${QORGANIZER_BACKEND}
     ${ECAL_LIBRARIES}
     ${EDATASERVER_LIBRARIES}
 )
-
 
 qt5_use_modules(${QORGANIZER_BACKEND}-lib Core Organizer)
 qt5_use_modules(${QORGANIZER_BACKEND} Core Organizer)
