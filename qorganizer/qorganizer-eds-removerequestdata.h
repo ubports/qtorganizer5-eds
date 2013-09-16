@@ -47,7 +47,6 @@ private:
     bool m_sessionStaterd;
     GSList *m_currentCompIds;
     QList<QtOrganizer::QOrganizerItemId> m_currentIds;
-    QList<QtOrganizer::QOrganizerItemId> m_removedIds;
     QtOrganizer::QOrganizerCollectionId m_currentCollectionId;
 
     void clear();
