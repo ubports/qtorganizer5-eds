@@ -38,14 +38,12 @@ SaveRequestData::~SaveRequestData()
 
 void SaveRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
 {
-
     QOrganizerManagerEngine::updateItemSaveRequest(request<QOrganizerItemSaveRequest>(),
                                                    m_result,
                                                    error,
                                                    QMap<int, QOrganizerManager::Error>(),
                                                    QOrganizerAbstractRequest::FinishedState);
     Q_FOREACH(QOrganizerItem item, m_result) {
-        qDebug() << "Item Added" << item.id();
         m_changeSet.insertAddedItem(item.id());
     }
     m_changeSet.emitSignals(m_parent);

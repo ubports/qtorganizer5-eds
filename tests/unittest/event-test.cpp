@@ -37,8 +37,25 @@ private:
     static const QString collectionTypePropertyName;
     static const QString taskListTypeName;
 
+    QDateTime m_itemRemovedTime;
+    QDateTime m_requestFinishedTime;
+
 private Q_SLOTS:
-    void testCreateEventWithReminder()
+    //helper
+    void itemRemoved()
+    {
+        m_itemRemovedTime = QDateTime::currentDateTime();
+    }
+
+    void requestFinished(QOrganizerAbstractRequest::State state)
+    {
+        if (state == QOrganizerAbstractRequest::FinishedState) {
+            m_requestFinishedTime  = QDateTime::currentDateTime();
+        }
+    }
+
+    // test functions
+    void xtestCreateEventWithReminder()
     {
         static QString displayLabelValue = QStringLiteral("Todo test");
         static QString descriptionValue = QStringLiteral("Todo description");
@@ -124,6 +141,57 @@ private Q_SLOTS:
         QCOMPARE(vReminder2.repetitionDelay(), vReminder.repetitionDelay());
         QCOMPARE(vReminder2.dataUrl(), vReminder.dataUrl());
         QCOMPARE(vReminder2.message(), vReminder.message());
+    }
+
+    void testRemoveEvent()
+    {
+        static QString displayLabelValue = QStringLiteral("event to be removed");
+        static QString descriptionValue = QStringLiteral("removable event");
+
+        QOrganizerEDSEngine *engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
+
+        QOrganizerCollection collection;
+        QtOrganizer::QOrganizerManager::Error error;
+        collection.setMetaData(QOrganizerCollection::KeyName, defaultTaskCollectionName + "_TODELETE");
+        collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
+        QVERIFY(engine->saveCollection(&collection, &error));
+
+        QOrganizerTodo todo;
+        todo.setCollectionId(collection.id());
+        todo.setStartDateTime(QDateTime(QDate(2013, 9, 3), QTime(0,30,0)));
+        todo.setDisplayLabel(displayLabelValue);
+        todo.setDescription(descriptionValue);
+
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        items << todo;
+        bool saveResult = engine->saveItems(&items,
+                                            QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                            &errorMap,
+                                            &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QVERIFY(errorMap.isEmpty());
+        QVERIFY(!items[0].id().isNull());
+
+        QTest::qSleep(1000);
+
+        m_itemRemovedTime = QDateTime();
+        m_requestFinishedTime = QDateTime();
+
+        QOrganizerItemRemoveRequest req;
+        connect(&req, SIGNAL(stateChanged(QOrganizerAbstractRequest::State)),
+                this, SLOT(requestFinished(QOrganizerAbstractRequest::State)));
+        connect(engine, SIGNAL(itemsRemoved(QList<QOrganizerItemId>)),
+                this, SLOT(itemRemoved()));
+        req.setItem(items[0]);
+        engine->startRequest(&req);
+        engine->waitForRequestFinished(&req, -1);
+
+        // check if the signal item removed was fired after the request finish
+        QVERIFY(!m_itemRemovedTime.isValid());
+        QVERIFY(m_requestFinishedTime.isValid());
+        QVERIFY(m_requestFinishedTime > m_itemRemovedTime);
     }
 };
 

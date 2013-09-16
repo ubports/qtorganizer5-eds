@@ -72,6 +72,7 @@ void RemoveRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
                                                      QMap<int, QOrganizerManager::Error>(),
                                                      QOrganizerAbstractRequest::FinishedState);
 
+    m_changeSet.emitSignals(m_parent);
 }
 
 GSList *RemoveRequestData::compIds() const
@@ -88,7 +89,6 @@ void RemoveRequestData::commit()
                                                      QOrganizerAbstractRequest::ActiveState);
 
     m_changeSet.insertRemovedItems(m_currentIds);
-    m_changeSet.emitSignals(m_parent);
     m_currentCollectionId = QOrganizerCollectionId();
     clear();
 }
