@@ -1,3 +1,13 @@
+qtorganizer5-eds (0.1.1+13.10.20130917.1-0ubuntu1) saucy; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * Avoid emit signal item removed before query finish.
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 13
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 17 Sep 2013 22:03:26 +0000
+
 qtorganizer5-eds (0.1.1+13.10.20130819.2-0ubuntu1) saucy; urgency=low
 
   [ Timo Jyrinki ]
