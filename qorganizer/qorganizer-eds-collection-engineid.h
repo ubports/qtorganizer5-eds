@@ -49,13 +49,13 @@ public:
 
 private:
     QString m_collectionId;
-    QString m_managerUri;
     ESource *m_esource;
     ECalClientSourceType m_sourceType;
 
-    QOrganizerEDSCollectionEngineId(ESource *source, const QString &managerUri);
+    QOrganizerEDSCollectionEngineId(ESource *source);
 
     friend class QOrganizerEDSEngine;
+    friend class ViewWatcher;
 };
 
 

@@ -25,6 +25,7 @@
 #include "qorganizer-eds-removerequestdata.h"
 #include "qorganizer-eds-savecollectionrequestdata.h"
 #include "qorganizer-eds-removecollectionrequestdata.h"
+#include "qorganizer-eds-viewwatcher.h"
 
 #include <QtCore/qdebug.h>
 #include <QtCore/QPointer>
@@ -64,6 +65,7 @@ QOrganizerEDSEngine* QOrganizerEDSEngine::createEDSEngine(const QMap<QString, QS
     return new QOrganizerEDSEngine();
 }
 
+
 QOrganizerEDSEngine::QOrganizerEDSEngine()
 {
     qDebug() << Q_FUNC_INFO;
@@ -79,9 +81,8 @@ QOrganizerEDSEngine::~QOrganizerEDSEngine()
 
 QString QOrganizerEDSEngine::managerName() const
 {
-    return QStringLiteral("eds");
+    return QOrganizerEDSEngineId::managerNameStatic();
 }
-
 
 /*! \reimp
 */
@@ -160,7 +161,7 @@ void QOrganizerEDSEngine::itemsAsyncListed(GObject *source_object,
         delete data;
         return;
     } else {
-        data->appendResults(parseEvents(data->collection(), events));
+        data->appendResults(parseEvents(data->collection(), events, false));
     }
     itemsAsyncStart(data);
 }
@@ -385,8 +386,7 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
 
             item.setCollectionId(data->collectionId());
             QOrganizerEDSEngineId *eid = new QOrganizerEDSEngineId(data->collectionId().toString(),
-                                                                   QString::fromUtf8(uid),
-                                                                   data->parent()->managerUri());
+                                                                   QString::fromUtf8(uid));
             item.setId(QOrganizerItemId(eid));
             item.setGuid(QString::fromUtf8(uid));
         }
@@ -845,14 +845,25 @@ QList<QOrganizerItemType::ItemType> QOrganizerEDSEngine::supportedItemTypes() co
                          << QOrganizerItemType::TypeTodoOccurrence;
 }
 
-void QOrganizerEDSEngine::registerCollection(const QOrganizerCollection &collection, QOrganizerEDSCollectionEngineId *edsId)
+void QOrganizerEDSEngine::registerCollection(const QOrganizerCollection &collection,
+                                             QOrganizerEDSCollectionEngineId *edsId)
 {
     m_collections << collection;
     m_collectionsMap.insert(collection.id().toString(), edsId);
+    ViewWatcher *viewW = m_viewWatchers.take(collection.id());
+    if (viewW) {
+        delete m_viewWatchers.take(collection.id());
+    }
+    m_viewWatchers.insert(collection.id(), new ViewWatcher(this, collection.id(), edsId));
 }
 
 void QOrganizerEDSEngine::unregisterCollection(const QOrganizerCollectionId &collectionId)
 {
+    ViewWatcher *viewW = m_viewWatchers.take(collectionId);
+    if (viewW) {
+        delete viewW;
+    }
+
     Q_FOREACH(QOrganizerCollection col, m_collections) {
         if (col.id() == collectionId) {
             m_collections.removeAll(col);
@@ -875,33 +886,42 @@ void QOrganizerEDSEngine::loadCollections()
         return;
     }
 
-    ESource *defaultSource = e_source_registry_ref_default_address_book(registry);
+    // We use calendar as default source, if you are trying to use other source type
+    // you need to set the item source id manually
+    ESource *defaultCalendarSource = e_source_registry_ref_default_calendar(registry);
+
     GList *sources = e_source_registry_list_sources(registry, 0);
     for(int i=0, iMax=g_list_length(sources); i < iMax; i++) {
         ESource *source = E_SOURCE(g_list_nth_data(sources, i));
 
-        if (e_source_has_extension(source, E_SOURCE_EXTENSION_CALENDAR) ||
-            e_source_has_extension(source, E_SOURCE_EXTENSION_TASK_LIST) ||
-            e_source_has_extension(source, E_SOURCE_EXTENSION_MEMO_LIST))
+        bool isCalendar = e_source_has_extension(source, E_SOURCE_EXTENSION_CALENDAR);
+        bool isTaskList = e_source_has_extension(source, E_SOURCE_EXTENSION_TASK_LIST);
+        bool isMemoList = e_source_has_extension(source, E_SOURCE_EXTENSION_MEMO_LIST);
+        bool isAlarms = e_source_has_extension(source, E_SOURCE_EXTENSION_ALARMS);
+
+        if (e_source_get_enabled(source) &&
+            (isCalendar || isTaskList || isMemoList || isAlarms))
         {
             //TODO get metadata (color, etc..)
             QOrganizerEDSCollectionEngineId *edsId = 0;
-            QOrganizerCollection collection = parseSource(source, managerUri(), &edsId);
+            QOrganizerCollection collection = parseSource(source, &edsId);
 
             registerCollection(collection, edsId);
 
-            if (e_source_compare_by_display_name(source, defaultSource) == 0) {
-                qDebug() << "Default Source" << e_source_get_display_name(source);
+            if (e_source_equal(defaultCalendarSource, source)) {
                 m_defaultCollection = collection;
             }
         }
     }
 
     g_list_free_full (sources, g_object_unref);
-    g_object_unref(registry);
-    if (defaultSource) {
-        g_object_unref(defaultSource);
+
+    if (defaultCalendarSource) {
+        g_object_unref(defaultCalendarSource);
     }
+
+    g_object_unref(registry);
+
     qDebug() << m_collections.count() << "Collection loaded";
 }
 
@@ -916,25 +936,29 @@ ESource *QOrganizerEDSEngine::findSource(const QtOrganizer::QOrganizerCollection
     }
 }
 
+void QOrganizerEDSEngine::updateCollection(QOrganizerCollection *collection,
+                                           ESource *source)
+{
+    collection->setMetaData(QOrganizerCollection::KeyName,
+                            QString::fromUtf8(e_source_get_display_name(source)));
+}
+
 QOrganizerCollection QOrganizerEDSEngine::parseSource(ESource *source,
-                                                      const QString &managerUri,
                                                       QOrganizerEDSCollectionEngineId **edsId)
 {
-    *edsId = new QOrganizerEDSCollectionEngineId(source, managerUri);
+    *edsId = new QOrganizerEDSCollectionEngineId(source);
     QOrganizerCollectionId id(*edsId);
     QOrganizerCollection collection;
 
     collection.setId(id);
-    collection.setMetaData(QOrganizerCollection::KeyName,
-                           QString::fromUtf8(e_source_get_display_name(source)));
-
+    updateCollection(&collection, source);
     return collection;
 }
 
-QOrganizerCollection QOrganizerEDSEngine::parseSource(ESource *source, const QString &managerUri)
+QOrganizerCollection QOrganizerEDSEngine::parseSource(ESource *source)
 {
     QOrganizerEDSCollectionEngineId *edsId = 0;
-    return parseSource(source, managerUri, &edsId);
+    return parseSource(source, &edsId);
 }
 
 QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value)
@@ -1373,13 +1397,20 @@ void QOrganizerEDSEngine::parseReminders(ECalComponent *comp, QtOrganizer::QOrga
     }
 }
 
-QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(QOrganizerEDSCollectionEngineId *collection, GSList *events)
+QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(QOrganizerEDSCollectionEngineId *collection,
+                                                       GSList *events,
+                                                       bool isIcalEvents)
 {
     QList<QOrganizerItem> items;
-    for(int i=0, iMax=g_slist_length(events); i < iMax; i++) {
+    for (GSList *l = events; l; l = l->next) {
         QOrganizerItem *item;
-        ECalComponent *comp = E_CAL_COMPONENT(g_slist_nth_data(events, i));
-
+        ECalComponent *comp;
+        if (isIcalEvents) {
+            icalcomponent *clone = icalcomponent_new_clone(static_cast<icalcomponent*>(l->data));
+            comp = e_cal_component_new_from_icalcomponent(clone);
+        } else {
+            comp = E_CAL_COMPONENT(l->data);
+        }
 
         //type
         ECalComponentVType vType = e_cal_component_get_vtype(comp);
@@ -1408,8 +1439,7 @@ QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(QOrganizerEDSCollectionEn
         QOrganizerCollectionId cId = QOrganizerCollectionId(collection);
 
         QOrganizerEDSEngineId *eid = new QOrganizerEDSEngineId(collection->m_collectionId,
-                                                               QString::fromUtf8(uid),
-                                                               collection->managerUri());
+                                                               QString::fromUtf8(uid));
         item->setId(QOrganizerItemId(eid));
         item->setCollectionId(cId);
         parseDescription(comp, item);
@@ -1436,6 +1466,10 @@ QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(QOrganizerEDSCollectionEn
 
         items << *item;
         delete item;
+
+        if (isIcalEvents) {
+            g_object_unref(comp);
+        }
     }
     return items;
 }

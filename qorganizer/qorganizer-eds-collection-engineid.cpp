@@ -17,12 +17,10 @@
  */
 
 #include "qorganizer-eds-collection-engineid.h"
+#include "qorganizer-eds-engineid.h"
 
-
-
-QOrganizerEDSCollectionEngineId::QOrganizerEDSCollectionEngineId(ESource *source,
-                                                                 const QString &managerUri)
-    : m_managerUri(managerUri), m_esource(source)
+QOrganizerEDSCollectionEngineId::QOrganizerEDSCollectionEngineId(ESource *source)
+    : m_esource(source)
 {
     g_object_ref(m_esource);
     m_collectionId = QString::fromUtf8(e_source_get_uid(m_esource));
@@ -39,26 +37,36 @@ QOrganizerEDSCollectionEngineId::QOrganizerEDSCollectionEngineId(ESource *source
 }
 
 QOrganizerEDSCollectionEngineId::QOrganizerEDSCollectionEngineId()
-    : QOrganizerCollectionEngineId()
+    : QOrganizerCollectionEngineId(),
+      m_esource(0)
 {
 }
 
 QOrganizerEDSCollectionEngineId::QOrganizerEDSCollectionEngineId(const QOrganizerEDSCollectionEngineId& other)
-    : QOrganizerCollectionEngineId(), m_collectionId(other.m_collectionId)
+    : QOrganizerCollectionEngineId(),
+      m_collectionId(other.m_collectionId),
+      m_esource(other.m_esource),
+      m_sourceType(other.m_sourceType)
 {
+    if (m_esource) {
+        g_object_ref(m_esource);
+    }
 }
 
 QOrganizerEDSCollectionEngineId::QOrganizerEDSCollectionEngineId(const QString& idString)
-    : QOrganizerCollectionEngineId()
+    : QOrganizerCollectionEngineId(),
+      m_esource(0)
 {
-    int colonIndex = idString.indexOf(QStringLiteral(":"));
-    m_managerUri = idString.mid(0, colonIndex).toUInt();
-    m_collectionId = idString.mid(colonIndex+1);
+    // separate engine id part, if full id given
+    m_collectionId = idString.contains(":") ? idString.mid(idString.lastIndexOf(":")+1) : idString;
 }
 
 QOrganizerEDSCollectionEngineId::~QOrganizerEDSCollectionEngineId()
 {
-    g_object_unref(m_esource);
+    if (m_esource) {
+        g_object_unref(m_esource);
+        m_esource = 0;
+    }
 }
 
 bool QOrganizerEDSCollectionEngineId::isEqualTo(const QOrganizerCollectionEngineId* other) const
@@ -74,8 +82,6 @@ bool QOrganizerEDSCollectionEngineId::isLessThan(const QOrganizerCollectionEngin
 {
     // order by collection, then by item in collection.
     const QOrganizerEDSCollectionEngineId* otherPtr = static_cast<const QOrganizerEDSCollectionEngineId*>(other);
-    if (m_managerUri < otherPtr->m_managerUri)
-        return true;
     if (m_collectionId < otherPtr->m_collectionId)
         return true;
     return false;
@@ -83,17 +89,17 @@ bool QOrganizerEDSCollectionEngineId::isLessThan(const QOrganizerCollectionEngin
 
 QString QOrganizerEDSCollectionEngineId::managerUri() const
 {
-    return m_managerUri;
+    return QOrganizerEDSEngineId::managerUriStatic();
 }
 
 QString QOrganizerEDSCollectionEngineId::toString() const
 {
-    return (m_managerUri + QLatin1Char(':') + m_collectionId);
+    return m_collectionId;
 }
 
 QOrganizerEDSCollectionEngineId* QOrganizerEDSCollectionEngineId::clone() const
 {
-    return new QOrganizerEDSCollectionEngineId(m_esource, m_managerUri);
+    return new QOrganizerEDSCollectionEngineId(m_esource);
 }
 
 uint QOrganizerEDSCollectionEngineId::hash() const
@@ -104,7 +110,7 @@ uint QOrganizerEDSCollectionEngineId::hash() const
 #ifndef QT_NO_DEBUG_STREAM
 QDebug& QOrganizerEDSCollectionEngineId::debugStreamOut(QDebug& dbg) const
 {
-    dbg.nospace() << "QOrganizerEDSCollectionEngineId(" << m_managerUri << "," << m_collectionId << ")";
+    dbg.nospace() << "QOrganizerEDSCollectionEngineId(" << managerUri() << "," << m_collectionId << ")";
     return dbg.maybeSpace();
 }
 

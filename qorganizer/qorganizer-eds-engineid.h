@@ -29,9 +29,8 @@ class QOrganizerEDSEngineId : public QtOrganizer::QOrganizerItemEngineId
 {
 public:
     QOrganizerEDSEngineId();
-    QOrganizerEDSEngineId(const QString &collectionId,
-                          const QString &id,
-                          const QString& managerUri);
+    QOrganizerEDSEngineId(const QString& collectionId,
+                          const QString& id);
     ~QOrganizerEDSEngineId();
     QOrganizerEDSEngineId(const QOrganizerEDSEngineId& other);
     QOrganizerEDSEngineId(const QString& idString);
@@ -49,11 +48,12 @@ public:
     QDebug& debugStreamOut(QDebug& dbg) const;
 #endif
 
+    static QString managerUriStatic();
+    static QString managerNameStatic();
     static QString toComponentId(const QtOrganizer::QOrganizerItemId &itemId);
     static QString toComponentId(const QString &itemId);
 
 private:
-    QString m_managerUri;
     QString m_collectionId;
     QString m_itemId;
     friend class QOrganizerEDSEngine;

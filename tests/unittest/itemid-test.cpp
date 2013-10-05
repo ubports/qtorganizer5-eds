@@ -24,7 +24,7 @@
 #include <QtOrganizer>
 
 #include "qorganizer-eds-engineid.h"
-
+#include "qorganizer-eds-collection-engineid.h"
 
 using namespace QtOrganizer;
 
@@ -35,8 +35,34 @@ class ItemIdTest : public QObject
 private Q_SLOTS:
     void testRetriveItemId()
     {
-        QString id("qtorganizer:eds::system-calendar&#58;20130814T212003Z-13580-1000-1995-22@ubuntu");
-        QCOMPARE(QOrganizerEDSEngineId::toComponentId(id), QStringLiteral("20130814T212003Z-13580-1000-1995-22@ubuntu"));
+        QString id("qtorganizer:eds::system-calendar/20130814T212003Z-13580-1000-1995-22@ubuntu");
+        QCOMPARE(QOrganizerEDSEngineId::toComponentId(id),
+                 QStringLiteral("20130814T212003Z-13580-1000-1995-22@ubuntu"));
+    }
+
+    void testCreateFromString()
+    {
+        QOrganizerEDSEngineId id("system-calendar", "20130814T212003Z-13580-1000-1995-22@ubuntu");
+        QCOMPARE(id.toString(),
+                 QStringLiteral("system-calendar/20130814T212003Z-13580-1000-1995-22@ubuntu"));
+    }
+
+    void testCollectionIdFromString()
+    {
+        QOrganizerEDSCollectionEngineId id(QStringLiteral("qtorganizer:eds::system-calendar/20130814T212003Z-13580-1000-1995-22@ubuntu"));
+        QOrganizerEDSCollectionEngineId id2(QStringLiteral("eds::system-calendar/20130814T212003Z-13580-1000-1995-22@ubuntu"));
+        QOrganizerEDSCollectionEngineId id3(QStringLiteral("system-calendar/20130814T212003Z-13580-1000-1995-22@ubuntu"));
+        QVERIFY(id.isEqualTo(&id2));
+        QVERIFY(id2.isEqualTo(&id3));
+    }
+
+    void testCreateOrganizerId()
+    {
+        QOrganizerEDSEngineId id("system-calendar", "20130814T212003Z-13580-1000-1995-22@ubuntu");
+        QOrganizerItemId id2(new QOrganizerEDSEngineId(id));
+        QCOMPARE(id2.managerUri(), QStringLiteral("qtorganizer:eds:"));
+        QString targetId = QString("qtorganizer:eds::") + id.toString();
+        QCOMPARE(id2.toString(), targetId);
     }
 };
 

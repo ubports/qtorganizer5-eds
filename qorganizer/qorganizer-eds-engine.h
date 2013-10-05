@@ -38,6 +38,7 @@ class SaveRequestData;
 class RemoveRequestData;
 class SaveCollectionRequestData;
 class RemoveCollectionRequestData;
+class ViewWatcher;
 
 class QOrganizerEDSEngine : public QtOrganizer::QOrganizerManagerEngine
 {
@@ -137,6 +138,7 @@ private:
 
     QtOrganizer::QOrganizerCollection m_defaultCollection;
     QList<FetchRequestData*> m_pendingFetchRequest;
+    QMap<QtOrganizer::QOrganizerCollectionId, ViewWatcher*> m_viewWatchers;
 
     void loadCollections();
     void registerCollection(const QtOrganizer::QOrganizerCollection &collection, QOrganizerEDSCollectionEngineId *edsId);
@@ -144,9 +146,10 @@ private:
 
     ESource *findSource(const QtOrganizer::QOrganizerCollectionId &id) const;
 
-    static QtOrganizer::QOrganizerCollection parseSource(ESource *source, const QString &managerUri);
-    static QtOrganizer::QOrganizerCollection parseSource(ESource *source, const QString &managerUri, QOrganizerEDSCollectionEngineId **edsId);
-    static QList<QtOrganizer::QOrganizerItem> parseEvents(QOrganizerEDSCollectionEngineId *collection, GSList *events);
+    static void updateCollection(QtOrganizer::QOrganizerCollection *collection, ESource *source);
+    static QtOrganizer::QOrganizerCollection parseSource(ESource *source);
+    static QtOrganizer::QOrganizerCollection parseSource(ESource *source, QOrganizerEDSCollectionEngineId **edsId);
+    static QList<QtOrganizer::QOrganizerItem> parseEvents(QOrganizerEDSCollectionEngineId *collection, GSList *events, bool isIcalEvents);
     static GSList *parseItems(ECalClient *client, QList<QtOrganizer::QOrganizerItem> items);
 
     // QOrganizerItem -> ECalComponent
@@ -246,6 +249,7 @@ private:
     friend class FetchRequestData;
     friend class SaveCollectionRequestData;
     friend class RemoveCollectionRequestData;
+    friend class ViewWatcher;
 };
 
 #endif
