@@ -90,7 +90,7 @@ void ViewWatcher::viewReady(GObject *sourceObject, GAsyncResult *res, ViewWatche
     ECalClientView *view = 0;
     e_cal_client_get_view_finish(self->m_eClient, res, &view, &gError);
     if (gError) {
-        qWarning() << "Fail to open viewr ("
+        qWarning() << "Fail to open view ("
                    << e_source_get_display_name(self->m_edsId->m_esource) << "):"
                    << gError->message;
         g_error_free(gError);

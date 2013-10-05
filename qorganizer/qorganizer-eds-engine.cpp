@@ -75,8 +75,12 @@ QOrganizerEDSEngine::QOrganizerEDSEngine()
 QOrganizerEDSEngine::~QOrganizerEDSEngine()
 {
     qDebug() << Q_FUNC_INFO;
-    m_collections.clear();
-    m_collectionsMap.clear();
+    Q_FOREACH(QOrganizerCollection col, m_collections) {
+        unregisterCollection(col.id());
+    }
+    Q_ASSERT(m_collections.count() == 0);
+    Q_ASSERT(m_collectionsMap.count() == 0);
+    Q_ASSERT(m_viewWatchers.count() == 0);
 }
 
 QString QOrganizerEDSEngine::managerName() const
