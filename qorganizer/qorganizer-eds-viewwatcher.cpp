@@ -35,7 +35,7 @@ ViewWatcher::ViewWatcher(QOrganizerEDSEngine *engine,
       m_edsId(edsId),
       m_eClient(0),
       m_eView(0),
-      m_collectionId(collectionId)
+      m_eventLoop(0)
 {
     if (m_dateFilter.isEmpty()) {
         QDateTime startDate;
@@ -74,6 +74,9 @@ void ViewWatcher::clientConnected(GObject *sourceObject, GAsyncResult *res, View
                    << gError->message;
         g_error_free(gError);
         gError = 0;
+        if (self->m_eventLoop) {
+            self->m_eventLoop->quit();
+        }
     } else {
         e_cal_client_get_view(self->m_eClient,
                               self->m_dateFilter.toUtf8().data(),
@@ -112,7 +115,6 @@ void ViewWatcher::viewReady(GObject *sourceObject, GAsyncResult *res, ViewWatche
                          "objects-modified",
                          (GCallback) ViewWatcher::onObjectsModified,
                          self);
-
         e_cal_client_view_set_flags(view, E_CAL_CLIENT_VIEW_FLAGS_NONE, NULL);
         e_cal_client_view_start(view, &gError);
         if (gError) {
@@ -121,11 +123,18 @@ void ViewWatcher::viewReady(GObject *sourceObject, GAsyncResult *res, ViewWatche
                        << gError->message;
             g_error_free(gError);
             gError = 0;
+            if (self->m_eventLoop) {
+                self->m_eventLoop->quit();
+            }
         } else {
-            qWarning() << "Listening for changes on ("
-                       << e_source_get_display_name(self->m_edsId->m_esource) << ")";
+            qDebug() << "Listening for changes on ("
+                     << e_source_get_display_name(self->m_edsId->m_esource) << ")";
         }
         g_clear_object(&self->m_cancellable);
+    }
+
+    if (self->m_eventLoop) {
+        self->m_eventLoop->quit();
     }
 }
 
@@ -133,6 +142,7 @@ void ViewWatcher::clear()
 {
     if (m_cancellable) {
         g_cancellable_cancel(m_cancellable);
+        wait();
         g_clear_object(&m_cancellable);
     }
 
@@ -142,6 +152,16 @@ void ViewWatcher::clear()
 
     if (m_eClient) {
         g_clear_object(&m_eClient);
+    }
+}
+
+void ViewWatcher::wait()
+{
+    if (m_cancellable) {
+        QEventLoop eventLoop;
+        m_eventLoop = &eventLoop;
+        eventLoop.exec();
+        m_eventLoop = 0;
     }
 }
 

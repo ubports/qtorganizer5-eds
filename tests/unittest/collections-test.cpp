@@ -36,31 +36,42 @@ private:
     static const QString defaultTaskCollectionName;
     static const QString collectionTypePropertyName;
     static const QString taskListTypeName;
+    QOrganizerEDSEngine *m_engine;
+
 private Q_SLOTS:
+    void init()
+    {
+        m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
+    }
+
+    void cleanup()
+    {
+        delete m_engine;
+        m_engine = 0;
+    }
+
     void testCreateCollection()
     {
-        QOrganizerEDSEngine *engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
-
         QOrganizerCollection collection;
         QtOrganizer::QOrganizerManager::Error error;
         collection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName);
 
-        QVERIFY(engine->saveCollection(&collection, &error));
+        QVERIFY(m_engine->saveCollection(&collection, &error));
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(!collection.id().isNull());
     }
 
     void testCreateTaskList()
     {
-        QOrganizerEDSEngine *engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
+        m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
         QOrganizerCollection collection;
         QtOrganizer::QOrganizerManager::Error error;
         collection.setMetaData(QOrganizerCollection::KeyName, defaultTaskCollectionName);
         collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
 
-        QSignalSpy createdCollection(engine, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
-        QVERIFY(engine->saveCollection(&collection, &error));
+        QSignalSpy createdCollection(m_engine, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
+        QVERIFY(m_engine->saveCollection(&collection, &error));
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(!collection.id().isNull());
 
@@ -69,12 +80,12 @@ private Q_SLOTS:
         QList<QVariant> args = createdCollection.takeFirst();
         QCOMPARE(args.count(), 1);
 
-        QVERIFY(engine->collections(&error).contains(collection));
-        delete engine;
+        QVERIFY(m_engine->collections(&error).contains(collection));
+        delete m_engine;
 
         // recreate and check if the new collection is listed
-        engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
-        QVERIFY(engine->collections(&error).contains(collection));
+        m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
+        QVERIFY(m_engine->collections(&error).contains(collection));
     }
 
     void testCreateTask()
@@ -82,13 +93,14 @@ private Q_SLOTS:
         static QString displayLabelValue = QStringLiteral("Todo test");
         static QString descriptionValue = QStringLiteral("Todo description");
 
-        QOrganizerEDSEngine *engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
+        m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
         QOrganizerCollection collection;
         QtOrganizer::QOrganizerManager::Error error;
         collection.setMetaData(QOrganizerCollection::KeyName, defaultTaskCollectionName + "2");
         collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
-        QVERIFY(engine->saveCollection(&collection, &error));
+
+        QVERIFY(m_engine->saveCollection(&collection, &error));
 
         QOrganizerTodo todo;
         todo.setCollectionId(collection.id());
@@ -98,9 +110,9 @@ private Q_SLOTS:
 
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
-        QSignalSpy createdItem(engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+        QSignalSpy createdItem(m_engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
         items << todo;
-        bool saveResult = engine->saveItems(&items,
+        bool saveResult = m_engine->saveItems(&items,
                                             QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
                                             &errorMap,
                                             &error);
@@ -121,7 +133,7 @@ private Q_SLOTS:
 
         filter.setCollectionId(collection.id());
 
-        items = engine->items(filter,
+        items = m_engine->items(filter,
                       QDateTime(),
                       QDateTime(),
                       10,
@@ -137,12 +149,11 @@ private Q_SLOTS:
         QCOMPARE(result.displayLabel(), todo.displayLabel());
         QCOMPARE(result.description(), todo.description());
 
-
         // check if the item is listead by id
         QList<QOrganizerItemId> ids;
         ids << todo.id();
 
-        items = engine->items(ids, hint, &errorMap, &error);
+        items = m_engine->items(ids, hint, &errorMap, &error);
         QCOMPARE(items.count(), 1);
         result = static_cast<QOrganizerTodo>(items[0]);
         todo = items[0];
@@ -150,8 +161,6 @@ private Q_SLOTS:
         QCOMPARE(result.startDateTime(), todo.startDateTime());
         QCOMPARE(result.displayLabel(), todo.displayLabel());
         QCOMPARE(result.description(), todo.description());
-
-        delete engine;
     }
 
     void testRemoveCollection()

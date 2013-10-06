@@ -23,6 +23,7 @@
 
 #include <QtCore/QList>
 #include <QtCore/QObject>
+#include <QtCore/QEventLoop>
 
 #include <libecal/libecal.h>
 
@@ -36,6 +37,7 @@ public:
     virtual ~ViewWatcher();
     void append(ECalClientView *view, FetchRequestData *data);
     void clear();
+    void wait();
 
 Q_SIGNALS:
     void viewProcessed(ECalClientView *view, gpointer data);
@@ -46,7 +48,7 @@ private:
     QOrganizerEDSCollectionEngineId *m_edsId;
     ECalClient *m_eClient;
     ECalClientView *m_eView;
-    QtOrganizer::QOrganizerCollectionId m_collectionId;
+    QEventLoop *m_eventLoop;
 
     static QString m_dateFilter;
 
