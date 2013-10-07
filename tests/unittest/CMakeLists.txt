@@ -42,5 +42,5 @@ declare_test(itemid-test)
 declare_test(parseecal-test)
 # Jenkins will not be able to run these tests because they need EDS running
 # FIXME: Mock EDS to run the tests bellow
-declare_test(collections-test)
-declare_test(event-test)
+#declare_test(collections-test)
+#declare_test(event-test)
