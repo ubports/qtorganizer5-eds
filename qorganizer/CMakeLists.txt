@@ -12,6 +12,7 @@ set(QORGANIZER_BACKEND_SRCS
     qorganizer-eds-requestdata.cpp
     qorganizer-eds-savecollectionrequestdata.cpp
     qorganizer-eds-saverequestdata.cpp
+    qorganizer-eds-viewwatcher.cpp
 )
 
 set(QORGANIZER_BACKEND_HDRS
@@ -24,6 +25,7 @@ set(QORGANIZER_BACKEND_HDRS
     qorganizer-eds-requestdata.h
     qorganizer-eds-savecollectionrequestdata.h
     qorganizer-eds-saverequestdata.h
+    qorganizer-eds-viewwatcher.h
 )
 
 add_library(${QORGANIZER_BACKEND}-lib STATIC

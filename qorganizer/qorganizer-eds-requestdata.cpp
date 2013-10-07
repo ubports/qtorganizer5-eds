@@ -33,8 +33,11 @@ RequestData::RequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbs
 
 RequestData::~RequestData()
 {
-    g_cancellable_cancel(m_cancellable);
-    g_object_unref(m_cancellable);
+    if (m_cancellable) {
+        g_cancellable_cancel(m_cancellable);
+        g_object_unref(m_cancellable);
+    }
+
 
     if (m_client) {
         g_object_unref(m_client);
@@ -68,6 +71,7 @@ void RequestData::cancel()
         g_object_unref(m_cancellable);
         m_cancellable = 0;
     }
+    QOrganizerManagerEngine::updateRequestState(m_req, QOrganizerAbstractRequest::CanceledState);
 }
 
 void RequestData::setClient(EClient *client)

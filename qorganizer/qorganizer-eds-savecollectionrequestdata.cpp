@@ -64,7 +64,7 @@ void SaveCollectionRequestData::commit(QtOrganizer::QOrganizerManager::Error err
         ESource *source = E_SOURCE(g_list_nth_data(m_sources, m_currentSource));
         QOrganizerEDSCollectionEngineId *edsId = 0;
 
-        QOrganizerCollection collection = QOrganizerEDSEngine::parseSource(source, parent()->managerUri(), &edsId);
+        QOrganizerCollection collection = QOrganizerEDSEngine::parseSource(source, &edsId);
         parent()->registerCollection(collection, edsId);
 
         m_results.append(collection);

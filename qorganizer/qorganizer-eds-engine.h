@@ -38,6 +38,7 @@ class SaveRequestData;
 class RemoveRequestData;
 class SaveCollectionRequestData;
 class RemoveCollectionRequestData;
+class ViewWatcher;
 
 class QOrganizerEDSEngine : public QtOrganizer::QOrganizerManagerEngine
 {
@@ -137,6 +138,7 @@ private:
 
     QtOrganizer::QOrganizerCollection m_defaultCollection;
     QList<FetchRequestData*> m_pendingFetchRequest;
+    QMap<QtOrganizer::QOrganizerCollectionId, ViewWatcher*> m_viewWatchers;
 
     void loadCollections();
     void registerCollection(const QtOrganizer::QOrganizerCollection &collection, QOrganizerEDSCollectionEngineId *edsId);
@@ -144,9 +146,10 @@ private:
 
     ESource *findSource(const QtOrganizer::QOrganizerCollectionId &id) const;
 
-    static QtOrganizer::QOrganizerCollection parseSource(ESource *source, const QString &managerUri);
-    static QtOrganizer::QOrganizerCollection parseSource(ESource *source, const QString &managerUri, QOrganizerEDSCollectionEngineId **edsId);
-    static QList<QtOrganizer::QOrganizerItem> parseEvents(QOrganizerEDSCollectionEngineId *collection, GSList *events);
+    static void updateCollection(QtOrganizer::QOrganizerCollection *collection, ESource *source);
+    static QtOrganizer::QOrganizerCollection parseSource(ESource *source);
+    static QtOrganizer::QOrganizerCollection parseSource(ESource *source, QOrganizerEDSCollectionEngineId **edsId);
+    static QList<QtOrganizer::QOrganizerItem> parseEvents(QOrganizerEDSCollectionEngineId *collection, GSList *events, bool isIcalEvents);
     static GSList *parseItems(ECalClient *client, QList<QtOrganizer::QOrganizerItem> items);
 
     // QOrganizerItem -> ECalComponent
@@ -170,6 +173,7 @@ private:
     static void parseDueDate(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseProgress(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseStatus(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseAttendeeList(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
 
     // ECalComponent -> QOrganizerItem
     static void parseSummary(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
@@ -191,6 +195,8 @@ private:
     static void parseDueDate(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseProgress(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseStatus(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseAttendeeList(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+
 
     static QDateTime fromIcalTime(struct icaltimetype value);
     static QtOrganizer::QOrganizerItem *parseEvent(ECalComponent *comp);
@@ -246,6 +252,7 @@ private:
     friend class FetchRequestData;
     friend class SaveCollectionRequestData;
     friend class RemoveCollectionRequestData;
+    friend class ViewWatcher;
 };
 
 #endif

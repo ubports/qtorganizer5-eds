@@ -26,10 +26,8 @@ QOrganizerEDSEngineId::QOrganizerEDSEngineId()
 }
 
 QOrganizerEDSEngineId::QOrganizerEDSEngineId(const QString &collectionId,
-                                             const QString &id,
-                                             const QString& managerUri)
+                                             const QString &id)
     : QOrganizerItemEngineId(),
-      m_managerUri(managerUri),
       m_collectionId(collectionId),
       m_itemId(id)
 {
@@ -41,7 +39,6 @@ QOrganizerEDSEngineId::~QOrganizerEDSEngineId()
 
 QOrganizerEDSEngineId::QOrganizerEDSEngineId(const QOrganizerEDSEngineId& other)
     : QOrganizerItemEngineId(),
-      m_managerUri(other.m_managerUri),
       m_collectionId(other.m_collectionId),
       m_itemId(other.m_itemId)
 {
@@ -50,14 +47,11 @@ QOrganizerEDSEngineId::QOrganizerEDSEngineId(const QOrganizerEDSEngineId& other)
 QOrganizerEDSEngineId::QOrganizerEDSEngineId(const QString& idString)
     : QOrganizerItemEngineId()
 {
-    int temp = 0;
-    int colonIndex = idString.indexOf(QStringLiteral(":"), 0);
-    m_managerUri = idString.mid(temp, colonIndex);
-    temp = colonIndex + 1;
-    colonIndex = idString.indexOf(QStringLiteral(":"), temp);
-    m_collectionId = idString.mid(temp, (colonIndex-temp));
-    temp = colonIndex + 1;
-    m_itemId = idString.mid(temp);
+    QString edsIdPart = idString.contains(":") ? idString.mid(idString.lastIndexOf(":")+1) : idString;
+    QStringList idParts = edsIdPart.split("/");
+    Q_ASSERT(idParts.count() == 2);
+    m_collectionId = idParts.first();
+    m_itemId = idParts.last();
 }
 
 bool QOrganizerEDSEngineId::isEqualTo(const QOrganizerItemEngineId* other) const
@@ -75,8 +69,6 @@ bool QOrganizerEDSEngineId::isLessThan(const QOrganizerItemEngineId* other) cons
 {
     // order by collection, then by item in collection.
     const QOrganizerEDSEngineId* otherPtr = static_cast<const QOrganizerEDSEngineId*>(other);
-    if (m_managerUri < otherPtr->m_managerUri)
-        return true;
     if (m_collectionId < otherPtr->m_collectionId)
         return true;
     if (m_collectionId == otherPtr->m_collectionId)
@@ -86,17 +78,17 @@ bool QOrganizerEDSEngineId::isLessThan(const QOrganizerItemEngineId* other) cons
 
 QString QOrganizerEDSEngineId::managerUri() const
 {
-    return m_managerUri;
+    return managerUriStatic();
 }
 
 QString QOrganizerEDSEngineId::toString() const
 {
-    return (m_collectionId + QLatin1Char(':') + m_itemId);
+    return QString("%1/%2").arg(m_collectionId).arg(m_itemId);
 }
 
 QOrganizerItemEngineId* QOrganizerEDSEngineId::clone() const
 {
-    return new QOrganizerEDSEngineId(m_collectionId, m_itemId, m_managerUri);
+    return new QOrganizerEDSEngineId(m_collectionId, m_itemId);
 }
 
 uint QOrganizerEDSEngineId::hash() const
@@ -107,8 +99,18 @@ uint QOrganizerEDSEngineId::hash() const
 #ifndef QT_NO_DEBUG_STREAM
 QDebug& QOrganizerEDSEngineId::debugStreamOut(QDebug& dbg) const
 {
-    dbg.nospace() << "QOrganizerItemMemoryEngineId(" << m_managerUri << ", " << m_collectionId << ", " << m_itemId << ")";
+    dbg.nospace() << "QOrganizerEDSEngineId(" << managerNameStatic() << ", " << m_collectionId << ", " << m_itemId << ")";
     return dbg.maybeSpace();
+}
+
+QString QOrganizerEDSEngineId::managerNameStatic()
+{
+    return QStringLiteral("eds");
+}
+
+QString QOrganizerEDSEngineId::managerUriStatic()
+{
+    return QStringLiteral("qtorganizer:eds:");
 }
 
 QString QOrganizerEDSEngineId::toComponentId(const QtOrganizer::QOrganizerItemId &itemId)
@@ -118,7 +120,7 @@ QString QOrganizerEDSEngineId::toComponentId(const QtOrganizer::QOrganizerItemId
 
 QString QOrganizerEDSEngineId::toComponentId(const QString &itemId)
 {
-    return itemId.split("&#58;").last();
+    return itemId.split("/").last();
 }
 
 #endif

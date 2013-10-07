@@ -36,6 +36,7 @@ FetchRequestData::~FetchRequestData()
 QOrganizerEDSCollectionEngineId* FetchRequestData::nextCollection()
 {
     m_current = 0;
+    setClient(0);
     if (m_collections.size()) {
         m_current = m_collections.takeFirst();
         return m_current;
