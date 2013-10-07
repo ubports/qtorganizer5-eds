@@ -123,9 +123,6 @@ void ViewWatcher::viewReady(GObject *sourceObject, GAsyncResult *res, ViewWatche
                        << gError->message;
             g_error_free(gError);
             gError = 0;
-            if (self->m_eventLoop) {
-                self->m_eventLoop->quit();
-            }
         } else {
             qDebug() << "Listening for changes on ("
                      << e_source_get_display_name(self->m_edsId->m_esource) << ")";
