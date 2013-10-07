@@ -1223,6 +1223,64 @@ void QOrganizerEDSEngine::parseStatus(ECalComponent *comp, QOrganizerItem *item)
     item->saveDetail(&tp);
 }
 
+void QOrganizerEDSEngine::parseAttendeeList(ECalComponent *comp, QOrganizerItem *item)
+{
+    GSList *attendeeList = 0;
+    e_cal_component_get_attendee_list(comp, &attendeeList);
+    for (GSList *attendeeIter=attendeeList; attendeeIter != 0; attendeeIter = attendeeIter->next) {
+        ECalComponentAttendee *attendee = static_cast<ECalComponentAttendee *>(attendeeIter->data);
+        QOrganizerEventAttendee qAttendee;
+
+        qAttendee.setName(QString::fromUtf8(attendee->cn));
+        qAttendee.setEmailAddress(QString::fromUtf8(attendee->member));
+
+        switch(attendee->role) {
+        case ICAL_ROLE_REQPARTICIPANT:
+            qAttendee.setParticipationRole(QOrganizerEventAttendee::RoleRequiredParticipant);
+            break;
+        case ICAL_ROLE_OPTPARTICIPANT:
+            qAttendee.setParticipationRole(QOrganizerEventAttendee::RoleOptionalParticipant);
+            break;
+        case ICAL_ROLE_CHAIR:
+            qAttendee.setParticipationRole(QOrganizerEventAttendee::RoleChairperson);
+            break;
+        case ICAL_ROLE_NONE:
+        default:
+            qAttendee.setParticipationRole(QOrganizerEventAttendee::RoleNonParticipant);
+            break;
+        }
+
+        switch(attendee->status) {
+        case ICAL_PARTSTAT_ACCEPTED:
+            qAttendee.setParticipationStatus(QOrganizerEventAttendee::StatusAccepted);
+            break;
+        case ICAL_PARTSTAT_DECLINED:
+            qAttendee.setParticipationStatus(QOrganizerEventAttendee::StatusDeclined);
+            break;
+        case ICAL_PARTSTAT_TENTATIVE:
+            qAttendee.setParticipationStatus(QOrganizerEventAttendee::StatusTentative);
+            break;
+        case ICAL_PARTSTAT_DELEGATED:
+            qAttendee.setParticipationStatus(QOrganizerEventAttendee::StatusDelegated);
+            break;
+        case ICAL_PARTSTAT_COMPLETED:
+            qAttendee.setParticipationStatus(QOrganizerEventAttendee::StatusCompleted);
+            break;
+        case ICAL_PARTSTAT_INPROCESS:
+            qAttendee.setParticipationStatus(QOrganizerEventAttendee::StatusInProcess);
+            break;
+        case ICAL_PARTSTAT_NEEDSACTION:
+        case ICAL_PARTSTAT_NONE:
+        default:
+            qAttendee.setParticipationStatus(QOrganizerEventAttendee::StatusUnknown);
+            break;
+
+        }
+        item->saveDetail(&qAttendee);
+    }
+    e_cal_component_free_attendee_list(attendeeList);
+}
+
 QOrganizerItem *QOrganizerEDSEngine::parseEvent(ECalComponent *comp)
 {
     QOrganizerEvent *event = new QOrganizerEvent();
@@ -1451,22 +1509,7 @@ QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(QOrganizerEDSCollectionEn
         parseComments(comp, item);
         parseTags(comp, item);
         parseReminders(comp, item);
-
-//        //Attendee
-//        GList *attendeeList = 0;
-//        e_cal_component_get_attendee_list(comp, &attendeeList);
-//        for(int ci=0, ciMax=g_list_length(attendeeList); ci < ciMax; ci++) {
-//            ECalComponentAttendee *attendee = static_cast<ECalComponentAttendee *>(g_list_nth_data(attendeeList, ci));
-//            QOrganizerEventAttendee qAttendee;
-//            qAttendee.setAttendeeId(QString::fromUtf8(attendee->member));
-//            qAttendee.setEmailAddress(QString::fromUtf8(attendee->member));
-//            qAttendee.setName(QString::fromUtf8(attendee->member));
-//            //TODO: check
-//            qAttendee.setParticipationRole(QOrganizerEventAttendee::RoleRequiredParticipant);
-//            qAttendee.setParticipationStatus(QOrganizerEventAttendee::StatusAccepted);
-
-//            item.saveDetail(&qAttendee);
-//        }
+        parseAttendeeList(comp, item);
 
         items << *item;
         delete item;
@@ -1723,6 +1766,57 @@ void QOrganizerEDSEngine::parseStatus(const QtOrganizer::QOrganizerItem &item, E
     }
 }
 
+void QOrganizerEDSEngine::parseAttendeeList(const QOrganizerItem &item, ECalComponent *comp)
+{
+    GSList *attendeeList = 0;
+    Q_FOREACH(QOrganizerEventAttendee attendee, item.details(QOrganizerItemDetail::TypeEventAttendee)) {
+        ECalComponentAttendee *calAttendee = g_new0(ECalComponentAttendee, 1);
+
+        calAttendee->cn = g_strdup(attendee.name().toUtf8().constData());
+        calAttendee->value = g_strconcat("MAILTO:", attendee.emailAddress().toUtf8().constData(), NULL);
+        switch(attendee.participationRole()) {
+        case QOrganizerEventAttendee::RoleRequiredParticipant:
+            calAttendee->role = ICAL_ROLE_REQPARTICIPANT;
+            break;
+        case QOrganizerEventAttendee::RoleOptionalParticipant:
+            calAttendee->role = ICAL_ROLE_OPTPARTICIPANT;
+            break;
+        case QOrganizerEventAttendee::RoleChairperson:
+            calAttendee->role = ICAL_ROLE_CHAIR;
+            break;
+        default:
+            calAttendee->role = ICAL_ROLE_NONE;
+        }
+
+        switch(attendee.participationStatus()) {
+        case QOrganizerEventAttendee::StatusAccepted:
+            calAttendee->status = ICAL_PARTSTAT_ACCEPTED;
+            break;
+        case QOrganizerEventAttendee::StatusDeclined:
+            calAttendee->status = ICAL_PARTSTAT_DECLINED;
+            break;
+        case QOrganizerEventAttendee::StatusTentative:
+            calAttendee->status = ICAL_PARTSTAT_TENTATIVE;
+            break;
+        case QOrganizerEventAttendee::StatusDelegated:
+            calAttendee->status = ICAL_PARTSTAT_DELEGATED;
+            break;
+        case QOrganizerEventAttendee::StatusInProcess:
+            calAttendee->status = ICAL_PARTSTAT_INPROCESS;
+            break;
+        case QOrganizerEventAttendee::StatusCompleted:
+            calAttendee->status = ICAL_PARTSTAT_COMPLETED;
+            break;
+        case QOrganizerEventAttendee::StatusUnknown:
+        default:
+            calAttendee->status = ICAL_PARTSTAT_NONE;
+            break;
+        }
+        attendeeList = g_slist_append(attendeeList, calAttendee);
+    }
+    e_cal_component_set_attendee_list(comp, attendeeList);
+}
+
 ECalComponent *QOrganizerEDSEngine::createDefaultComponent(ECalClient *client,
                                                            icalcomponent_kind iKind,
                                                            ECalComponentVType eType)
@@ -1970,6 +2064,7 @@ GSList *QOrganizerEDSEngine::parseItems(ECalClient *client, QList<QOrganizerItem
         parseComments(item, comp);
         parseTags(item, comp);
         parseReminders(item, comp);
+        parseAttendeeList(item, comp);
 
         if (!item.id().isNull()) {
             e_cal_component_commit_sequence(comp);

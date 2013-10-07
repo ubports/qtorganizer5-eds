@@ -173,6 +173,7 @@ private:
     static void parseDueDate(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseProgress(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseStatus(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseAttendeeList(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
 
     // ECalComponent -> QOrganizerItem
     static void parseSummary(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
@@ -194,6 +195,8 @@ private:
     static void parseDueDate(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseProgress(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseStatus(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseAttendeeList(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+
 
     static QDateTime fromIcalTime(struct icaltimetype value);
     static QtOrganizer::QOrganizerItem *parseEvent(ECalComponent *comp);
