@@ -1,3 +1,13 @@
+qtorganizer5-eds (0.1.1+13.10.20131011-0ubuntu1) saucy; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * *Fixed default source/collection load; *Implemented changes notify.
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 15
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 11 Oct 2013 02:09:03 +0000
+
 qtorganizer5-eds (0.1.1+13.10.20130917.1-0ubuntu1) saucy; urgency=low
 
   [ Renato Araujo Oliveira Filho ]
