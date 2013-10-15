@@ -26,8 +26,6 @@
 
 using namespace QtOrganizer;
 
-QString ViewWatcher::m_dateFilter;
-
 ViewWatcher::ViewWatcher(QOrganizerEDSEngine *engine,
                          const QOrganizerCollectionId &collectionId,
                          QOrganizerEDSCollectionEngineId *edsId)
@@ -37,19 +35,6 @@ ViewWatcher::ViewWatcher(QOrganizerEDSEngine *engine,
       m_eView(0),
       m_eventLoop(0)
 {
-    if (m_dateFilter.isEmpty()) {
-        QDateTime startDate;
-        startDate.setMSecsSinceEpoch(0);
-
-        QDateTime endDate;
-        endDate.setMSecsSinceEpoch(std::numeric_limits<qint64>::max());
-
-        m_dateFilter =  QString("(occur-in-time-range? "
-                                                     "(make-time \"%1\") (make-time \"%2\"))")
-                                                     .arg(isodate_from_time_t(startDate.toTime_t()))
-                                                     .arg(isodate_from_time_t(endDate.toTime_t()));
-
-    }
     m_cancellable = g_cancellable_new();
     e_cal_client_connect(m_edsId->m_esource,
                          m_edsId->m_sourceType,
@@ -79,7 +64,7 @@ void ViewWatcher::clientConnected(GObject *sourceObject, GAsyncResult *res, View
         }
     } else {
         e_cal_client_get_view(self->m_eClient,
-                              self->m_dateFilter.toUtf8().data(),
+                              QStringLiteral("#t").toUtf8().constData(), // match all,
                               self->m_cancellable,
                               (GAsyncReadyCallback) ViewWatcher::viewReady,
                               self);
