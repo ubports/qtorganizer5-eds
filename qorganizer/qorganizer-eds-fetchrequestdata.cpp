@@ -59,14 +59,17 @@ void FetchRequestData::finish(QOrganizerManager::Error error)
     // TODO: emit changeset???
 }
 
-void FetchRequestData::appendResults(QList<QOrganizerItem> results)
+int FetchRequestData::appendResults(QList<QOrganizerItem> results)
 {
+    int count = 0;
     QOrganizerItemFetchRequest *req = request<QOrganizerItemFetchRequest>();
     Q_FOREACH(QOrganizerItem item, results) {
         if (QOrganizerManagerEngine::testFilter(req->filter(), item)) {
             m_results << item;
+            count++;
         }
     }
+    return count;
 }
 
 QString FetchRequestData::dateFilter()
@@ -74,17 +77,16 @@ QString FetchRequestData::dateFilter()
     QDateTime startDate = request<QOrganizerItemFetchRequest>()->startDate();
     QDateTime endDate = request<QOrganizerItemFetchRequest>()->endDate();
 
-    if (!startDate.isValid()) {
-        startDate.setMSecsSinceEpoch(0);
+    if (!startDate.isValid() ||
+        !endDate.isValid()) {
+        return QStringLiteral("#t"); // match all
     }
 
-    if (!endDate.isValid()) {
-        endDate.setMSecsSinceEpoch(std::numeric_limits<qint64>::max());
-    }
 
     QString query = QString("(occur-in-time-range? "
                             "(make-time \"%1\") (make-time \"%2\"))")
             .arg(isodate_from_time_t(startDate.toTime_t()))
             .arg(isodate_from_time_t(endDate.toTime_t()));
+
     return query;
 }

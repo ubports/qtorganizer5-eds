@@ -50,8 +50,6 @@ private:
     ECalClientView *m_eView;
     QEventLoop *m_eventLoop;
 
-    static QString m_dateFilter;
-
     static void clientConnected(GObject *sourceObject, GAsyncResult *res, ViewWatcher *self);
     static void viewReady(GObject *sourceObject, GAsyncResult *res, ViewWatcher *self);
 

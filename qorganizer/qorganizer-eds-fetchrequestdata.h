@@ -31,7 +31,7 @@ public:
     QOrganizerEDSCollectionEngineId* collection() const;
 
     void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
-    void appendResults(QList<QtOrganizer::QOrganizerItem> results);
+    int appendResults(QList<QtOrganizer::QOrganizerItem> results);
     QString dateFilter();
 
 private:
