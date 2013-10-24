@@ -1,3 +1,13 @@
+qtorganizer5-eds (0.1.1+14.04.20131024.4-0ubuntu1) trusty; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * Used a proper match all query string. (LP: #1236390)
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 17
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 24 Oct 2013 19:53:51 +0000
+
 qtorganizer5-eds (0.1.1+13.10.20131011-0ubuntu1) saucy; urgency=low
 
   [ Renato Araujo Oliveira Filho ]
