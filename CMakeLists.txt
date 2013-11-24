@@ -47,9 +47,19 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
 add_custom_target(uninstall "${CMAKE_COMMAND}"
                   -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
 
-enable_testing()
-
-add_subdirectory(qorganizer)
-add_subdirectory(tests)
-
 configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+add_subdirectory(qorganizer)
+
+find_program(DBUS_RUNNER dbus-test-runner)
+find_program(EVOLUTION_CALENDAR_FACTORY evolution-calendar-factory
+             PATHS /usr/lib/evolution/)
+if(DBUS_RUNNER)
+    if(EVOLUTION_CALENDAR_FACTORY)
+        enable_testing()
+        add_subdirectory(tests)
+    else(EVOLUTION_CALENDAR_FACTORY)
+        message(WARNING "evolution-calendar-factory binary not found tests will be disabled")
+    endif(EVOLUTION_CALENDAR_FACTORY)
+else(DBUS_RUNNER)
+    message(WARNING "dbus-test-runner binary not found tests will be disabled")
+endif(DBUS_RUNNER)
