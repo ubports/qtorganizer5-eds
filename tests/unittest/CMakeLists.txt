@@ -31,11 +31,8 @@ macro(update_test_properties TESTNAME)
                     OUTPUT_VARIABLE  TMP_DIR
                     OUTPUT_STRIP_TRAILING_WHITESPACE)
     #Create the directories
-    #execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${TMP_DIR}/.cache)
     file(MAKE_DIRECTORY ${TMP_DIR}/.cache)
-    #execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${TMP_DIR}/.config)
     file(MAKE_DIRECTORY ${TMP_DIR}/.config)
-    #execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${TMP_DIR})
     file(MAKE_DIRECTORY ${TMP_DIR}/.local/share)
 
     list(APPEND ENV_VARS_LIST "QT_QPA_PLATFORM=minimal")
