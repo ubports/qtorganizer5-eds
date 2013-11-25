@@ -92,7 +92,6 @@ private Q_SLOTS:
         aReminder.setRepetition(10, 20);
         aReminder.setDataUrl(QUrl("file://home/user/My Musics/play as alarm.wav"));
 
-
         todo.saveDetail(&aReminder);
         todo.saveDetail(&vReminder);
 
@@ -104,10 +103,10 @@ private Q_SLOTS:
                                             &errorMap,
                                             &error);
         QVERIFY(saveResult);
-        QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
+
         // delete engine to make sure the new engine will be loaded from scratch
         delete engine;
-
+        QTest::qSleep(1000);
         engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
         QOrganizerItemSortOrder sort;

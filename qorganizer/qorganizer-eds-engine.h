@@ -139,6 +139,7 @@ private:
     QtOrganizer::QOrganizerCollection m_defaultCollection;
     QList<FetchRequestData*> m_pendingFetchRequest;
     QMap<QtOrganizer::QOrganizerCollectionId, ViewWatcher*> m_viewWatchers;
+    QSet<QtOrganizer::QOrganizerAbstractRequest*> m_runningRequests;
 
     void loadCollections();
     void registerCollection(const QtOrganizer::QOrganizerCollection &collection, QOrganizerEDSCollectionEngineId *edsId);

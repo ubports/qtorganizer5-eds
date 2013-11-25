@@ -24,11 +24,12 @@
 #include <QtOrganizer>
 
 #include "qorganizer-eds-engine.h"
+#include "eds-base-test.h"
 
 
 using namespace QtOrganizer;
 
-class CollectionTest : public QObject
+class CollectionTest : public QObject, public EDSBaseTest
 {
     Q_OBJECT
 private:
@@ -41,6 +42,7 @@ private:
 private Q_SLOTS:
     void init()
     {
+        clear();
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
     }
 
@@ -82,6 +84,7 @@ private Q_SLOTS:
 
         QVERIFY(m_engine->collections(&error).contains(collection));
         delete m_engine;
+        QTest::qSleep(1000);
 
         // recreate and check if the new collection is listed
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
@@ -174,8 +177,8 @@ private Q_SLOTS:
         QtOrganizer::QOrganizerManager::Error error;
         collection.setMetaData(QOrganizerCollection::KeyName, removableCollectionName);
         QVERIFY(engine->saveCollection(&collection, &error));
-        delete engine;
 
+        delete engine;
         QTest::qSleep(1000);
 
         engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());

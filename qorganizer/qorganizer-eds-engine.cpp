@@ -75,9 +75,17 @@ QOrganizerEDSEngine::QOrganizerEDSEngine()
 QOrganizerEDSEngine::~QOrganizerEDSEngine()
 {
     qDebug() << Q_FUNC_INFO;
+
+    Q_FOREACH(QOrganizerAbstractRequest *req, m_runningRequests) {
+        cancelRequest(req);
+        waitForRequestFinished(req, -1);
+    }
+
     Q_FOREACH(QOrganizerCollection col, m_collections) {
         unregisterCollection(col.id());
     }
+
+    Q_ASSERT(m_runningRequests.count() == 0);
     Q_ASSERT(m_collections.count() == 0);
     Q_ASSERT(m_collectionsMap.count() == 0);
     Q_ASSERT(m_viewWatchers.count() == 0);
@@ -698,7 +706,7 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *source_object,
 void QOrganizerEDSEngine::requestDestroyed(QOrganizerAbstractRequest* req)
 {
     qDebug() << Q_FUNC_INFO;
-    Q_UNUSED(req);
+    m_runningRequests.remove(req);
 }
 
 bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
@@ -707,7 +715,7 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
 
     if (!req)
         return false;
-
+    m_runningRequests << req;
     updateRequestState(req, QOrganizerAbstractRequest::ActiveState);
     switch (req->type())
     {
@@ -744,21 +752,25 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
 bool QOrganizerEDSEngine::cancelRequest(QOrganizerAbstractRequest* req)
 {
     qDebug() << Q_FUNC_INFO;
-    Q_UNUSED(req);
-    //TODO
-    Q_ASSERT(false);
-    return false;
+    updateRequestState(req, QOrganizerAbstractRequest::CanceledState);
+    m_runningRequests.remove(req);
+    return true;
 }
 
 bool QOrganizerEDSEngine::waitForRequestFinished(QOrganizerAbstractRequest* req, int msecs)
 {
     qDebug() << Q_FUNC_INFO;
+    Q_ASSERT(req);
     Q_UNUSED(msecs);
 
-    while(req->state() == QOrganizerAbstractRequest::ActiveState) {
-        QCoreApplication::processEvents();
+    QEventLoop eventLoop;
+    QPointer<QOrganizerAbstractRequest> r(req);
+
+    while(r && (r->state() == QOrganizerAbstractRequest::ActiveState)) {
+        eventLoop.processEvents();
     }
 
+    m_runningRequests.remove(req);
     return true;
 }
 
