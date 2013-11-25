@@ -24,11 +24,12 @@
 #include <QtOrganizer>
 
 #include "qorganizer-eds-engine.h"
+#include "eds-base-test.h"
 
 
 using namespace QtOrganizer;
 
-class EventTest : public QObject
+class EventTest : public QObject, public EDSBaseTest
 {
     Q_OBJECT
 private:
@@ -41,6 +42,11 @@ private:
     QDateTime m_requestFinishedTime;
 
 private Q_SLOTS:
+    void init()
+    {
+        clear();
+    }
+
     //helper
     void itemRemoved()
     {
@@ -55,7 +61,7 @@ private Q_SLOTS:
     }
 
     // test functions
-    void xtestCreateEventWithReminder()
+    void testCreateEventWithReminder()
     {
         static QString displayLabelValue = QStringLiteral("Todo test");
         static QString descriptionValue = QStringLiteral("Todo description");
@@ -67,7 +73,9 @@ private Q_SLOTS:
         collection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName);
         collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
 
-        engine->saveCollection(&collection, &error);
+        bool saveResult = engine->saveCollection(&collection, &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
 
         QOrganizerTodo todo;
         todo.setCollectionId(collection.id());
@@ -91,12 +99,12 @@ private Q_SLOTS:
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
         items << todo;
-        bool saveResult = engine->saveItems(&items,
+        saveResult = engine->saveItems(&items,
                                             QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
                                             &errorMap,
                                             &error);
         QVERIFY(saveResult);
-
+        QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
         // delete engine to make sure the new engine will be loaded from scratch
         delete engine;
 
