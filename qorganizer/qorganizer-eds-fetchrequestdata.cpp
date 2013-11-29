@@ -30,7 +30,6 @@ FetchRequestData::FetchRequestData(QOrganizerEDSEngine *engine, QOrganizerAbstra
 
 FetchRequestData::~FetchRequestData()
 {
-    m_parent->m_pendingFetchRequest.removeOne(this);
 }
 
 QOrganizerEDSCollectionEngineId* FetchRequestData::nextCollection()

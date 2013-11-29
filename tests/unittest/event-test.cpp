@@ -99,14 +99,15 @@ private Q_SLOTS:
         QList<QOrganizerItem> items;
         items << todo;
         saveResult = engine->saveItems(&items,
-                                            QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
-                                            &errorMap,
-                                            &error);
+                                       QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                       &errorMap,
+                                       &error);
         QVERIFY(saveResult);
+        QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
 
+        qDebug() << "Will delete engine";
         // delete engine to make sure the new engine will be loaded from scratch
         delete engine;
-        QTest::qSleep(1000);
         engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
         QOrganizerItemSortOrder sort;
@@ -116,6 +117,8 @@ private Q_SLOTS:
         QList<QOrganizerItemId> ids;
         ids << items[0].id();
         filter.setIds(ids);
+
+        qDebug() << "Wait for items";
 
         items = engine->items(filter,
                       QDateTime(),
@@ -162,6 +165,7 @@ private Q_SLOTS:
         collection.setMetaData(QOrganizerCollection::KeyName, defaultTaskCollectionName + "_TODELETE");
         collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
         QVERIFY(engine->saveCollection(&collection, &error));
+        QTest::qSleep(1000);
 
         QOrganizerTodo todo;
         todo.setCollectionId(collection.id());

@@ -38,7 +38,6 @@ SaveCollectionRequestData::~SaveCollectionRequestData()
 {
 }
 
-
 void SaveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
 {
     qDebug() << "update request collections" << m_results;

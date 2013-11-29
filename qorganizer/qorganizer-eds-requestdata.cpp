@@ -28,20 +28,24 @@ RequestData::RequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbs
       m_req(req),
       m_client(0)
 {
+    QOrganizerManagerEngine::updateRequestState(req, QOrganizerAbstractRequest::ActiveState);
+    qDebug() << "\tUpdate request state";
     m_cancellable = g_cancellable_new();
+    m_parent->m_runningRequests.insert(req, this);
 }
 
 RequestData::~RequestData()
 {
+    Q_ASSERT(m_req->state() != QOrganizerAbstractRequest::ActiveState);
     if (m_cancellable) {
-        g_cancellable_cancel(m_cancellable);
-        g_object_unref(m_cancellable);
+        g_clear_object(&m_cancellable);
     }
-
 
     if (m_client) {
-        g_object_unref(m_client);
+        g_clear_object(&m_client);
     }
+
+    m_parent->m_runningRequests.remove(m_req);
 }
 
 GCancellable* RequestData::cancellable() const
@@ -68,6 +72,7 @@ void RequestData::cancel()
 {
     if (m_cancellable) {
         g_cancellable_cancel(m_cancellable);
+        m_parent->waitForRequestFinished(m_req, 0);
         g_object_unref(m_cancellable);
         m_cancellable = 0;
     }

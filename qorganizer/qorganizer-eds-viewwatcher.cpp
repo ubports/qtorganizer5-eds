@@ -59,6 +59,7 @@ void ViewWatcher::clientConnected(GObject *sourceObject, GAsyncResult *res, View
                    << gError->message;
         g_error_free(gError);
         gError = 0;
+        g_clear_object(&self->m_cancellable);
         if (self->m_eventLoop) {
             self->m_eventLoop->quit();
         }
@@ -112,9 +113,8 @@ void ViewWatcher::viewReady(GObject *sourceObject, GAsyncResult *res, ViewWatche
             qDebug() << "Listening for changes on ("
                      << e_source_get_display_name(self->m_edsId->m_esource) << ")";
         }
-        g_clear_object(&self->m_cancellable);
     }
-
+    g_clear_object(&self->m_cancellable);
     if (self->m_eventLoop) {
         self->m_eventLoop->quit();
     }

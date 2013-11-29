@@ -76,9 +76,8 @@ QOrganizerEDSEngine::~QOrganizerEDSEngine()
 {
     qDebug() << Q_FUNC_INFO;
 
-    Q_FOREACH(QOrganizerAbstractRequest *req, m_runningRequests) {
-        cancelRequest(req);
-        waitForRequestFinished(req, -1);
+    Q_FOREACH(QOrganizerAbstractRequest *req, m_runningRequests.keys()) {
+        req->cancel();
     }
 
     Q_FOREACH(QOrganizerCollection col, m_collections) {
@@ -108,7 +107,6 @@ void QOrganizerEDSEngine::itemsAsync(QOrganizerItemFetchRequest *req)
 {
     qDebug() << Q_FUNC_INFO;
     FetchRequestData *data = new FetchRequestData(this, req);
-    m_pendingFetchRequest << data;
     itemsAsyncStart(data);
 }
 
@@ -132,8 +130,8 @@ void QOrganizerEDSEngine::itemsAsyncConnected(GObject *source_object,
                                               GAsyncResult *res,
                                               FetchRequestData *data)
 {
-    Q_UNUSED(source_object);
     qDebug() << Q_FUNC_INFO;
+    Q_UNUSED(source_object);
     GError *gError = 0;
     EClient *client = e_cal_client_connect_finish(res, &gError);
 
@@ -150,6 +148,10 @@ void QOrganizerEDSEngine::itemsAsyncConnected(GObject *source_object,
                                               data->cancellable(),
                                               (GAsyncReadyCallback) QOrganizerEDSEngine::itemsAsyncListed,
                                               data);
+    }
+
+    if (client) {
+        g_object_unref(client);
     }
 }
 
@@ -192,7 +194,7 @@ QList<QOrganizerItem> QOrganizerEDSEngine::items(const QList<QOrganizerItemId> &
     req->setFetchHint(fetchHint);
 
     startRequest(req);
-    waitForRequestFinished(req, -1);
+    waitForRequestFinished(req, 0);
 
     if (error) {
         *error = req->error();
@@ -214,8 +216,8 @@ QList<QOrganizerItem> QOrganizerEDSEngine::items(const QOrganizerItemFilter &fil
                                                  QOrganizerManager::Error *error)
 {
     qDebug() << Q_FUNC_INFO;
-
     QOrganizerItemFetchRequest *req = new QOrganizerItemFetchRequest(this);
+
     req->setFilter(filter);
     req->setStartDate(startDateTime);
     req->setEndDate(endDateTime);
@@ -224,11 +226,12 @@ QList<QOrganizerItem> QOrganizerEDSEngine::items(const QOrganizerItemFilter &fil
     req->setFetchHint(fetchHint);
 
     startRequest(req);
-    waitForRequestFinished(req, -1);
+    waitForRequestFinished(req, 0);
 
     if (error) {
         *error = req->error();
     }
+
     req->deleteLater();
     return req->items();
 }
@@ -342,6 +345,10 @@ void QOrganizerEDSEngine::saveItemsAsyncConnected(GObject *source_object,
             delete data;
         }
     }
+
+    if (client) {
+        g_object_unref(client);
+    }
 }
 
 void QOrganizerEDSEngine::saveItemsAsyncModified(GObject *source_object,
@@ -422,7 +429,7 @@ bool QOrganizerEDSEngine::saveItems(QList<QtOrganizer::QOrganizerItem> *items,
     req->setDetailMask(detailMask);
 
     startRequest(req);
-    waitForRequestFinished(req, -1);
+    waitForRequestFinished(req, 0);
 
     *errorMap = req->errorMap();
     *error = req->error();
@@ -478,6 +485,7 @@ void QOrganizerEDSEngine::removeItemsAsyncConnected(GObject *source_object,
 
     GError *gError = 0;
     EClient *client = e_cal_client_connect_finish(res, &gError);
+
     if (gError) {
         qWarning() << "Fail to open calendar" << gError->message;
         g_error_free(gError);
@@ -494,6 +502,10 @@ void QOrganizerEDSEngine::removeItemsAsyncConnected(GObject *source_object,
                                     data->cancellable(),
                                     (GAsyncReadyCallback) QOrganizerEDSEngine::removeItemsAsyncRemoved,
                                     data);
+    }
+
+    if (client) {
+        g_object_unref(client);
     }
 }
 
@@ -547,7 +559,7 @@ QList<QOrganizerCollection> QOrganizerEDSEngine::collections(QOrganizerManager::
     QOrganizerCollectionFetchRequest *req = new QOrganizerCollectionFetchRequest(this);
 
     startRequest(req);
-    waitForRequestFinished(req, -1);
+    waitForRequestFinished(req, 0);
 
     *error = req->error();
 
@@ -565,7 +577,7 @@ bool QOrganizerEDSEngine::saveCollection(QOrganizerCollection* collection, QOrga
     req->setCollection(*collection);
 
     startRequest(req);
-    waitForRequestFinished(req, -1);
+    waitForRequestFinished(req, 0);
 
     *error = req->error();
     if ((*error == QOrganizerManager::NoError) &&
@@ -649,7 +661,7 @@ bool QOrganizerEDSEngine::removeCollection(const QOrganizerCollectionId& collect
     req->setCollectionId(collectionId);
 
     startRequest(req);
-    waitForRequestFinished(req, -1);
+    waitForRequestFinished(req, 0);
 
     *error = req->error();
     return(*error == QOrganizerManager::NoError);
@@ -706,7 +718,8 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *source_object,
 void QOrganizerEDSEngine::requestDestroyed(QOrganizerAbstractRequest* req)
 {
     qDebug() << Q_FUNC_INFO;
-    m_runningRequests.remove(req);
+    RequestData *data = m_runningRequests[req];
+    delete data;
 }
 
 bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
@@ -715,8 +728,7 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
 
     if (!req)
         return false;
-    m_runningRequests << req;
-    updateRequestState(req, QOrganizerAbstractRequest::ActiveState);
+
     switch (req->type())
     {
         case QOrganizerAbstractRequest::ItemFetchRequest:
@@ -752,9 +764,13 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
 bool QOrganizerEDSEngine::cancelRequest(QOrganizerAbstractRequest* req)
 {
     qDebug() << Q_FUNC_INFO;
-    updateRequestState(req, QOrganizerAbstractRequest::CanceledState);
-    m_runningRequests.remove(req);
-    return true;
+    RequestData *data = m_runningRequests.take(req);
+    if (data) {
+        data->cancel();
+        delete data;
+        return true;
+    }
+    return false;
 }
 
 bool QOrganizerEDSEngine::waitForRequestFinished(QOrganizerAbstractRequest* req, int msecs)
@@ -770,7 +786,6 @@ bool QOrganizerEDSEngine::waitForRequestFinished(QOrganizerAbstractRequest* req,
         eventLoop.processEvents();
     }
 
-    m_runningRequests.remove(req);
     return true;
 }
 

@@ -33,6 +33,7 @@
 
 #include <libecal/libecal.h>
 
+class RequestData;
 class FetchRequestData;
 class SaveRequestData;
 class RemoveRequestData;
@@ -137,9 +138,8 @@ private:
     QMap<QString, QOrganizerEDSCollectionEngineId*> m_collectionsMap;
 
     QtOrganizer::QOrganizerCollection m_defaultCollection;
-    QList<FetchRequestData*> m_pendingFetchRequest;
     QMap<QtOrganizer::QOrganizerCollectionId, ViewWatcher*> m_viewWatchers;
-    QSet<QtOrganizer::QOrganizerAbstractRequest*> m_runningRequests;
+    QMap<QtOrganizer::QOrganizerAbstractRequest*, RequestData*> m_runningRequests;
 
     void loadCollections();
     void registerCollection(const QtOrganizer::QOrganizerCollection &collection, QOrganizerEDSCollectionEngineId *edsId);
@@ -250,6 +250,7 @@ private:
                                                      bool forExport) const;
     QtOrganizer::QOrganizerItem item(const QtOrganizer::QOrganizerItemId& organizeritemId) const;
     */
+    friend class RequestData;
     friend class FetchRequestData;
     friend class SaveCollectionRequestData;
     friend class RemoveCollectionRequestData;
