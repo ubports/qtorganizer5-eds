@@ -25,6 +25,14 @@ SourceRegistry::~SourceRegistry()
 
         g_clear_object(&m_sourceRegistry);
     }
+    m_sources.clear();
+    m_collections.clear();
+    m_collectionsMap.clear();
+
+    Q_FOREACH(EClient *client, m_clients.values()) {
+        g_object_unref(client);
+    }
+    m_clients.clear();
 }
 
 ESourceRegistry *SourceRegistry::object() const
@@ -41,6 +49,7 @@ void SourceRegistry::load()
     m_sources.clear();
     m_collections.clear();
     m_collectionsMap.clear();
+    m_clients.clear();
 
     GError *error = 0;
     m_sourceRegistry = e_source_registry_new_sync(0, &error);
