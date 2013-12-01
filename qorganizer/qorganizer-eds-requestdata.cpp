@@ -29,7 +29,6 @@ RequestData::RequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbs
       m_client(0)
 {
     QOrganizerManagerEngine::updateRequestState(req, QOrganizerAbstractRequest::ActiveState);
-    qDebug() << "\tUpdate request state";
     m_cancellable = g_cancellable_new();
     m_parent->m_runningRequests.insert(req, this);
 }
@@ -50,6 +49,8 @@ RequestData::~RequestData()
 
 GCancellable* RequestData::cancellable() const
 {
+    g_cancellable_reset(m_cancellable);
+    g_object_ref(m_cancellable);
     return m_cancellable;
 }
 
@@ -84,12 +85,9 @@ void RequestData::setClient(EClient *client)
     if (m_client == client) {
         return;
     }
-
     if (m_client) {
-        g_object_unref(m_client);
-        m_client = 0;
+        g_clear_object(&m_client);
     }
-
     if (client) {
         m_client = client;
         g_object_ref(m_client);

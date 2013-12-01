@@ -47,6 +47,7 @@ private Q_SLOTS:
     void init()
     {
         clear();
+        wait(500);
 
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
@@ -57,6 +58,7 @@ private Q_SLOTS:
         bool saveResult = m_engine->saveCollection(&m_collection, &error);
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
+        wait(500);
     }
 
     void cleanup()
@@ -176,6 +178,7 @@ private Q_SLOTS:
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(errorMap.isEmpty());
         QVERIFY(!items[0].id().isNull());
+        wait(500);
 
         m_itemRemovedTime = QDateTime();
         m_requestFinishedTime = QDateTime();
@@ -186,6 +189,7 @@ private Q_SLOTS:
         connect(m_engine, SIGNAL(itemsRemoved(QList<QOrganizerItemId>)),
                 this, SLOT(itemRemoved()));
         req.setItem(items[0]);
+
         m_engine->startRequest(&req);
         m_engine->waitForRequestFinished(&req, -1);
 

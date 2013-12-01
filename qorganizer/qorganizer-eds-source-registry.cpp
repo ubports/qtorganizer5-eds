@@ -38,6 +38,7 @@ void SourceRegistry::load()
         return;
     }
 
+    m_sources.clear();
     m_collections.clear();
     m_collectionsMap.clear();
 
@@ -120,12 +121,7 @@ QOrganizerEDSCollectionEngineId *SourceRegistry::collectionEngineId(const QStrin
 
 ESource *SourceRegistry::source(const QString &collectionId) const
 {
-    QOrganizerEDSCollectionEngineId *id = m_collectionsMap[collectionId];
-    if (id) {
-        return id->m_esource;
-    } else {
-        return 0;
-    }
+    return m_sources[collectionId];
 }
 
 QOrganizerCollection SourceRegistry::collection(ESource *source) const
@@ -142,32 +138,46 @@ QOrganizerCollection SourceRegistry::insert(ESource *source)
 void SourceRegistry::remove(ESource *source)
 {
     QString collectionId = findCollection(source);
-    if (!collectionId.isEmpty()) {
-        m_collections.remove(collectionId);
-        m_collectionsMap.remove(collectionId);
-        Q_EMIT sourceRemoved(collectionId);
-    }
+    remove(collectionId);
 }
 
 void SourceRegistry::remove(const QString &collectionId)
 {
+    if (collectionId.isEmpty()) {
+        return;
+    }
+
     QOrganizerCollection collection = m_collections.take(collectionId);
     if (!collection.id().isNull()) {
-        m_collectionsMap.remove(collectionId);
         Q_EMIT sourceRemoved(collectionId);
+        m_collectionsMap.remove(collectionId);
+        g_object_unref(m_sources.take(collectionId));
+        g_object_unref(m_clients.take(collectionId));
     }
+}
+
+EClient* SourceRegistry::client(const QString &collectionId)
+{
+    EClient *client = m_clients.value(collectionId, 0);
+    if (!client) {
+        QOrganizerEDSCollectionEngineId *eid = m_collectionsMap[collectionId];
+        GError *gError = 0;
+        client = e_cal_client_connect_sync(eid->m_esource, eid->m_sourceType, 0, &gError);
+        if (gError) {
+            qWarning() << "Fail to connect with client" << gError->message;
+            g_error_free(gError);
+        }
+        m_clients.insert(collectionId, client);
+    }
+    if (client) {
+        g_object_ref(client);
+    }
+    return client;
 }
 
 QString SourceRegistry::findCollection(ESource *source) const
 {
-    QMap<QString, QOrganizerEDSCollectionEngineId*>::const_iterator i = m_collectionsMap.constBegin();
-    while (i != m_collectionsMap.constEnd()) {
-        if (e_source_equal(i.value()->m_esource, source)) {
-            return i.key();
-        }
-        i++;
-    }
-    return QString();
+    return m_sources.key(source, QString());
 }
 
 QOrganizerCollection SourceRegistry::registerSource(ESource *source)
@@ -186,8 +196,9 @@ QOrganizerCollection SourceRegistry::registerSource(ESource *source)
         if (!m_collectionsMap.contains(collectionId)) {
             m_collections.insert(collectionId, collection);
             m_collectionsMap.insert(collectionId, edsId);
+            m_sources.insert(collectionId, source);
+            g_object_ref(source);
 
-            qDebug() << "EMIT SOURCE ADDED" << collectionId;
             Q_EMIT sourceAdded(collectionId);
         } else {
             qDebug() << "Source already exists.";

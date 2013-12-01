@@ -25,20 +25,20 @@ class FetchRequestData : public RequestData
 {
 public:
     FetchRequestData(QOrganizerEDSEngine *engine,
-                     QList<QOrganizerEDSCollectionEngineId*> collections,
+                     QStringList collections,
                      QtOrganizer::QOrganizerAbstractRequest *req);
     ~FetchRequestData();
 
-    QOrganizerEDSCollectionEngineId* nextCollection();
-    QOrganizerEDSCollectionEngineId* collection() const;
+    QString nextCollection();
+    QString collection() const;
 
     void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
     int appendResults(QList<QtOrganizer::QOrganizerItem> results);
     QString dateFilter();
 
 private:
-    QList<QOrganizerEDSCollectionEngineId*> m_collections;
-    QOrganizerEDSCollectionEngineId *m_current;
+    QStringList m_collections;
+    QString m_current;
     QList<QtOrganizer::QOrganizerItem> m_results;
 };
 

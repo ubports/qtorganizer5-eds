@@ -45,7 +45,6 @@ private Q_SLOTS:
     void init()
     {
         clear();
-        QTest::qSleep(500);
 
         m_engineWrite = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
         m_engineRead = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());

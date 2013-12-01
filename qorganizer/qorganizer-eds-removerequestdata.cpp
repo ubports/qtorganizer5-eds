@@ -57,6 +57,7 @@ GSList *RemoveRequestData::takeItemsIds(QOrganizerCollectionId collectionId)
             ECalComponentId *id = g_new0(ECalComponentId, 1);
 
             id->uid = g_strdup(QOrganizerEDSEngineId::toComponentId(item.id()).toUtf8().data());
+            id->rid = NULL;
             ids = g_slist_append(ids, id);
 
             m_pendingItems.removeAll(item);
@@ -94,7 +95,7 @@ void RemoveRequestData::commit()
     clear();
 }
 
-QOrganizerCollectionId RemoveRequestData::begin()
+QOrganizerCollectionId RemoveRequestData::next()
 {
     Q_ASSERT(!m_sessionStaterd);
     if (m_pendingCollections.count() > 0) {

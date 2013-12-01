@@ -23,7 +23,7 @@
 using namespace QtOrganizer;
 
 FetchRequestData::FetchRequestData(QOrganizerEDSEngine *engine,
-                                   QList<QOrganizerEDSCollectionEngineId *> collections,
+                                   QStringList collections,
                                    QOrganizerAbstractRequest *req)
     : RequestData(engine, req),
       m_collections(collections)
@@ -34,19 +34,19 @@ FetchRequestData::~FetchRequestData()
 {
 }
 
-QOrganizerEDSCollectionEngineId* FetchRequestData::nextCollection()
+QString FetchRequestData::nextCollection()
 {
-    m_current = 0;
+    m_current = "";
     setClient(0);
     if (m_collections.size()) {
         m_current = m_collections.takeFirst();
         return m_current;
     } else {
-        return 0;
+        return QString();
     }
 }
 
-QOrganizerEDSCollectionEngineId* FetchRequestData::collection() const
+QString FetchRequestData::collection() const
 {
     return m_current;
 }

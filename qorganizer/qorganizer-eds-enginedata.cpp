@@ -46,7 +46,7 @@ ViewWatcher* QOrganizerEDSEngineData::watch(const QString &collectionId)
 {
     ViewWatcher *vw = m_viewWatchers[collectionId];
     if (!vw) {
-        vw = new ViewWatcher(this, m_sourceRegistry->collectionEngineId(collectionId));
+        vw = new ViewWatcher(collectionId, this, m_sourceRegistry->client(collectionId));
         m_viewWatchers.insert(collectionId, vw);
     }
     return vw;

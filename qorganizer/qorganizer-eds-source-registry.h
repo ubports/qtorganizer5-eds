@@ -47,6 +47,7 @@ public:
     QtOrganizer::QOrganizerCollection insert(ESource *source);
     void remove(ESource *source);
     void remove(const QString &collectionId);
+    EClient *client(const QString &collectionId);
 
 Q_SIGNALS:
     void sourceAdded(const QString &collectionId);
@@ -56,6 +57,8 @@ Q_SIGNALS:
 private:
     ESourceRegistry *m_sourceRegistry;
     QtOrganizer::QOrganizerCollection m_defaultCollection;
+    QMap<QString, EClient*> m_clients;
+    QMap<QString, ESource*> m_sources;
     QMap<QString, QtOrganizer::QOrganizerCollection> m_collections;
     QMap<QString, QOrganizerEDSCollectionEngineId*> m_collectionsMap;
 

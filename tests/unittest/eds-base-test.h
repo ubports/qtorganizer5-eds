@@ -23,6 +23,7 @@ class EDSBaseTest
 {
 protected:
     void clear();
+    void wait(int msecs);
 };
 
 #endif

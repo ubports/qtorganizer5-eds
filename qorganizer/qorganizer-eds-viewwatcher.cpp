@@ -27,50 +27,28 @@
 
 using namespace QtOrganizer;
 
-ViewWatcher::ViewWatcher(QOrganizerEDSEngineData *data, QOrganizerEDSCollectionEngineId *edsId)
-    : m_engineData(data),
-      m_edsId(edsId),
-      m_eClient(0),
+ViewWatcher::ViewWatcher(const QString &collectionId,
+                         QOrganizerEDSEngineData *data,
+                         EClient *client)
+    : m_collectionId(collectionId),
+      m_engineData(data),
+      m_eClient(E_CAL_CLIENT(client)),
       m_eView(0),
       m_eventLoop(0)
 {
+    g_object_ref(m_eClient);
     m_cancellable = g_cancellable_new();
-    e_cal_client_connect(m_edsId->m_esource,
-                         m_edsId->m_sourceType,
-                         m_cancellable,
-                         (GAsyncReadyCallback) ViewWatcher::clientConnected,
-                         this);
+    e_cal_client_get_view(m_eClient,
+                          QStringLiteral("#t").toUtf8().constData(), // match all,
+                          m_cancellable,
+                          (GAsyncReadyCallback) ViewWatcher::viewReady,
+                          this);
     wait();
 }
 
 ViewWatcher::~ViewWatcher()
 {
     clear();
-}
-
-void ViewWatcher::clientConnected(GObject *sourceObject, GAsyncResult *res, ViewWatcher *self)
-{
-    Q_UNUSED(sourceObject);
-    GError *gError = 0;
-    self->m_eClient = E_CAL_CLIENT(e_cal_client_connect_finish(res, &gError));
-    if (gError) {
-        qWarning() << "Fail to connect with server ("
-                   << (E_IS_SOURCE(self->m_edsId->m_esource) ? e_source_get_display_name(self->m_edsId->m_esource) : "")
-                   << "):" << gError->message;
-        g_error_free(gError);
-        gError = 0;
-        g_clear_object(&self->m_cancellable);
-        if (self->m_eventLoop) {
-            qDebug() << "quit";
-            self->m_eventLoop->quit();
-        }
-    } else {
-        e_cal_client_get_view(self->m_eClient,
-                              QStringLiteral("#t").toUtf8().constData(), // match all,
-                              self->m_cancellable,
-                              (GAsyncReadyCallback) ViewWatcher::viewReady,
-                              self);
-    }
 }
 
 void ViewWatcher::viewReady(GObject *sourceObject, GAsyncResult *res, ViewWatcher *self)
@@ -81,7 +59,7 @@ void ViewWatcher::viewReady(GObject *sourceObject, GAsyncResult *res, ViewWatche
     e_cal_client_get_view_finish(self->m_eClient, res, &view, &gError);
     if (gError) {
         qWarning() << "Fail to open view ("
-                   << e_source_get_display_name(self->m_edsId->m_esource) << "):"
+                   << self->m_collectionId << "):"
                    << gError->message;
         g_error_free(gError);
         gError = 0;
@@ -106,13 +84,13 @@ void ViewWatcher::viewReady(GObject *sourceObject, GAsyncResult *res, ViewWatche
         e_cal_client_view_start(view, &gError);
         if (gError) {
             qWarning() << "Fail to start view ("
-                       << e_source_get_display_name(self->m_edsId->m_esource) << "):"
+                       << self->m_collectionId << "):"
                        << gError->message;
             g_error_free(gError);
             gError = 0;
         } else {
             qDebug() << "Listening for changes on ("
-                     << e_source_get_display_name(self->m_edsId->m_esource) << ")";
+                     << self->m_collectionId << ")";
         }
     }
     g_clear_object(&self->m_cancellable);
@@ -148,21 +126,34 @@ void ViewWatcher::wait()
     }
 }
 
+QList<QOrganizerItemId> ViewWatcher::parseItemIds(GSList *objects)
+{
+    QList<QOrganizerItemId> result;
+
+    for (GSList *l = objects; l; l = l->next) {
+        const gchar *uid = 0;
+        ECalComponent *comp;
+
+        icalcomponent *clone = icalcomponent_new_clone(static_cast<icalcomponent*>(l->data));
+        comp = e_cal_component_new_from_icalcomponent(clone);
+
+        e_cal_component_get_uid(comp, &uid);
+        QOrganizerEDSEngineId *itemId = new QOrganizerEDSEngineId(m_collectionId,
+                                                                  QString::fromUtf8(uid));
+        result << QOrganizerItemId(itemId);
+    }
+    return result;
+}
+
 void ViewWatcher::onObjectsAdded(ECalClientView *view,
                                  GSList *objects,
                                  ViewWatcher *self)
 {
     qDebug() << Q_FUNC_INFO << (void*)self;
     Q_UNUSED(view);
-    QList<QOrganizerItem> items;
 
-    items = QOrganizerEDSEngine::parseEvents(self->m_edsId, objects, true);
     QOrganizerItemChangeSet changeSet;
-
-    Q_FOREACH(QOrganizerItem item, items) {
-        changeSet.insertAddedItem(item.id());
-    }
-
+    changeSet.insertAddedItems(self->parseItemIds(objects));
     self->m_engineData->emitSharedSignals(&changeSet);
 }
 
@@ -176,8 +167,7 @@ void ViewWatcher::onObjectsRemoved(ECalClientView *view,
 
     for (GSList *l = objects; l; l = l->next) {
         ECalComponentId *id = static_cast<ECalComponentId*>(l->data);
-
-        QOrganizerEDSEngineId *itemId = new QOrganizerEDSEngineId(self->m_edsId->toString(),
+        QOrganizerEDSEngineId *itemId = new QOrganizerEDSEngineId(self->m_collectionId,
                                                                   QString::fromUtf8(id->uid));
         changeSet.insertRemovedItem(QOrganizerItemId(itemId));
     }
@@ -190,14 +180,10 @@ void ViewWatcher::onObjectsModified(ECalClientView *view,
                                     ViewWatcher *self)
 {
     qDebug() << Q_FUNC_INFO << (void*)self;
-    QList<QOrganizerItem> items;
+    Q_UNUSED(view);
 
-    items = QOrganizerEDSEngine::parseEvents(self->m_edsId, objects, true);
     QOrganizerItemChangeSet changeSet;
-
-    Q_FOREACH(QOrganizerItem item, items) {
-        changeSet.insertChangedItem(item.id());
-    }
+    changeSet.insertChangedItems(self->parseItemIds(objects));
 
     self->m_engineData->emitSharedSignals(&changeSet);
 }

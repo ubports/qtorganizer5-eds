@@ -26,9 +26,11 @@
 void EDSBaseTest::clear()
 {
     GError *error = 0;
+
     ESourceRegistry *registry = e_source_registry_new_sync(0, &error);
     if (error) {
         qWarning() << "Failt to get registry" << error->message;
+        Q_ASSERT(false);
     }
     Q_ASSERT(error == 0);
     GList *sources = e_source_registry_list_sources(registry, 0);
@@ -41,8 +43,31 @@ void EDSBaseTest::clear()
             }
             Q_ASSERT(error == 0);
         }
-        g_object_unref(source);
     }
+
+    g_list_free_full (sources, g_object_unref);
     g_object_unref(registry);
-    QTest::qSleep(500);
+
+    wait(500);
+
+    // Make sure all sources was removed
+    registry = e_source_registry_new_sync(0, &error);
+    if (error) {
+        qWarning() << "Failt to get registry" << error->message;
+        Q_ASSERT(false);
+    }
+
+    sources = e_source_registry_list_sources(registry, 0);
+    Q_ASSERT(g_list_length(sources) == 16);
+    g_list_free_full (sources, g_object_unref);
+    g_object_unref(registry);
+}
+
+void EDSBaseTest::wait(int msecs)
+{
+    if (msecs > 0) {
+        QEventLoop eventLoop;
+        QTimer::singleShot(msecs, &eventLoop, SLOT(quit()));
+        eventLoop.exec();
+    }
 }

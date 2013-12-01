@@ -33,19 +33,23 @@ class ViewWatcher : public QObject
 {
     Q_OBJECT
 public:
-    ViewWatcher(QOrganizerEDSEngineData *data, QOrganizerEDSCollectionEngineId *edsId);
+    ViewWatcher(const QString &collectionId,
+                QOrganizerEDSEngineData *data,
+                EClient *client);
     virtual ~ViewWatcher();
     void append(ECalClientView *view, FetchRequestData *data);
     void clear();
     void wait();
 
 private:
+    QString m_collectionId;
     QOrganizerEDSEngineData *m_engineData;
     GCancellable *m_cancellable;
-    QOrganizerEDSCollectionEngineId *m_edsId;
     ECalClient *m_eClient;
     ECalClientView *m_eView;
     QEventLoop *m_eventLoop;
+
+    QList<QtOrganizer::QOrganizerItemId> parseItemIds(GSList *objects);
 
     static void clientConnected(GObject *sourceObject, GAsyncResult *res, ViewWatcher *self);
     static void viewReady(GObject *sourceObject, GAsyncResult *res, ViewWatcher *self);

@@ -133,7 +133,7 @@ private:
     QOrganizerEDSEngineData *d;
     QMap<QtOrganizer::QOrganizerAbstractRequest*, RequestData*> m_runningRequests;
 
-    static QList<QtOrganizer::QOrganizerItem> parseEvents(QOrganizerEDSCollectionEngineId *collection, GSList *events, bool isIcalEvents);
+    QList<QtOrganizer::QOrganizerItem> parseEvents(const QString &collectionId, GSList *events, bool isIcalEvents);
     static GSList *parseItems(ECalClient *client, QList<QtOrganizer::QOrganizerItem> items);
 
     // QOrganizerItem -> ECalComponent
@@ -198,14 +198,11 @@ private:
     static void itemsAsyncListed(GObject *source_object, GAsyncResult *res, FetchRequestData *data);
 
     void saveItemsAsync(QtOrganizer::QOrganizerItemSaveRequest *req);
-    static void saveItemsAsyncConnected(GObject *source_object, GAsyncResult *res, SaveRequestData *data);
     static void saveItemsAsyncCreated(GObject *source_object, GAsyncResult *res, SaveRequestData *data);
     static void saveItemsAsyncModified(GObject *source_object, GAsyncResult *res, SaveRequestData *data);
 
     void removeItemsAsync(QtOrganizer::QOrganizerItemRemoveRequest *req);
     static void removeItemsAsyncStart(RemoveRequestData *data);
-    static void removeItemsAsyncConnected(GObject *source_object, GAsyncResult *res, RemoveRequestData *data);
-    static void removeItemsAsyncRemoved(GObject *source_object, GAsyncResult *res, RemoveRequestData *data);
 
     void saveCollectionAsync(QtOrganizer::QOrganizerCollectionSaveRequest *req);
     static void saveCollectionAsyncStart(ESourceRegistry *registry, SaveCollectionRequestData *data);
