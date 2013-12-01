@@ -46,8 +46,7 @@ private:
 private Q_SLOTS:
     void init()
     {
-        clear();
-        wait(500);
+        startEDS();
 
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
@@ -65,6 +64,7 @@ private Q_SLOTS:
     {
         delete m_engine;
         m_collection = QOrganizerCollection();
+        stopEDS();
     }
 
     //helper

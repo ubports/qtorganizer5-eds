@@ -16,51 +16,56 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
+#include "config.h"
 #include "eds-base-test.h"
+
 #include <QtCore>
 #include <QtTest>
 #include <libecal/libecal.h>
 
-
-void EDSBaseTest::clear()
+bool EDSBaseTest::removeDir(const QString & dirName)
 {
-    GError *error = 0;
+    bool result = true;
+    QDir dir(dirName);
 
-    ESourceRegistry *registry = e_source_registry_new_sync(0, &error);
-    if (error) {
-        qWarning() << "Failt to get registry" << error->message;
-        Q_ASSERT(false);
-    }
-    Q_ASSERT(error == 0);
-    GList *sources = e_source_registry_list_sources(registry, 0);
-    for(int i=0, iMax=g_list_length(sources); i < iMax; i++) {
-        ESource *source = E_SOURCE(g_list_nth_data(sources, i));
-        if (e_source_get_removable(source)) {
-            e_source_remove_sync(source, 0, &error);
-            if (error) {
-                qWarning() << "Failt to remove source" << error->message;
+    if (dir.exists(dirName)) {
+        Q_FOREACH(QFileInfo info, dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden  | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
+            if (info.isDir()) {
+                result = removeDir(info.absoluteFilePath());
             }
-            Q_ASSERT(error == 0);
+            else {
+                result = QFile::remove(info.absoluteFilePath());
+            }
+
+            if (!result) {
+                return result;
+            }
         }
+        result = dir.rmdir(dirName);
     }
+    return result;
+}
 
-    g_list_free_full (sources, g_object_unref);
-    g_object_unref(registry);
+void EDSBaseTest::startEDS()
+{
+    // Make sure that the data dir is empty
+    removeDir(QString("%1/.local/share/evolution").arg(TMP_DIR));
 
-    wait(500);
+    // Start new EDS process
+    qDebug() << "Start" << EVOLUTION_CALENDAR_FACTORY;
+    m_process->start(EVOLUTION_CALENDAR_FACTORY);
+    m_process->waitForStarted();
+    wait(1000);
+    qDebug() << "started";
+}
 
-    // Make sure all sources was removed
-    registry = e_source_registry_new_sync(0, &error);
-    if (error) {
-        qWarning() << "Failt to get registry" << error->message;
-        Q_ASSERT(false);
-    }
+void EDSBaseTest::stopEDS()
+{
+    m_process->kill();
+    m_process->waitForFinished();
 
-    sources = e_source_registry_list_sources(registry, 0);
-    Q_ASSERT(g_list_length(sources) == 16);
-    g_list_free_full (sources, g_object_unref);
-    g_object_unref(registry);
+    // clear data
+    removeDir(QString("%1/.local/share/evolution").arg(TMP_DIR));
 }
 
 void EDSBaseTest::wait(int msecs)
@@ -70,4 +75,14 @@ void EDSBaseTest::wait(int msecs)
         QTimer::singleShot(msecs, &eventLoop, SLOT(quit()));
         eventLoop.exec();
     }
+}
+
+EDSBaseTest::EDSBaseTest()
+{
+    m_process = new QProcess();
+}
+
+EDSBaseTest::~EDSBaseTest()
+{
+    delete m_process;
 }

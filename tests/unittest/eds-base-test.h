@@ -19,11 +19,23 @@
 #ifndef __EDS_BASE_TEST__
 #define __EDS_BASE_TEST__
 
+#include <QtCore/QProcess>
+
 class EDSBaseTest
 {
+public:
+    EDSBaseTest();
+    ~EDSBaseTest();
+
 protected:
-    void clear();
+    void startEDS();
+    void stopEDS();
     void wait(int msecs);
+
+private:
+    QProcess *m_process;
+
+    bool removeDir(const QString & dirName);
 };
 
 #endif

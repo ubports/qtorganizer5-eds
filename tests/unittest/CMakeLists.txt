@@ -21,23 +21,12 @@ macro(declare_test TESTNAME)
     )
 
     add_test(${TESTNAME}
-             ${DBUS_RUNNER} --keep-env -m 90
-             --task ${EVOLUTION_CALENDAR_FACTORY} --task-name evolution -r
-             --task ${CMAKE_CURRENT_BINARY_DIR}/${TESTNAME} --task-name ${TESTNAME} -c --wait-for=org.gnome.evolution.dataserver.Calendar4
-             )
+             ${DBUS_RUNNER} --keep-env
+             --task ${CMAKE_CURRENT_BINARY_DIR}/${TESTNAME} --task-name ${TESTNAME} -c)
     update_test_properties(${TESTNAME})
 endmacro(declare_test testname)
 
 macro(update_test_properties TESTNAME)
-
-    execute_process(COMMAND mktemp -d -t qorganizer_eds_test.XXX
-                    OUTPUT_VARIABLE  TMP_DIR
-                    OUTPUT_STRIP_TRAILING_WHITESPACE)
-    #Create the directories
-    file(MAKE_DIRECTORY ${TMP_DIR}/.cache)
-    file(MAKE_DIRECTORY ${TMP_DIR}/.config)
-    file(MAKE_DIRECTORY ${TMP_DIR}/.local/share)
-
     list(APPEND ENV_VARS_LIST "QT_QPA_PLATFORM=minimal")
     list(APPEND ENV_VARS_LIST "HOME=${TMP_DIR}")
     list(APPEND ENV_VARS_LIST "XDG_CACHE_HOME=${TMP_DIR}/.cache")
@@ -60,6 +49,7 @@ endmacro(update_test_properties)
 
 include_directories(
     ${CMAKE_SOURCE_DIR}
+    ${CMAKE_BINARY_DIR}
     ${qorganizer-eds-src_SOURCE_DIR}
     ${GLIB_INCLUDE_DIRS}
     ${GIO_INCLUDE_DIRS}

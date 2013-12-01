@@ -47,12 +47,21 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
 add_custom_target(uninstall "${CMAKE_COMMAND}"
                   -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
 
-configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-add_subdirectory(qorganizer)
+#Temporary dir used by tests
+execute_process(COMMAND mktemp -d -t qorganizer_eds_test.XXX
+                OUTPUT_VARIABLE  TMP_DIR
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+#Create the directories
+file(MAKE_DIRECTORY ${TMP_DIR}/.cache)
+file(MAKE_DIRECTORY ${TMP_DIR}/.config)
+file(MAKE_DIRECTORY ${TMP_DIR}/.local/share)
 
 find_program(DBUS_RUNNER dbus-test-runner)
 find_program(EVOLUTION_CALENDAR_FACTORY evolution-calendar-factory
              PATHS /usr/lib/evolution/)
+configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+
+add_subdirectory(qorganizer)
 if(DBUS_RUNNER)
     if(EVOLUTION_CALENDAR_FACTORY)
         enable_testing()
