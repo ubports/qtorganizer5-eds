@@ -26,6 +26,8 @@
 #include "qorganizer-eds-savecollectionrequestdata.h"
 #include "qorganizer-eds-removecollectionrequestdata.h"
 #include "qorganizer-eds-viewwatcher.h"
+#include "qorganizer-eds-enginedata.h"
+#include "qorganizer-eds-source-registry.h"
 
 #include <QtCore/qdebug.h>
 #include <QtCore/QPointer>
@@ -58,18 +60,31 @@
 #include <libical/ical.h>
 
 using namespace QtOrganizer;
+QOrganizerEDSEngineData *QOrganizerEDSEngine::m_globalData = 0;
 
 QOrganizerEDSEngine* QOrganizerEDSEngine::createEDSEngine(const QMap<QString, QString>& parameters)
 {
     Q_UNUSED(parameters);
-    return new QOrganizerEDSEngine();
+    if (!m_globalData) {
+        m_globalData = new QOrganizerEDSEngineData();
+        m_globalData->m_sourceRegistry = new SourceRegistry;
+    }
+    m_globalData->m_refCount.ref();
+    return new QOrganizerEDSEngine(m_globalData);
 }
 
-
-QOrganizerEDSEngine::QOrganizerEDSEngine()
+QOrganizerEDSEngine::QOrganizerEDSEngine(QOrganizerEDSEngineData *data)
+    : d(data)
 {
     qDebug() << Q_FUNC_INFO;
-    loadCollections();
+    d->m_sharedEngines << this;
+
+    Q_FOREACH(QString collectionId, d->m_sourceRegistry->collectionsIds()){
+        onSourceAdded(collectionId);
+    }
+    connect(d->m_sourceRegistry, SIGNAL(sourceAdded(QString)), SLOT(onSourceAdded(QString)));
+    connect(d->m_sourceRegistry, SIGNAL(sourceRemoved(QString)), SLOT(onSourceRemoved(QString)));
+    d->m_sourceRegistry->load();
 }
 
 QOrganizerEDSEngine::~QOrganizerEDSEngine()
@@ -80,14 +95,12 @@ QOrganizerEDSEngine::~QOrganizerEDSEngine()
         req->cancel();
     }
 
-    Q_FOREACH(QOrganizerCollection col, m_collections) {
-        unregisterCollection(col.id());
-    }
-
     Q_ASSERT(m_runningRequests.count() == 0);
-    Q_ASSERT(m_collections.count() == 0);
-    Q_ASSERT(m_collectionsMap.count() == 0);
-    Q_ASSERT(m_viewWatchers.count() == 0);
+    d->m_sharedEngines.remove(this);
+    if (!d->m_refCount.deref()) {
+        delete d;
+        m_globalData = 0;
+    }
 }
 
 QString QOrganizerEDSEngine::managerName() const
@@ -106,7 +119,9 @@ QMap<QString, QString> QOrganizerEDSEngine::managerParameters() const
 void QOrganizerEDSEngine::itemsAsync(QOrganizerItemFetchRequest *req)
 {
     qDebug() << Q_FUNC_INFO;
-    FetchRequestData *data = new FetchRequestData(this, req);
+    FetchRequestData *data = new FetchRequestData(this,
+                                                  d->m_sourceRegistry->collectionsEngineIds(),
+                                                  req);
     itemsAsyncStart(data);
 }
 
@@ -290,11 +305,11 @@ void QOrganizerEDSEngine::saveItemsAsync(QOrganizerItemSaveRequest *req)
     QOrganizerCollectionId collectionId = item.collectionId();
 
     if (collectionId.isNull()) {
-        collectionId = m_defaultCollection.id();
+        collectionId = d->m_sourceRegistry->defaultCollection().id();
     }
 
     Q_ASSERT(!collectionId.isNull());
-    collectionEngineId = m_collectionsMap[collectionId.toString()];
+    collectionEngineId = d->m_sourceRegistry->collectionEngineId(collectionId.toString());
 
     SaveRequestData *data = new SaveRequestData(this, req, collectionId);
     e_cal_client_connect(collectionEngineId->m_esource,
@@ -401,7 +416,6 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
         for(uint i=0, iMax=g_slist_length(uids); i < iMax; i++) {
             QOrganizerItem &item = items[i];
             const gchar *uid = static_cast<const gchar*>(g_slist_nth_data(uids, i));
-            qDebug() << "Item created:" << uid;
 
             item.setCollectionId(data->collectionId());
             QOrganizerEDSEngineId *eid = new QOrganizerEDSEngineId(data->collectionId().toString(),
@@ -464,7 +478,7 @@ void QOrganizerEDSEngine::removeItemsAsyncStart(RemoveRequestData *data)
     qDebug() << Q_FUNC_INFO;
     QOrganizerCollectionId collection = data->begin();
     if (!collection.isNull()) {
-        QOrganizerEDSCollectionEngineId *collectionEngineId = data->parent()->m_collectionsMap[collection.toString()];
+        QOrganizerEDSCollectionEngineId *collectionEngineId = data->parent()->d->m_sourceRegistry->collectionEngineId(collection.toString());
         e_cal_client_connect(collectionEngineId->m_esource,
                              collectionEngineId->m_sourceType,
                              data->cancellable(),
@@ -495,7 +509,6 @@ void QOrganizerEDSEngine::removeItemsAsyncConnected(GObject *source_object,
     } else {
         data->setClient(client);
         GSList *ids = data->compIds();
-        qDebug() << "Remove item size: " << g_slist_length(ids);
         e_cal_client_remove_objects(E_CAL_CLIENT(client),
                                     ids,
                                     E_CAL_OBJ_MOD_ALL,
@@ -542,7 +555,7 @@ QOrganizerCollection QOrganizerEDSEngine::defaultCollection(QOrganizerManager::E
 {
     qDebug() << Q_FUNC_INFO;
     *error = QOrganizerManager::NoError;
-    return m_defaultCollection;
+    return d->m_sourceRegistry->defaultCollection();
 }
 
 QOrganizerCollection QOrganizerEDSEngine::collection(const QOrganizerCollectionId& collectionId, QOrganizerManager::Error* error)
@@ -602,55 +615,35 @@ void QOrganizerEDSEngine::saveCollectionAsync(QOrganizerCollectionSaveRequest *r
         return;
     }
 
-    GError *gError = 0;
-    ESourceRegistry *registry = e_source_registry_new_sync(0, &gError);
-    if (gError) {
-        qWarning() << "Fail to create sourge registry:" << gError->message;
-        g_error_free(gError);
-        QOrganizerManagerEngine::updateCollectionSaveRequest(req,
-                                                             QList<QOrganizerCollection>(),
-                                                             QOrganizerManager::UnspecifiedError,
-                                                             QMap<int, QOrganizerManager::Error>(),
-                                                             QOrganizerAbstractRequest::FinishedState);
-        return;
-    }
+    ESourceRegistry *registry = d->m_sourceRegistry->object();
+    g_object_ref(registry);
     SaveCollectionRequestData *requestData = new SaveCollectionRequestData(this, req);
-    saveCollectionAsyncStart(registry, requestData);
+    e_source_registry_create_sources(registry,
+                                     requestData->sources(),
+                                     requestData->cancellable(),
+                                     (GAsyncReadyCallback) QOrganizerEDSEngine::saveCollectionAsyncCommited,
+                                     requestData);
 }
 
-void QOrganizerEDSEngine::saveCollectionAsyncStart(ESourceRegistry *registry, SaveCollectionRequestData *data)
-{
-    qDebug() << Q_FUNC_INFO;
-
-    ESource *source = data->begin();
-    if (source) {
-        e_source_registry_commit_source(registry,
-                                        source,
-                                        data->cancellable(),
-                                        (GAsyncReadyCallback) QOrganizerEDSEngine::saveCollectionAsyncCommited,
-                                        data);
-    } else {
-        data->finish();
-        delete data;
-    }
-}
-
-void QOrganizerEDSEngine::saveCollectionAsyncCommited(GObject *source_object,
+void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
                                                       GAsyncResult *res,
                                                       SaveCollectionRequestData *data)
 {
     qDebug() << Q_FUNC_INFO;
     GError *gError = 0;
-    e_source_registry_commit_source_finish(E_SOURCE_REGISTRY(source_object), res, &gError);
+    e_source_registry_create_sources_finish(registry, res, &gError);
+
     if (gError) {
-        qWarning() << "Fail to commit source:" << gError->message;
+        qWarning() << "Fail to create sources:" << gError->message;
         g_error_free(gError);
-        data->commit(QOrganizerManager::InvalidCollectionError);
+        data->finish(QOrganizerManager::InvalidCollectionError);
     } else {
-        data->commit();
+        data->finish();
+        qDebug() << "sources createdddddddddddd";
+        delete data;
     }
 
-    saveCollectionAsyncStart(E_SOURCE_REGISTRY(source_object), data);
+    g_object_unref(registry);
 }
 
 bool QOrganizerEDSEngine::removeCollection(const QOrganizerCollectionId& collectionId, QOrganizerManager::Error* error)
@@ -736,7 +729,7 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
             break;
         case QOrganizerAbstractRequest::CollectionFetchRequest:
             QOrganizerManagerEngine::updateCollectionFetchRequest(qobject_cast<QOrganizerCollectionFetchRequest*>(req),
-                                                                  m_collections,
+                                                                  d->m_sourceRegistry->collections(),
                                                                   QOrganizerManager::NoError,
                                                                   QOrganizerAbstractRequest::FinishedState);
             break;
@@ -754,7 +747,7 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
             break;
         default:
             updateRequestState(req, QOrganizerAbstractRequest::FinishedState);
-            qDebug() << "No implemented request" << req->type();
+            qWarning() << "No implemented request" << req->type();
             break;
     }
 
@@ -876,120 +869,21 @@ QList<QOrganizerItemType::ItemType> QOrganizerEDSEngine::supportedItemTypes() co
                          << QOrganizerItemType::TypeTodoOccurrence;
 }
 
-void QOrganizerEDSEngine::registerCollection(const QOrganizerCollection &collection,
-                                             QOrganizerEDSCollectionEngineId *edsId)
+void QOrganizerEDSEngine::onSourceAdded(const QString &collectionId)
 {
-    m_collections << collection;
-    m_collectionsMap.insert(collection.id().toString(), edsId);
-    ViewWatcher *viewW = m_viewWatchers.take(collection.id());
-    if (viewW) {
-        delete m_viewWatchers.take(collection.id());
-    }
-    m_viewWatchers.insert(collection.id(), new ViewWatcher(this, collection.id(), edsId));
+    qDebug() << Q_FUNC_INFO << collectionId;
+    d->watch(collectionId);
 }
 
-void QOrganizerEDSEngine::unregisterCollection(const QOrganizerCollectionId &collectionId)
+void QOrganizerEDSEngine::onSourceRemoved(const QString &collectionId)
 {
-    ViewWatcher *viewW = m_viewWatchers.take(collectionId);
-    if (viewW) {
-        delete viewW;
-    }
-
-    Q_FOREACH(QOrganizerCollection col, m_collections) {
-        if (col.id() == collectionId) {
-            m_collections.removeAll(col);
-        }
-    }
-
-    m_collectionsMap.remove(collectionId.toString());
+    qDebug() << Q_FUNC_INFO;
+    d->unWatch(collectionId);
 }
 
-void QOrganizerEDSEngine::loadCollections()
+void QOrganizerEDSEngine::onViewChanged(QOrganizerItemChangeSet *change)
 {
-    m_collections.clear();
-    m_collectionsMap.clear();
-
-    GError *error = 0;
-    ESourceRegistry *registry = e_source_registry_new_sync(0, &error);
-    if (error) {
-        qWarning() << "Fail to create sourge registry:" << error->message;
-        g_error_free(error);
-        return;
-    }
-
-    // We use calendar as default source, if you are trying to use other source type
-    // you need to set the item source id manually
-    ESource *defaultCalendarSource = e_source_registry_ref_default_calendar(registry);
-
-    GList *sources = e_source_registry_list_sources(registry, 0);
-    for(int i=0, iMax=g_list_length(sources); i < iMax; i++) {
-        ESource *source = E_SOURCE(g_list_nth_data(sources, i));
-
-        bool isCalendar = e_source_has_extension(source, E_SOURCE_EXTENSION_CALENDAR);
-        bool isTaskList = e_source_has_extension(source, E_SOURCE_EXTENSION_TASK_LIST);
-        bool isMemoList = e_source_has_extension(source, E_SOURCE_EXTENSION_MEMO_LIST);
-        bool isAlarms = e_source_has_extension(source, E_SOURCE_EXTENSION_ALARMS);
-
-        if (e_source_get_enabled(source) &&
-            (isCalendar || isTaskList || isMemoList || isAlarms))
-        {
-            //TODO get metadata (color, etc..)
-            QOrganizerEDSCollectionEngineId *edsId = 0;
-            QOrganizerCollection collection = parseSource(source, &edsId);
-
-            registerCollection(collection, edsId);
-
-            if (e_source_equal(defaultCalendarSource, source)) {
-                m_defaultCollection = collection;
-            }
-        }
-    }
-
-    g_list_free_full (sources, g_object_unref);
-
-    if (defaultCalendarSource) {
-        g_object_unref(defaultCalendarSource);
-    }
-
-    g_object_unref(registry);
-
-    qDebug() << m_collections.count() << "Collection loaded";
-}
-
-ESource *QOrganizerEDSEngine::findSource(const QtOrganizer::QOrganizerCollectionId &id) const
-{
-    if (!id.isNull() && m_collectionsMap.contains(id.toString())) {
-        QOrganizerEDSCollectionEngineId *edsId = m_collectionsMap[id.toString()];
-        Q_ASSERT(edsId);
-        return edsId->m_esource;
-    } else {
-        return 0;
-    }
-}
-
-void QOrganizerEDSEngine::updateCollection(QOrganizerCollection *collection,
-                                           ESource *source)
-{
-    collection->setMetaData(QOrganizerCollection::KeyName,
-                            QString::fromUtf8(e_source_get_display_name(source)));
-}
-
-QOrganizerCollection QOrganizerEDSEngine::parseSource(ESource *source,
-                                                      QOrganizerEDSCollectionEngineId **edsId)
-{
-    *edsId = new QOrganizerEDSCollectionEngineId(source);
-    QOrganizerCollectionId id(*edsId);
-    QOrganizerCollection collection;
-
-    collection.setId(id);
-    updateCollection(&collection, source);
-    return collection;
-}
-
-QOrganizerCollection QOrganizerEDSEngine::parseSource(ESource *source)
-{
-    QOrganizerEDSCollectionEngineId *edsId = 0;
-    return parseSource(source, &edsId);
+    change->emitSignals(this);
 }
 
 QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value)
@@ -1733,7 +1627,6 @@ void QOrganizerEDSEngine::parsePriority(const QOrganizerItem &item, ECalComponen
     QOrganizerItemPriority priority = item.detail(QOrganizerItemDetail::TypePriority);
     if (!priority.isEmpty()) {
         gint iPriority = (gint) priority.priority();
-        qDebug() << "Priority" << iPriority;
         e_cal_component_set_priority(comp, &iPriority);
     }
 }
@@ -1750,7 +1643,6 @@ void QOrganizerEDSEngine::parseDueDate(const QtOrganizer::QOrganizerItem &item, 
 {
     QOrganizerTodoTime ttr = item.detail(QOrganizerItemDetail::TypeTodoTime);
     if (!ttr.isEmpty()) {
-        qDebug() << "Due date" << ttr.dueDateTime();
         ECalComponentDateTime *due = g_new0(ECalComponentDateTime, 1);
         due->value = g_new0(struct icaltimetype, 1);
 
@@ -1765,7 +1657,6 @@ void QOrganizerEDSEngine::parseProgress(const QtOrganizer::QOrganizerItem &item,
 {
     QOrganizerTodoProgress tp = item.detail(QOrganizerItemDetail::TypeTodoProgress);
     if (!tp.isEmpty()) {
-        qDebug() << "Progress" << tp.percentageComplete();
         e_cal_component_set_percent_as_int(comp, tp.percentageComplete());
     }
 }
@@ -1779,14 +1670,12 @@ void QOrganizerEDSEngine::parseStatus(const QtOrganizer::QOrganizerItem &item, E
                 e_cal_component_set_status(comp, ICAL_STATUS_NONE);
                 break;
             case QOrganizerTodoProgress::StatusInProgress:
-                qDebug() << "Set status in progress";
                 e_cal_component_set_status(comp, ICAL_STATUS_INPROCESS);
                 break;
             case QOrganizerTodoProgress::StatusComplete:
                 e_cal_component_set_status(comp, ICAL_STATUS_COMPLETED);
                 break;
             default:
-                qDebug() << "Set status cancelled";
                 e_cal_component_set_status(comp, ICAL_STATUS_CANCELLED);
                 break;
         }
@@ -2107,4 +1996,5 @@ GSList *QOrganizerEDSEngine::parseItems(ECalClient *client, QList<QOrganizerItem
 
     return comps;
 }
+
 

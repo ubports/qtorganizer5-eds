@@ -24,7 +24,9 @@
 class FetchRequestData : public RequestData
 {
 public:
-    FetchRequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbstractRequest *req);
+    FetchRequestData(QOrganizerEDSEngine *engine,
+                     QList<QOrganizerEDSCollectionEngineId*> collections,
+                     QtOrganizer::QOrganizerAbstractRequest *req);
     ~FetchRequestData();
 
     QOrganizerEDSCollectionEngineId* nextCollection();

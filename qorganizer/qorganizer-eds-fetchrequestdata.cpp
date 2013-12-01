@@ -22,9 +22,11 @@
 
 using namespace QtOrganizer;
 
-FetchRequestData::FetchRequestData(QOrganizerEDSEngine *engine, QOrganizerAbstractRequest *req)
+FetchRequestData::FetchRequestData(QOrganizerEDSEngine *engine,
+                                   QList<QOrganizerEDSCollectionEngineId *> collections,
+                                   QOrganizerAbstractRequest *req)
     : RequestData(engine, req),
-      m_collections(engine->m_collectionsMap.values())
+      m_collections(collections)
 {
 }
 

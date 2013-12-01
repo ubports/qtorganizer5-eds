@@ -40,11 +40,29 @@ private:
 
     QDateTime m_itemRemovedTime;
     QDateTime m_requestFinishedTime;
+    QOrganizerEDSEngine *m_engine;
+    QOrganizerCollection m_collection;
 
 private Q_SLOTS:
     void init()
     {
         clear();
+
+        m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
+
+        QtOrganizer::QOrganizerManager::Error error;
+        m_collection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName);
+        m_collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
+
+        bool saveResult = m_engine->saveCollection(&m_collection, &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
+    }
+
+    void cleanup()
+    {
+        delete m_engine;
+        m_collection = QOrganizerCollection();
     }
 
     //helper
@@ -66,19 +84,8 @@ private Q_SLOTS:
         static QString displayLabelValue = QStringLiteral("Todo test");
         static QString descriptionValue = QStringLiteral("Todo description");
 
-        QOrganizerEDSEngine *engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
-
-        QOrganizerCollection collection;
-        QtOrganizer::QOrganizerManager::Error error;
-        collection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName);
-        collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
-
-        bool saveResult = engine->saveCollection(&collection, &error);
-        QVERIFY(saveResult);
-        QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
-
         QOrganizerTodo todo;
-        todo.setCollectionId(collection.id());
+        todo.setCollectionId(m_collection.id());
         todo.setStartDateTime(QDateTime(QDate(2013, 9, 3), QTime(0,30,0)));
         todo.setDisplayLabel(displayLabelValue);
         todo.setDescription(descriptionValue);
@@ -95,20 +102,16 @@ private Q_SLOTS:
         todo.saveDetail(&aReminder);
         todo.saveDetail(&vReminder);
 
+        QtOrganizer::QOrganizerManager::Error error;
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
         items << todo;
-        saveResult = engine->saveItems(&items,
-                                       QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
-                                       &errorMap,
-                                       &error);
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
-
-        qDebug() << "Will delete engine";
-        // delete engine to make sure the new engine will be loaded from scratch
-        delete engine;
-        engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
         QOrganizerItemSortOrder sort;
         QOrganizerItemFetchHint hint;
@@ -117,10 +120,7 @@ private Q_SLOTS:
         QList<QOrganizerItemId> ids;
         ids << items[0].id();
         filter.setIds(ids);
-
-        qDebug() << "Wait for items";
-
-        items = engine->items(filter,
+        items = m_engine->items(filter,
                       QDateTime(),
                       QDateTime(),
                       10,
@@ -158,25 +158,17 @@ private Q_SLOTS:
         static QString displayLabelValue = QStringLiteral("event to be removed");
         static QString descriptionValue = QStringLiteral("removable event");
 
-        QOrganizerEDSEngine *engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
-
-        QOrganizerCollection collection;
-        QtOrganizer::QOrganizerManager::Error error;
-        collection.setMetaData(QOrganizerCollection::KeyName, defaultTaskCollectionName + "_TODELETE");
-        collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
-        QVERIFY(engine->saveCollection(&collection, &error));
-        QTest::qSleep(1000);
-
         QOrganizerTodo todo;
-        todo.setCollectionId(collection.id());
+        todo.setCollectionId(m_collection.id());
         todo.setStartDateTime(QDateTime(QDate(2013, 9, 3), QTime(0,30,0)));
         todo.setDisplayLabel(displayLabelValue);
         todo.setDescription(descriptionValue);
 
+        QtOrganizer::QOrganizerManager::Error error;
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
         items << todo;
-        bool saveResult = engine->saveItems(&items,
+        bool saveResult = m_engine->saveItems(&items,
                                             QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
                                             &errorMap,
                                             &error);
@@ -185,19 +177,17 @@ private Q_SLOTS:
         QVERIFY(errorMap.isEmpty());
         QVERIFY(!items[0].id().isNull());
 
-        QTest::qSleep(1000);
-
         m_itemRemovedTime = QDateTime();
         m_requestFinishedTime = QDateTime();
 
         QOrganizerItemRemoveRequest req;
         connect(&req, SIGNAL(stateChanged(QOrganizerAbstractRequest::State)),
                 this, SLOT(requestFinished(QOrganizerAbstractRequest::State)));
-        connect(engine, SIGNAL(itemsRemoved(QList<QOrganizerItemId>)),
+        connect(m_engine, SIGNAL(itemsRemoved(QList<QOrganizerItemId>)),
                 this, SLOT(itemRemoved()));
         req.setItem(items[0]);
-        engine->startRequest(&req);
-        engine->waitForRequestFinished(&req, -1);
+        m_engine->startRequest(&req);
+        m_engine->waitForRequestFinished(&req, -1);
 
         // check if the signal item removed was fired after the request finish
         QVERIFY(!m_itemRemovedTime.isValid());

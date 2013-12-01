@@ -17,9 +17,12 @@
  */
 
 #include "qorganizer-eds-savecollectionrequestdata.h"
+#include "qorganizer-eds-enginedata.h"
+#include "qorganizer-eds-source-registry.h"
 
 #include <QtOrganizer/QOrganizerManagerEngine>
 #include <QtOrganizer/QOrganizerCollectionSaveRequest>
+#include <QtOrganizer/QOrganizerCollectionChangeSet>
 
 using namespace QtOrganizer;
 
@@ -28,19 +31,34 @@ using namespace QtOrganizer;
 SaveCollectionRequestData::SaveCollectionRequestData(QOrganizerEDSEngine *engine,
                                                      QtOrganizer::QOrganizerAbstractRequest *req)
     : RequestData(engine, req),
-      m_sources(0),
-      m_currentSource(0)
+      m_sources(0)
 {
     parseCollections();
 }
 
 SaveCollectionRequestData::~SaveCollectionRequestData()
 {
+    if (m_sources) {
+        g_list_free_full(m_sources, g_object_unref);
+        m_sources = 0;
+    }
 }
 
 void SaveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
 {
-    qDebug() << "update request collections" << m_results;
+    if (error == QOrganizerManager::NoError) {
+        qDebug() << "Save collection no error";
+        GList *i = g_list_first(m_sources);
+
+        for(; i != 0; i = i->next) {
+            ESource *source = E_SOURCE(i->data);
+            QOrganizerCollection collection = parent()->d->m_sourceRegistry->insert(source);
+            qDebug() << "new collection" << collection;
+            m_results.append(collection);
+        }
+    } else {
+        qDebug() << "save collection error" << error;
+    }
 
     QOrganizerManagerEngine::updateCollectionSaveRequest(request<QOrganizerCollectionSaveRequest>(),
                                                          m_results,
@@ -52,23 +70,10 @@ void SaveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error err
     Q_FOREACH(QOrganizerCollection col, m_results) {
         added.append(col.id());
     }
-    Q_EMIT parent()->collectionsAdded(added);
-}
 
-void SaveCollectionRequestData::commit(QtOrganizer::QOrganizerManager::Error error)
-{
-    if (error != QOrganizerManager::NoError) {
-        m_errorMap.insert(m_currentSource, error);
-    } else {
-        ESource *source = E_SOURCE(g_list_nth_data(m_sources, m_currentSource));
-        QOrganizerEDSCollectionEngineId *edsId = 0;
-
-        QOrganizerCollection collection = QOrganizerEDSEngine::parseSource(source, &edsId);
-        parent()->registerCollection(collection, edsId);
-
-        m_results.append(collection);
-    }
-    m_currentSource++;
+    QOrganizerCollectionChangeSet cs;
+    cs.insertAddedCollections(added);
+    emitChangeset(&cs);
 }
 
 GList *SaveCollectionRequestData::sources() const
@@ -107,7 +112,7 @@ void SaveCollectionRequestData::parseCollections()
 
         QString name = collection.metaData(QOrganizerCollection::KeyName).toString();
         e_source_set_display_name(source, name.toUtf8().data());
-        e_source_set_parent(source,  "local-stub");
+        e_source_set_parent(source, "local-stub");
 
         QVariant callendarType = collection.extendedMetaData(COLLECTION_CALLENDAR_TYPE_METADATA);
         ESourceBackend *extCalendar = 0;
@@ -132,7 +137,3 @@ void SaveCollectionRequestData::parseCollections()
     qDebug() << "Request with" << g_list_length(m_sources) << "sources";
 }
 
-ESource *SaveCollectionRequestData::begin() const
-{
-    return E_SOURCE(g_list_nth_data(m_sources, m_currentSource));
-}

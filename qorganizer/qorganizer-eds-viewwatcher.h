@@ -27,23 +27,20 @@
 
 #include <libecal/libecal.h>
 
+class QOrganizerEDSEngineData;
+
 class ViewWatcher : public QObject
 {
     Q_OBJECT
 public:
-    ViewWatcher(QOrganizerEDSEngine *engine,
-                const QtOrganizer::QOrganizerCollectionId &collectionId,
-                QOrganizerEDSCollectionEngineId *edsId);
+    ViewWatcher(QOrganizerEDSEngineData *data, QOrganizerEDSCollectionEngineId *edsId);
     virtual ~ViewWatcher();
     void append(ECalClientView *view, FetchRequestData *data);
     void clear();
     void wait();
 
-Q_SIGNALS:
-    void viewProcessed(ECalClientView *view, gpointer data);
-
 private:
-    QOrganizerEDSEngine *m_parent;
+    QOrganizerEDSEngineData *m_engineData;
     GCancellable *m_cancellable;
     QOrganizerEDSCollectionEngineId *m_edsId;
     ECalClient *m_eClient;

@@ -21,6 +21,8 @@
 
 #include "qorganizer-eds-collection-engineid.h"
 
+#include <QExplicitlySharedDataPointer>
+
 #include <QtOrganizer/QOrganizerItemId>
 #include <QtOrganizer/QOrganizerItemFetchHint>
 #include <QtOrganizer/QOrganizerManager>
@@ -40,6 +42,7 @@ class RemoveRequestData;
 class SaveCollectionRequestData;
 class RemoveCollectionRequestData;
 class ViewWatcher;
+class QOrganizerEDSEngineData;
 
 class QOrganizerEDSEngine : public QtOrganizer::QOrganizerManagerEngine
 {
@@ -53,7 +56,6 @@ public:
     // URI reporting
     QString managerName() const;
     QMap<QString, QString> managerParameters() const;
-
 
     // items
     QList<QtOrganizer::QOrganizerItem> items(const QList<QtOrganizer::QOrganizerItemId> &itemIds,
@@ -118,38 +120,19 @@ public:
     virtual QList<QtOrganizer::QOrganizerItemDetail::DetailType> supportedItemDetails(QtOrganizer::QOrganizerItemType::ItemType itemType) const;
     virtual QList<QtOrganizer::QOrganizerItemType::ItemType> supportedItemTypes() const;
 
+protected Q_SLOTS:
+    void onSourceAdded(const QString &collectionId);
+    void onSourceRemoved(const QString &collectionId);
+    void onViewChanged(QtOrganizer::QOrganizerItemChangeSet *change);
+
 protected:
-    QOrganizerEDSEngine();
-/*
-    // Implement "signal coalescing" for batch functions via change set
-    virtual bool saveItem(QtOrganizer::QOrganizerItem* theOrganizerItem,
-                          QtOrganizer::QOrganizerItemChangeSet& changeSet,
-                          QtOrganizer::QOrganizerManager::Error* error);
-    virtual bool removeItem(const QtOrganizer::QOrganizerItemId& organizeritemId,
-                            QtOrganizer::QOrganizerItemChangeSet& changeSet,
-                            QtOrganizer::QOrganizerManager::Error* error);
-    virtual bool removeOccurrence(const QtOrganizer::QOrganizerItem& organizeritem,
-                                  QtOrganizer::QOrganizerItemChangeSet& changeSet,
-                                  QtOrganizer::QOrganizerManager::Error* error);
-*/
+    QOrganizerEDSEngine(QOrganizerEDSEngineData *data);
 
 private:
-    QList<QtOrganizer::QOrganizerCollection> m_collections;
-    QMap<QString, QOrganizerEDSCollectionEngineId*> m_collectionsMap;
-
-    QtOrganizer::QOrganizerCollection m_defaultCollection;
-    QMap<QtOrganizer::QOrganizerCollectionId, ViewWatcher*> m_viewWatchers;
+    static QOrganizerEDSEngineData *m_globalData;
+    QOrganizerEDSEngineData *d;
     QMap<QtOrganizer::QOrganizerAbstractRequest*, RequestData*> m_runningRequests;
 
-    void loadCollections();
-    void registerCollection(const QtOrganizer::QOrganizerCollection &collection, QOrganizerEDSCollectionEngineId *edsId);
-    void unregisterCollection(const QtOrganizer::QOrganizerCollectionId &collectionId);
-
-    ESource *findSource(const QtOrganizer::QOrganizerCollectionId &id) const;
-
-    static void updateCollection(QtOrganizer::QOrganizerCollection *collection, ESource *source);
-    static QtOrganizer::QOrganizerCollection parseSource(ESource *source);
-    static QtOrganizer::QOrganizerCollection parseSource(ESource *source, QOrganizerEDSCollectionEngineId **edsId);
     static QList<QtOrganizer::QOrganizerItem> parseEvents(QOrganizerEDSCollectionEngineId *collection, GSList *events, bool isIcalEvents);
     static GSList *parseItems(ECalClient *client, QList<QtOrganizer::QOrganizerItem> items);
 
@@ -198,7 +181,6 @@ private:
     static void parseStatus(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseAttendeeList(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
 
-
     static QDateTime fromIcalTime(struct icaltimetype value);
     static QtOrganizer::QOrganizerItem *parseEvent(ECalComponent *comp);
     static QtOrganizer::QOrganizerItem *parseToDo(ECalComponent *comp);
@@ -227,34 +209,16 @@ private:
 
     void saveCollectionAsync(QtOrganizer::QOrganizerCollectionSaveRequest *req);
     static void saveCollectionAsyncStart(ESourceRegistry *registry, SaveCollectionRequestData *data);
-    static void saveCollectionAsyncCommited(GObject *source_object, GAsyncResult *res, SaveCollectionRequestData *data);
+    static void saveCollectionAsyncCommited(ESourceRegistry *registry, GAsyncResult *res, SaveCollectionRequestData *data);
 
     void removeCollectionAsync(QtOrganizer::QOrganizerCollectionRemoveRequest *req);
     static void removeCollectionAsyncStart(GObject *source_object, GAsyncResult *res, RemoveCollectionRequestData *data);
-/*
-    QList<QtOrganizer::QOrganizerItem> internalItemOccurrences(const QtOrganizer::QOrganizerItem& parentItem,
-                                                               const QDateTime& periodStart,
-                                                               const QDateTime& periodEnd,
-                                                               int maxCount,
-                                                               bool includeExceptions,
-                                                               bool sortItems,
-                                                               QList<QDate> *exceptionDates,
-                                                               QtOrganizer::QOrganizerManager::Error* error) const;
 
-    QList<QtOrganizer::QOrganizerItem> internalItems(const QDateTime& startDate,
-                                                     const QDateTime& endDate,
-                                                     const QtOrganizer::QOrganizerItemFilter& filter,
-                                                     const QList<QtOrganizer::QOrganizerItemSortOrder>& sortOrders,
-                                                     const QtOrganizer::QOrganizerItemFetchHint& fetchHint,
-                                                     QtOrganizer::QOrganizerManager::Error* error,
-                                                     bool forExport) const;
-    QtOrganizer::QOrganizerItem item(const QtOrganizer::QOrganizerItemId& organizeritemId) const;
-    */
     friend class RequestData;
-    friend class FetchRequestData;
     friend class SaveCollectionRequestData;
     friend class RemoveCollectionRequestData;
     friend class ViewWatcher;
 };
 
 #endif
+

@@ -40,7 +40,6 @@ public:
 
     QString toString() const;
 
-
     uint hash() const;
 
 #ifndef QT_NO_DEBUG_STREAM
@@ -54,8 +53,9 @@ private:
 
     QOrganizerEDSCollectionEngineId(ESource *source);
 
-    friend class QOrganizerEDSEngine;
+    friend class SourceRegistry;
     friend class ViewWatcher;
+    friend class QOrganizerEDSEngine;
 };
 
 

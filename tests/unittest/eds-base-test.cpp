@@ -19,7 +19,9 @@
 
 #include "eds-base-test.h"
 #include <QtCore>
+#include <QtTest>
 #include <libecal/libecal.h>
+
 
 void EDSBaseTest::clear()
 {
@@ -42,4 +44,5 @@ void EDSBaseTest::clear()
         g_object_unref(source);
     }
     g_object_unref(registry);
+    QTest::qSleep(500);
 }

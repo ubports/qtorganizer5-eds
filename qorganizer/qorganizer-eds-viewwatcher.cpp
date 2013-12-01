@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "qorganizer-eds-enginedata.h"
 #include "qorganizer-eds-viewwatcher.h"
 #include "qorganizer-eds-fetchrequestdata.h"
 #include "qorganizer-eds-engineid.h"
@@ -26,10 +27,8 @@
 
 using namespace QtOrganizer;
 
-ViewWatcher::ViewWatcher(QOrganizerEDSEngine *engine,
-                         const QOrganizerCollectionId &collectionId,
-                         QOrganizerEDSCollectionEngineId *edsId)
-    : m_parent(engine),
+ViewWatcher::ViewWatcher(QOrganizerEDSEngineData *data, QOrganizerEDSCollectionEngineId *edsId)
+    : m_engineData(data),
       m_edsId(edsId),
       m_eClient(0),
       m_eView(0),
@@ -41,6 +40,7 @@ ViewWatcher::ViewWatcher(QOrganizerEDSEngine *engine,
                          m_cancellable,
                          (GAsyncReadyCallback) ViewWatcher::clientConnected,
                          this);
+    wait();
 }
 
 ViewWatcher::~ViewWatcher()
@@ -55,12 +55,13 @@ void ViewWatcher::clientConnected(GObject *sourceObject, GAsyncResult *res, View
     self->m_eClient = E_CAL_CLIENT(e_cal_client_connect_finish(res, &gError));
     if (gError) {
         qWarning() << "Fail to connect with server ("
-                   << e_source_get_display_name(self->m_edsId->m_esource) << "):"
-                   << gError->message;
+                   << (E_IS_SOURCE(self->m_edsId->m_esource) ? e_source_get_display_name(self->m_edsId->m_esource) : "")
+                   << "):" << gError->message;
         g_error_free(gError);
         gError = 0;
         g_clear_object(&self->m_cancellable);
         if (self->m_eventLoop) {
+            qDebug() << "quit";
             self->m_eventLoop->quit();
         }
     } else {
@@ -125,7 +126,7 @@ void ViewWatcher::clear()
     if (m_cancellable) {
         g_cancellable_cancel(m_cancellable);
         wait();
-        g_clear_object(&m_cancellable);
+        Q_ASSERT(m_cancellable == 0);
     }
 
     if (m_eView) {
@@ -151,6 +152,7 @@ void ViewWatcher::onObjectsAdded(ECalClientView *view,
                                  GSList *objects,
                                  ViewWatcher *self)
 {
+    qDebug() << Q_FUNC_INFO << (void*)self;
     Q_UNUSED(view);
     QList<QOrganizerItem> items;
 
@@ -160,13 +162,15 @@ void ViewWatcher::onObjectsAdded(ECalClientView *view,
     Q_FOREACH(QOrganizerItem item, items) {
         changeSet.insertAddedItem(item.id());
     }
-    changeSet.emitSignals(self->m_parent);
+
+    self->m_engineData->emitSharedSignals(&changeSet);
 }
 
 void ViewWatcher::onObjectsRemoved(ECalClientView *view,
                                    GSList *objects,
                                    ViewWatcher *self)
 {
+    qDebug() << Q_FUNC_INFO << (void*)self;
     Q_UNUSED(view);
     QOrganizerItemChangeSet changeSet;
 
@@ -177,13 +181,15 @@ void ViewWatcher::onObjectsRemoved(ECalClientView *view,
                                                                   QString::fromUtf8(id->uid));
         changeSet.insertRemovedItem(QOrganizerItemId(itemId));
     }
-    changeSet.emitSignals(self->m_parent);
+
+    self->m_engineData->emitSharedSignals(&changeSet);
 }
 
 void ViewWatcher::onObjectsModified(ECalClientView *view,
                                     GSList *objects,
                                     ViewWatcher *self)
 {
+    qDebug() << Q_FUNC_INFO << (void*)self;
     QList<QOrganizerItem> items;
 
     items = QOrganizerEDSEngine::parseEvents(self->m_edsId, objects, true);
@@ -192,5 +198,6 @@ void ViewWatcher::onObjectsModified(ECalClientView *view,
     Q_FOREACH(QOrganizerItem item, items) {
         changeSet.insertChangedItem(item.id());
     }
-    changeSet.emitSignals(self->m_parent);
+
+    self->m_engineData->emitSharedSignals(&changeSet);
 }

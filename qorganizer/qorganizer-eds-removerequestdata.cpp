@@ -18,6 +18,7 @@
 
 #include "qorganizer-eds-removerequestdata.h"
 #include "qorganizer-eds-engineid.h"
+#include "qorganizer-eds-enginedata.h"
 
 #include <QtOrganizer/QOrganizerManagerEngine>
 #include <QtOrganizer/QOrganizerItemRemoveRequest>
@@ -72,7 +73,7 @@ void RemoveRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
                                                      QMap<int, QOrganizerManager::Error>(),
                                                      QOrganizerAbstractRequest::FinishedState);
 
-    m_changeSet.emitSignals(m_parent);
+    emitChangeset(&m_changeSet);
 }
 
 GSList *RemoveRequestData::compIds() const
