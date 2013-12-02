@@ -21,6 +21,10 @@
 
 #include <QtCore>
 #include <QtTest>
+
+#include <QtDBus/QDBusConnection>
+#include <QtDBus/QDBusServiceWatcher>
+
 #include <libecal/libecal.h>
 
 bool EDSBaseTest::removeDir(const QString & dirName)
@@ -51,18 +55,31 @@ void EDSBaseTest::startEDS()
     // Make sure that the data dir is empty
     removeDir(QString("%1/.local/share/evolution").arg(TMP_DIR));
 
+    QDBusConnection con = QDBusConnection::sessionBus();
+    QDBusServiceWatcher watcher(EVOLUTION_CALENDAR_SERVICE,
+                                con, QDBusServiceWatcher::WatchForRegistration);
+    QEventLoop eventLoop;
+    eventLoop.connect(&watcher, SIGNAL(serviceRegistered(QString)), SLOT(quit()));
+
     // Start new EDS process
-    qDebug() << "Start" << EVOLUTION_CALENDAR_FACTORY;
     m_process->start(EVOLUTION_CALENDAR_FACTORY);
-    m_process->waitForStarted();
-    wait(1000);
-    qDebug() << "started";
+
+    // wait for service to appear
+    eventLoop.exec();
 }
 
 void EDSBaseTest::stopEDS()
 {
-    m_process->kill();
-    m_process->waitForFinished();
+    QDBusConnection con = QDBusConnection::sessionBus();
+    QDBusServiceWatcher watcher(EVOLUTION_CALENDAR_SERVICE,
+                                con, QDBusServiceWatcher::WatchForUnregistration);
+
+    QEventLoop eventLoop;
+    eventLoop.connect(&watcher, SIGNAL(serviceUnregistered(QString)), SLOT(quit()));
+    QTimer::singleShot(0, m_process, SLOT(kill()));
+
+    // Wait for service disappear
+    eventLoop.exec();
 
     // clear data
     removeDir(QString("%1/.local/share/evolution").arg(TMP_DIR));

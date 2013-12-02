@@ -4,7 +4,7 @@ macro(declare_test TESTNAME)
                     eds-base-test.cpp
                     eds-base-test.h
     )
-    qt5_use_modules(${TESTNAME} Core Organizer Test)
+    qt5_use_modules(${TESTNAME} Core Organizer Test DBus)
 
     if(TEST_XML_OUTPUT)
         set(TEST_ARGS -p -xunitxml -p -o -p test_${testname}.xml)

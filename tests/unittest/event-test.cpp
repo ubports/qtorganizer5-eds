@@ -51,6 +51,7 @@ private Q_SLOTS:
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
         QtOrganizer::QOrganizerManager::Error error;
+        m_collection = QOrganizerCollection();
         m_collection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName);
         m_collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
 
@@ -63,7 +64,7 @@ private Q_SLOTS:
     void cleanup()
     {
         delete m_engine;
-        m_collection = QOrganizerCollection();
+        wait(500);
         stopEDS();
     }
 
