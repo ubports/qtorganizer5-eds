@@ -66,6 +66,7 @@ void EDSBaseTest::startEDS()
 
     // wait for service to appear
     eventLoop.exec();
+    wait(500);
 }
 
 void EDSBaseTest::stopEDS()
@@ -76,10 +77,11 @@ void EDSBaseTest::stopEDS()
 
     QEventLoop eventLoop;
     eventLoop.connect(&watcher, SIGNAL(serviceUnregistered(QString)), SLOT(quit()));
-    QTimer::singleShot(0, m_process, SLOT(kill()));
+    QTimer::singleShot(100, m_process, SLOT(kill()));
 
     // Wait for service disappear
     eventLoop.exec();
+    wait(500);
 
     // clear data
     removeDir(QString("%1/.local/share/evolution").arg(TMP_DIR));

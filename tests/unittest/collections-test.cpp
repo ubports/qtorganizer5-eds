@@ -58,7 +58,7 @@ private Q_SLOTS:
         delete m_engineRead;
         m_engineRead = 0;
 
-        QTest::qSleep(500);
+        wait(500);
         stopEDS();
     }
 
