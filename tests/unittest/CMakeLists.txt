@@ -58,6 +58,7 @@ include_directories(
 )
 
 add_definitions(-DTEST_SUITE)
+add_definitions(-std=c++11)
 if(NOT CTEST_TESTING_TIMEOUT)
     set(CTEST_TESTING_TIMEOUT 60)
 endif()
@@ -65,4 +66,4 @@ endif()
 declare_test(itemid-test)
 declare_test(parseecal-test)
 declare_test(collections-test)
-declare_test(event-test)
+    declare_test(event-test)

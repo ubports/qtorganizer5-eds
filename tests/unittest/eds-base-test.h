@@ -28,14 +28,13 @@ public:
     ~EDSBaseTest();
 
 protected:
+    QProcess *m_process;
+
     void startEDS();
     void stopEDS();
     void wait(int msecs);
-
-private:
-    QProcess *m_process;
-
     bool removeDir(const QString & dirName);
+
 };
 
 #endif

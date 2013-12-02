@@ -47,6 +47,12 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
 add_custom_target(uninstall "${CMAKE_COMMAND}"
                   -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
 
+add_custom_target(test)
+add_custom_command(TARGET test
+    COMMAND ctest -V
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    )
+
 #Temporary dir used by tests
 execute_process(COMMAND mktemp -d -t qorganizer_eds_test.XXX
                 OUTPUT_VARIABLE  TMP_DIR

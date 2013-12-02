@@ -52,8 +52,13 @@ bool EDSBaseTest::removeDir(const QString & dirName)
 
 void EDSBaseTest::startEDS()
 {
+    if (m_process) {
+        delete m_process;
+    }
+
     // Make sure that the data dir is empty
     removeDir(QString("%1/.local/share/evolution").arg(TMP_DIR));
+
 
     QDBusConnection con = QDBusConnection::sessionBus();
     QDBusServiceWatcher watcher(EVOLUTION_CALENDAR_SERVICE,
@@ -62,17 +67,20 @@ void EDSBaseTest::startEDS()
     eventLoop.connect(&watcher, SIGNAL(serviceRegistered(QString)), SLOT(quit()));
 
     // Start new EDS process
-    if (m_process) {
-        delete m_process;
-    }
-    qDebug() << "ENV" << QProcess::systemEnvironment();
     m_process = new QProcess();
-    m_process->start(EVOLUTION_CALENDAR_FACTORY);
+
+    QTimer timer;
+    timer.setInterval(100);
+    timer.setSingleShot(true);
+    QObject::connect(&timer, &QTimer::timeout, [this]() {
+        this->m_process->start(EVOLUTION_CALENDAR_FACTORY);
+    });
 
     // wait for service to appear
     qDebug() << "Wait service";
+    timer.start();
     eventLoop.exec();
-    m_process->waitForStarted();
+    qDebug() << "Service ready";
     wait(500);
 }
 
@@ -109,6 +117,7 @@ void EDSBaseTest::wait(int msecs)
 EDSBaseTest::EDSBaseTest()
     : m_process(0)
 {
+
 }
 
 EDSBaseTest::~EDSBaseTest()
