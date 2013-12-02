@@ -45,9 +45,9 @@ private Q_SLOTS:
     void init()
     {
         startEDS();
-
         m_engineWrite = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
         m_engineRead = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
+        wait(100);
     }
 
     void cleanup()
@@ -58,8 +58,9 @@ private Q_SLOTS:
         delete m_engineRead;
         m_engineRead = 0;
 
-        wait(500);
+        wait(100);
         stopEDS();
+        wait(100);
     }
 
     void testCreateCollection()

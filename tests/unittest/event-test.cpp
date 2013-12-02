@@ -58,14 +58,15 @@ private Q_SLOTS:
         bool saveResult = m_engine->saveCollection(&m_collection, &error);
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
-        wait(500);
+        wait(100);
     }
 
     void cleanup()
     {
         delete m_engine;
-        wait(500);
+        wait(100);
         stopEDS();
+        wait(100);
     }
 
     //helper

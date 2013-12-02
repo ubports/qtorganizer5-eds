@@ -62,10 +62,17 @@ void EDSBaseTest::startEDS()
     eventLoop.connect(&watcher, SIGNAL(serviceRegistered(QString)), SLOT(quit()));
 
     // Start new EDS process
+    if (m_process) {
+        delete m_process;
+    }
+    qDebug() << "ENV" << QProcess::systemEnvironment();
+    m_process = new QProcess();
     m_process->start(EVOLUTION_CALENDAR_FACTORY);
 
     // wait for service to appear
+    qDebug() << "Wait service";
     eventLoop.exec();
+    m_process->waitForStarted();
     wait(500);
 }
 
@@ -80,8 +87,11 @@ void EDSBaseTest::stopEDS()
     QTimer::singleShot(100, m_process, SLOT(kill()));
 
     // Wait for service disappear
+    qDebug() << "Wait for finish";
     eventLoop.exec();
-    wait(500);
+    m_process->waitForFinished();
+    delete m_process;
+    m_process = 0;
 
     // clear data
     removeDir(QString("%1/.local/share/evolution").arg(TMP_DIR));
@@ -97,11 +107,13 @@ void EDSBaseTest::wait(int msecs)
 }
 
 EDSBaseTest::EDSBaseTest()
+    : m_process(0)
 {
-    m_process = new QProcess();
 }
 
 EDSBaseTest::~EDSBaseTest()
 {
-    delete m_process;
+    if (m_process) {
+        delete m_process;
+    }
 }
