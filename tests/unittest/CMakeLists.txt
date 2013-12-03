@@ -64,6 +64,7 @@ if(NOT CTEST_TESTING_TIMEOUT)
     set(CTEST_TESTING_TIMEOUT 60)
 endif()
 
+declare_test(fetchitem-test)
 declare_test(itemid-test)
 declare_test(parseecal-test)
 declare_test(collections-test)
