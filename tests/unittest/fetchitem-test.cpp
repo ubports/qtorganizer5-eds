@@ -115,7 +115,11 @@ private Q_SLOTS:
         expected << m_events[4]
                  << m_events[2];
 
-        QCOMPARE(expected, req.items());
+        QCOMPARE(expected.size(), req.items().size());
+        Q_FOREACH(QOrganizerItem i, req.items()) {
+            expected.removeAll(i);
+        }
+        QCOMPARE(expected.size(), 0);
     }
 
     void testFetchWithInvalidId()
@@ -152,7 +156,7 @@ private Q_SLOTS:
     }
 };
 
-const QString FetchItemTest::defaultCollectionName = QStringLiteral("TEST FETCH COLLECTION");
+const QString FetchItemTest::defaultCollectionName = QStringLiteral("TEST_FETCH_COLLECTION");
 
 QTEST_MAIN(FetchItemTest)
 
