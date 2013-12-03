@@ -82,7 +82,6 @@ private Q_SLOTS:
 
     void testRemoveCollection()
     {
-        qDebug() << "START TESSSSSSSSSSSSSSSSSSSSSSSSSS";
         static QString removableCollectionName = defaultTaskCollectionName + QStringLiteral("_REMOVABLE");
 
         // Create a collection
@@ -93,13 +92,10 @@ private Q_SLOTS:
         QList<QOrganizerCollection> collections = m_engineRead->collections(&error);
         int initalCollectionCount = collections.count();
 
-        qDebug() << "\tSAVE COLLECTION";
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
 
         // remove recent created collection
-        qDebug() << "\tREMOVE COLLECTION";
         QVERIFY(m_engineWrite->removeCollection(collection.id(), &error));
-        qDebug() << "\tREMOVE COLLECTION:DONE";
 
         collections = m_engineWrite->collections(&error);
         QCOMPARE(collections.count(), initalCollectionCount);
@@ -108,8 +104,6 @@ private Q_SLOTS:
         collections = m_engineRead->collections(&error);
         QCOMPARE(collections.count(), initalCollectionCount);
         QVERIFY(!collections.contains(collection));
-
-        qDebug() << "END TESTSSSSSSSSSSSSSSSSSSSSSSSSSSSs";
     }
 
    void testCreateTaskList()
