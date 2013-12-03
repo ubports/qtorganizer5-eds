@@ -41,8 +41,8 @@ public:
     QList<QtOrganizer::QOrganizerCollection> collections() const;
     QStringList collectionsIds() const;
     QList<QOrganizerEDSCollectionEngineId*> collectionsEngineIds() const;
-    QOrganizerEDSCollectionEngineId* collectionEngineId(const QString &collectionId) const;
     ESource *source(const QString &collectionId) const;
+    QOrganizerEDSCollectionEngineId* collectionEngineId(const QString &collectionId) const;
     QtOrganizer::QOrganizerCollection collection(ESource *source) const;
     QtOrganizer::QOrganizerCollection insert(ESource *source);
     void remove(ESource *source);

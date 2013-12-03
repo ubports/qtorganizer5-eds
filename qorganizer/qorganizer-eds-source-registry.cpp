@@ -118,7 +118,7 @@ QList<QOrganizerEDSCollectionEngineId *> SourceRegistry::collectionsEngineIds() 
 
 QOrganizerEDSCollectionEngineId *SourceRegistry::collectionEngineId(const QString &collectionId) const
 {
-    return m_collectionsMap[collectionId];
+    return m_collectionsMap.value(collectionId, 0);
 }
 
 ESource *SourceRegistry::source(const QString &collectionId) const
@@ -171,8 +171,9 @@ EClient* SourceRegistry::client(const QString &collectionId)
         if (gError) {
             qWarning() << "Fail to connect with client" << gError->message;
             g_error_free(gError);
+        } else {
+            m_clients.insert(collectionId, client);
         }
-        m_clients.insert(collectionId, client);
     }
     if (client) {
         g_object_ref(client);
