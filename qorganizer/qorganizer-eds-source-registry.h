@@ -48,6 +48,7 @@ public:
     void remove(ESource *source);
     void remove(const QString &collectionId);
     EClient *client(const QString &collectionId);
+    void clear();
 
 Q_SIGNALS:
     void sourceAdded(const QString &collectionId);

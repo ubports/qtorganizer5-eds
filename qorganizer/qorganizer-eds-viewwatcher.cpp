@@ -108,6 +108,7 @@ void ViewWatcher::clear()
     }
 
     if (m_eView) {
+        e_cal_client_view_stop(m_eView, 0);
         g_clear_object(&m_eView);
     }
 

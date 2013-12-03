@@ -37,7 +37,6 @@ public:
                 QOrganizerEDSEngineData *data,
                 EClient *client);
     virtual ~ViewWatcher();
-    void append(ECalClientView *view, FetchRequestData *data);
     void clear();
     void wait();
 

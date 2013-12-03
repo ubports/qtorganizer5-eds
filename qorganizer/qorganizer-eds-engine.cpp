@@ -323,7 +323,7 @@ void QOrganizerEDSEngine::saveItemsAsyncModified(GObject *source_object,
     e_cal_client_modify_objects_finish(E_CAL_CLIENT(data->client()),
                                        res,
                                        &gError);
-
+    QCoreApplication::processEvents();
     if (gError) {
         qWarning() << "Fail to modify items" << gError->message;
         g_error_free(gError);
@@ -350,7 +350,7 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
                                        res,
                                        &uids,
                                        &gError);
-
+    QCoreApplication::processEvents();
     if (gError) {
         qWarning() << "Fail to create items:" << gError->message;
         g_error_free(gError);
@@ -430,6 +430,7 @@ void QOrganizerEDSEngine::removeItemsAsyncStart(RemoveRequestData *data)
         GSList *ids = data->compIds();
         GError *gError = 0;
         e_cal_client_remove_objects_sync(data->client(), ids, E_CAL_OBJ_MOD_ALL, 0, 0);
+        QCoreApplication::processEvents();
         if (gError) {
             qWarning() << "Fail to remove Items" << gError->message;
             g_error_free(gError);
@@ -516,6 +517,7 @@ void QOrganizerEDSEngine::saveCollectionAsync(QOrganizerCollectionSaveRequest *r
 
     ESourceRegistry *registry = d->m_sourceRegistry->object();
     g_object_ref(registry);
+
     SaveCollectionRequestData *requestData = new SaveCollectionRequestData(this, req);
     e_source_registry_create_sources(registry,
                                      requestData->sources(),
@@ -531,6 +533,7 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
     qDebug() << Q_FUNC_INFO;
     GError *gError = 0;
     e_source_registry_create_sources_finish(registry, res, &gError);
+    QCoreApplication::processEvents();
 
     if (gError) {
         qWarning() << "Fail to create sources:" << gError->message;
@@ -538,9 +541,9 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
         data->finish(QOrganizerManager::InvalidCollectionError);
     } else {
         data->finish();
-        delete data;
     }
 
+    delete data;
     g_object_unref(registry);
 }
 
@@ -574,13 +577,18 @@ void QOrganizerEDSEngine::removeCollectionAsync(QtOrganizer::QOrganizerCollectio
     removeCollectionAsyncStart(0, 0, requestData);
 }
 
-void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *source_object,
+void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
                                                      GAsyncResult *res,
                                                      RemoveCollectionRequestData *data)
 {
-    if (source_object && res) {
+    if (sourceObject && res) {
         GError *gError = 0;
-        e_source_remove_finish(E_SOURCE(source_object), res, &gError);
+        if (data->remoteDeletable()) {
+            e_source_remote_delete_finish(E_SOURCE(sourceObject), res, &gError);
+        } else {
+            e_source_remove_finish(E_SOURCE(sourceObject), res, &gError);
+        }
+        QCoreApplication::processEvents();
         if (gError) {
             qWarning() << "Fail to remove collection" << gError->message;
             g_error_free(gError);
@@ -592,7 +600,12 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *source_object,
 
     ESource *source = data->begin();
     if (source) {
-        if (e_source_get_removable(source)) {
+        if (e_source_get_remote_deletable(source)) {
+            data->setRemoteDeletable(true);
+            e_source_remote_delete(source, data->cancellable(),
+                                   (GAsyncReadyCallback) QOrganizerEDSEngine::removeCollectionAsyncStart,
+                                   data);
+        } else if (e_source_get_removable(source)) {
             e_source_remove(source, data->cancellable(),
                             (GAsyncReadyCallback) QOrganizerEDSEngine::removeCollectionAsyncStart,
                             data);
@@ -775,7 +788,7 @@ void QOrganizerEDSEngine::onSourceAdded(const QString &collectionId)
 
 void QOrganizerEDSEngine::onSourceRemoved(const QString &collectionId)
 {
-    qDebug() << Q_FUNC_INFO;
+    qDebug() << Q_FUNC_INFO << (void*) this;
     d->unWatch(collectionId);
 }
 

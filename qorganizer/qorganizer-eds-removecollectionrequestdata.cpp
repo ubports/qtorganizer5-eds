@@ -29,7 +29,8 @@ using namespace QtOrganizer;
 
 RemoveCollectionRequestData::RemoveCollectionRequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbstractRequest *req)
     : RequestData(engine, req),
-      m_currentCollection(0)
+      m_currentCollection(0),
+      m_remoteDeletable(false)
 {
     m_pendingCollections = request<QOrganizerCollectionRemoveRequest>()->collectionIds();
 }
@@ -65,6 +66,17 @@ void RemoveCollectionRequestData::commit(QtOrganizer::QOrganizerManager::Error e
     }
 
     m_currentCollection++;
+    m_remoteDeletable = false;
+}
+
+bool RemoveCollectionRequestData::remoteDeletable() const
+{
+    return m_remoteDeletable;
+}
+
+void RemoveCollectionRequestData::setRemoteDeletable(bool deletable)
+{
+    m_remoteDeletable = deletable;
 }
 
 ESource *RemoveCollectionRequestData::begin()

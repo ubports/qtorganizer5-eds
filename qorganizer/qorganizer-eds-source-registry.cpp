@@ -16,6 +16,9 @@ SourceRegistry::SourceRegistry(QObject *parent)
 SourceRegistry::~SourceRegistry()
 {
     qDebug() << Q_FUNC_INFO << (void*) this;
+
+    clear();
+
     if (m_sourceRegistry) {
         g_signal_handler_disconnect(m_sourceRegistry, m_sourceAddedId);
         g_signal_handler_disconnect(m_sourceRegistry, m_sourceRemovedId);
@@ -24,15 +27,8 @@ SourceRegistry::~SourceRegistry()
         g_signal_handler_disconnect(m_sourceRegistry, m_sourceDisabledId);
 
         g_clear_object(&m_sourceRegistry);
-    }
-    m_sources.clear();
-    m_collections.clear();
-    m_collectionsMap.clear();
 
-    Q_FOREACH(EClient *client, m_clients.values()) {
-        g_object_unref(client);
     }
-    m_clients.clear();
 }
 
 ESourceRegistry *SourceRegistry::object() const
@@ -46,10 +42,7 @@ void SourceRegistry::load()
         return;
     }
 
-    m_sources.clear();
-    m_collections.clear();
-    m_collectionsMap.clear();
-    m_clients.clear();
+    clear();
 
     GError *error = 0;
     m_sourceRegistry = e_source_registry_new_sync(0, &error);
@@ -161,7 +154,10 @@ void SourceRegistry::remove(const QString &collectionId)
         Q_EMIT sourceRemoved(collectionId);
         m_collectionsMap.remove(collectionId);
         g_object_unref(m_sources.take(collectionId));
-        g_object_unref(m_clients.take(collectionId));
+        EClient *client = m_clients.take(collectionId);
+        if (client) {
+            g_object_unref(client);
+        }
     }
 }
 
@@ -184,37 +180,66 @@ EClient* SourceRegistry::client(const QString &collectionId)
     return client;
 }
 
+void SourceRegistry::clear()
+{
+    Q_FOREACH(ESource *source, m_sources.values()) {
+        g_object_unref(source);
+    }
+
+    Q_FOREACH(EClient *client, m_clients.values()) {
+        g_object_unref(client);
+    }
+
+    m_sources.clear();
+    m_collections.clear();
+    m_collectionsMap.clear();
+    m_clients.clear();
+}
+
 QString SourceRegistry::findCollection(ESource *source) const
 {
-    return m_sources.key(source, QString());
+    QMap<QString, ESource*>::ConstIterator i = m_sources.constBegin();
+    while (i != m_sources.constEnd()) {
+        if (e_source_equal(source, i.value())) {
+            return i.key();
+        }
+        i++;
+    }
+    return QString();
 }
 
 QOrganizerCollection SourceRegistry::registerSource(ESource *source)
 {
-    bool isEnabled = e_source_get_enabled(source);
-    bool isCalendar = e_source_has_extension(source, E_SOURCE_EXTENSION_CALENDAR);
-    bool isTaskList = e_source_has_extension(source, E_SOURCE_EXTENSION_TASK_LIST);
-    bool isMemoList = e_source_has_extension(source, E_SOURCE_EXTENSION_MEMO_LIST);
-    bool isAlarms = e_source_has_extension(source, E_SOURCE_EXTENSION_ALARMS);
+    QString collectionId = findCollection(source);
+    if (collectionId.isEmpty()) {
+        bool isEnabled = e_source_get_enabled(source);
+        bool isCalendar = e_source_has_extension(source, E_SOURCE_EXTENSION_CALENDAR);
+        bool isTaskList = e_source_has_extension(source, E_SOURCE_EXTENSION_TASK_LIST);
+        bool isMemoList = e_source_has_extension(source, E_SOURCE_EXTENSION_MEMO_LIST);
+        bool isAlarms = e_source_has_extension(source, E_SOURCE_EXTENSION_ALARMS);
 
-    if ( isEnabled && (isCalendar || isTaskList || isMemoList || isAlarms)) {
-        QOrganizerEDSCollectionEngineId *edsId = 0;
-        QOrganizerCollection collection = parseSource(source, &edsId);
-        QString collectionId = collection.id().toString();
+        if ( isEnabled && (isCalendar || isTaskList || isMemoList || isAlarms)) {
+            QOrganizerEDSCollectionEngineId *edsId = 0;
+            QOrganizerCollection collection = parseSource(source, &edsId);
+            QString collectionId = collection.id().toString();
 
-        if (!m_collectionsMap.contains(collectionId)) {
-            m_collections.insert(collectionId, collection);
-            m_collectionsMap.insert(collectionId, edsId);
-            m_sources.insert(collectionId, source);
-            g_object_ref(source);
+            if (!m_collectionsMap.contains(collectionId)) {
+                m_collections.insert(collectionId, collection);
+                m_collectionsMap.insert(collectionId, edsId);
+                m_sources.insert(collectionId, source);
+                g_object_ref(source);
 
-            Q_EMIT sourceAdded(collectionId);
-        } else {
-            qDebug() << "Source already exists.";
+                Q_EMIT sourceAdded(collectionId);
+            } else {
+                Q_ASSERT(false);
+            }
+            return collection;
         }
-        return collection;
+        return QOrganizerCollection();
+    } else {
+        return m_collections.value(collectionId);
     }
-    return QOrganizerCollection();
+
 }
 
 QOrganizerCollection SourceRegistry::parseSource(ESource *source,

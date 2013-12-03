@@ -22,107 +22,56 @@
 #include <QtCore>
 #include <QtTest>
 
-#include <QtDBus/QDBusConnection>
-#include <QtDBus/QDBusServiceWatcher>
-
 #include <libecal/libecal.h>
 
-bool EDSBaseTest::removeDir(const QString & dirName)
-{
-    bool result = true;
-    QDir dir(dirName);
-
-    if (dir.exists(dirName)) {
-        Q_FOREACH(QFileInfo info, dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden  | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
-            if (info.isDir()) {
-                result = removeDir(info.absoluteFilePath());
-            }
-            else {
-                result = QFile::remove(info.absoluteFilePath());
-            }
-
-            if (!result) {
-                return result;
-            }
-        }
-        result = dir.rmdir(dirName);
-    }
-    return result;
-}
-
-void EDSBaseTest::startEDS()
-{
-    if (m_process) {
-        delete m_process;
-    }
-
-    // Make sure that the data dir is empty
-    removeDir(QString("%1/.local/share/evolution").arg(TMP_DIR));
-
-
-    QDBusConnection con = QDBusConnection::sessionBus();
-    QDBusServiceWatcher watcher(EVOLUTION_CALENDAR_SERVICE,
-                                con, QDBusServiceWatcher::WatchForRegistration);
-    QEventLoop eventLoop;
-    eventLoop.connect(&watcher, SIGNAL(serviceRegistered(QString)), SLOT(quit()));
-
-    // Start new EDS process
-    m_process = new QProcess();
-
-    QTimer timer;
-    timer.setInterval(100);
-    timer.setSingleShot(true);
-    QObject::connect(&timer, &QTimer::timeout, [this]() {
-        this->m_process->start(EVOLUTION_CALENDAR_FACTORY);
-    });
-
-    // wait for service to appear
-    qDebug() << "Wait service";
-    timer.start();
-    eventLoop.exec();
-    qDebug() << "Service ready";
-    wait(500);
-}
-
-void EDSBaseTest::stopEDS()
-{
-    QDBusConnection con = QDBusConnection::sessionBus();
-    QDBusServiceWatcher watcher(EVOLUTION_CALENDAR_SERVICE,
-                                con, QDBusServiceWatcher::WatchForUnregistration);
-
-    QEventLoop eventLoop;
-    eventLoop.connect(&watcher, SIGNAL(serviceUnregistered(QString)), SLOT(quit()));
-    QTimer::singleShot(100, m_process, SLOT(kill()));
-
-    // Wait for service disappear
-    qDebug() << "Wait for finish";
-    eventLoop.exec();
-    m_process->waitForFinished();
-    delete m_process;
-    m_process = 0;
-
-    // clear data
-    removeDir(QString("%1/.local/share/evolution").arg(TMP_DIR));
-}
-
-void EDSBaseTest::wait(int msecs)
-{
-    if (msecs > 0) {
-        QEventLoop eventLoop;
-        QTimer::singleShot(msecs, &eventLoop, SLOT(quit()));
-        eventLoop.exec();
-    }
-}
-
 EDSBaseTest::EDSBaseTest()
-    : m_process(0)
 {
-
+    GError *error = 0;
+    m_sourceRegistry = e_source_registry_new_sync(0, &error);
+    if (error) {
+        qWarning() << "Fail to create sourge registry:" << error->message;
+        g_error_free(error);
+        Q_ASSERT(false);
+    }
 }
 
 EDSBaseTest::~EDSBaseTest()
 {
-    if (m_process) {
-        delete m_process;
+    g_object_unref(m_sourceRegistry);
+}
+
+void EDSBaseTest::init()
+{
+}
+
+void EDSBaseTest::cleanup()
+{
+    GError *error;
+    gboolean status;
+    GList *sources = e_source_registry_list_sources(m_sourceRegistry, 0);
+
+    for(GList  *i = sources; i != 0; i = i->next) {
+        ESource *source = E_SOURCE(i->data);
+        error = 0;
+        status = true;
+        if (e_source_get_remote_deletable(source)) {
+            status = e_source_remote_delete_sync(source, 0, &error);
+        } else if (e_source_get_removable(source)) {
+            status = e_source_remove_sync(source, 0, &error);
+            QTest::qWait(100);
+            // check if source was removed
+            const gchar *uid = e_source_get_uid(source);
+            Q_ASSERT(e_source_registry_ref_source(m_sourceRegistry, uid) == 0);
+        }
+        if (error) {
+            qWarning() << "Fail to remove source:" << error->message;
+            g_error_free(error);
+            Q_ASSERT(false);
+        }
+
+        Q_ASSERT(status);
     }
+
+    g_list_free_full(sources, g_object_unref);
+    e_source_registry_debug_dump(m_sourceRegistry, 0);
 }

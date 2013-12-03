@@ -19,7 +19,8 @@
 #ifndef __EDS_BASE_TEST__
 #define __EDS_BASE_TEST__
 
-#include <QtCore/QProcess>
+#include <QtCore>
+#include <libecal/libecal.h>
 
 class EDSBaseTest
 {
@@ -28,13 +29,11 @@ public:
     ~EDSBaseTest();
 
 protected:
-    QProcess *m_process;
+    void init();
+    void cleanup();
 
-    void startEDS();
-    void stopEDS();
-    void wait(int msecs);
-    bool removeDir(const QString & dirName);
-
+private:
+    ESourceRegistry *m_sourceRegistry;
 };
 
 #endif

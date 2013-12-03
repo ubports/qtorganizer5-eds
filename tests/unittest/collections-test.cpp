@@ -44,10 +44,9 @@ private:
 private Q_SLOTS:
     void init()
     {
-        startEDS();
+        EDSBaseTest::init();
         m_engineWrite = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
         m_engineRead = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
-        wait(100);
     }
 
     void cleanup()
@@ -57,10 +56,7 @@ private Q_SLOTS:
 
         delete m_engineRead;
         m_engineRead = 0;
-
-        wait(100);
-        stopEDS();
-        wait(100);
+        EDSBaseTest::cleanup();
     }
 
     void testCreateCollection()
@@ -86,6 +82,7 @@ private Q_SLOTS:
 
     void testRemoveCollection()
     {
+        qDebug() << "START TESSSSSSSSSSSSSSSSSSSSSSSSSS";
         static QString removableCollectionName = defaultTaskCollectionName + QStringLiteral("_REMOVABLE");
 
         // Create a collection
@@ -96,12 +93,13 @@ private Q_SLOTS:
         QList<QOrganizerCollection> collections = m_engineRead->collections(&error);
         int initalCollectionCount = collections.count();
 
+        qDebug() << "\tSAVE COLLECTION";
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
-        QTest::qSleep(500);
 
         // remove recent created collection
+        qDebug() << "\tREMOVE COLLECTION";
         QVERIFY(m_engineWrite->removeCollection(collection.id(), &error));
-        QTest::qSleep(500);
+        qDebug() << "\tREMOVE COLLECTION:DONE";
 
         collections = m_engineWrite->collections(&error);
         QCOMPARE(collections.count(), initalCollectionCount);
@@ -110,6 +108,8 @@ private Q_SLOTS:
         collections = m_engineRead->collections(&error);
         QCOMPARE(collections.count(), initalCollectionCount);
         QVERIFY(!collections.contains(collection));
+
+        qDebug() << "END TESTSSSSSSSSSSSSSSSSSSSSSSSSSSSs";
     }
 
    void testCreateTaskList()

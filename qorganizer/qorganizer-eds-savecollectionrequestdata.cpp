@@ -104,15 +104,17 @@ void SaveCollectionRequestData::parseCollections()
                 m_errorMap.insert(index, QOrganizerManager::UnspecifiedError);
                 qWarning() << "Fail to create source:" << gError->message;
                 g_error_free(gError);
+                Q_ASSERT(false);
             }
         } else {
             qDebug() << "Collection update not implemented";
-            Q_ASSERT(FALSE);
+            Q_ASSERT(false);
         }
 
+        e_source_set_parent(source, "local-stub");
         QString name = collection.metaData(QOrganizerCollection::KeyName).toString();
         e_source_set_display_name(source, name.toUtf8().data());
-        e_source_set_parent(source, "local-stub");
+
 
         QVariant callendarType = collection.extendedMetaData(COLLECTION_CALLENDAR_TYPE_METADATA);
         ESourceBackend *extCalendar = 0;

@@ -46,7 +46,7 @@ private:
 private Q_SLOTS:
     void init()
     {
-        startEDS();
+        EDSBaseTest::init();
 
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
@@ -58,15 +58,12 @@ private Q_SLOTS:
         bool saveResult = m_engine->saveCollection(&m_collection, &error);
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
-        wait(100);
     }
 
     void cleanup()
     {
         delete m_engine;
-        wait(100);
-        stopEDS();
-        wait(100);
+        EDSBaseTest::cleanup();
     }
 
     //helper
@@ -180,7 +177,6 @@ private Q_SLOTS:
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(errorMap.isEmpty());
         QVERIFY(!items[0].id().isNull());
-        wait(500);
 
         m_itemRemovedTime = QDateTime();
         m_requestFinishedTime = QDateTime();
