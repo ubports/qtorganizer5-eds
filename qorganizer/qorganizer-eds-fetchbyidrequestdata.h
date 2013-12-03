@@ -32,6 +32,7 @@ public:
     QString nextId();
     QString currentId() const;
     QString currentCollectionId() const;
+    bool end() const;
 
     void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
     int appendResult(const QtOrganizer::QOrganizerItem &result);

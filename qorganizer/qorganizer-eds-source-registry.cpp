@@ -166,13 +166,15 @@ EClient* SourceRegistry::client(const QString &collectionId)
     EClient *client = m_clients.value(collectionId, 0);
     if (!client) {
         QOrganizerEDSCollectionEngineId *eid = m_collectionsMap[collectionId];
-        GError *gError = 0;
-        client = e_cal_client_connect_sync(eid->m_esource, eid->m_sourceType, 0, &gError);
-        if (gError) {
-            qWarning() << "Fail to connect with client" << gError->message;
-            g_error_free(gError);
-        } else {
-            m_clients.insert(collectionId, client);
+        if (eid) {
+            GError *gError = 0;
+            client = e_cal_client_connect_sync(eid->m_esource, eid->m_sourceType, 0, &gError);
+            if (gError) {
+                qWarning() << "Fail to connect with client" << gError->message;
+                g_error_free(gError);
+            } else {
+                m_clients.insert(collectionId, client);
+            }
         }
     }
     if (client) {

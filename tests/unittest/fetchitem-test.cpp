@@ -107,6 +107,39 @@ private Q_SLOTS:
 
         QCOMPARE(expected, req.items());
     }
+
+    void testFetchWithInvalidId()
+    {
+        // malformated id
+        QList<QOrganizerItemId> request;
+        request << QOrganizerItemId::fromString("qorganizer:eds::invalidcollection/invalidcontact");
+
+        QOrganizerItemFetchByIdRequest req;
+        req.setIds(request);
+
+        m_engine->startRequest(&req);
+        m_engine->waitForRequestFinished(&req, 0);
+
+        QCOMPARE(req.items().size(), 0);
+        QMap<int, QOrganizerManager::Error> errors = req.errorMap();
+        QCOMPARE(errors.size(), 1);
+        QCOMPARE(errors[0], QOrganizerManager::DoesNotExistError);
+
+        // id not exists
+        request.clear();
+        request << QOrganizerItemId::fromString("qtorganizer:eds::1386099272.14397.0@organizer/20131203T193432Z-14397-1000-14367-9@organizer");
+
+        QOrganizerItemFetchByIdRequest reqNotFound;
+        reqNotFound.setIds(request);
+
+        m_engine->startRequest(&reqNotFound);
+        m_engine->waitForRequestFinished(&reqNotFound, 0);
+
+        QCOMPARE(reqNotFound.items().size(), 0);
+        errors = reqNotFound.errorMap();
+        QCOMPARE(errors.size(), 1);
+        QCOMPARE(errors[0], QOrganizerManager::DoesNotExistError);
+    }
 };
 
 const QString FetchItemTest::defaultCollectionName = QStringLiteral("TEST FETCH COLLECTION");

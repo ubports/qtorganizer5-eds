@@ -184,21 +184,30 @@ void QOrganizerEDSEngine::itemsByIdAsyncStart(FetchByIdRequestData *data)
     QString id = data->nextId();
     if (!id.isEmpty()) {
         QStringList ids = id.split("/");
-        Q_ASSERT(ids.length() == 2);
-        QString collectionId = ids[0];
-        QString itemId = ids[1];
-        EClient *client = data->parent()->d->m_sourceRegistry->client(collectionId);
-        data->setClient(client);
-        e_cal_client_get_objects_for_uid(data->client(),
-                                         itemId.toUtf8().data(),
-                                         data->cancellable(),
-                                         (GAsyncReadyCallback) QOrganizerEDSEngine::itemsByIdAsyncListed,
-                                         data);
-        g_object_unref(client);
-    } else {
+        if (ids.length() == 2) {
+            Q_ASSERT(ids.length() == 2);
+            QString collectionId = ids[0];
+            QString itemId = ids[1];
+            EClient *client = data->parent()->d->m_sourceRegistry->client(collectionId);
+            if (client) {
+                data->setClient(client);
+                e_cal_client_get_objects_for_uid(data->client(),
+                                                 itemId.toUtf8().data(),
+                                                 data->cancellable(),
+                                                 (GAsyncReadyCallback) QOrganizerEDSEngine::itemsByIdAsyncListed,
+                                                 data);
+                g_object_unref(client);
+                return;
+            }
+        }
+    } else if (data->end()) {
         data->finish();
         delete data;
+        return;
     }
+    qWarning() << "Invalid item id" << id;
+    data->appendResult(QOrganizerItem());
+    itemsByIdAsyncStart(data);
 }
 
 void QOrganizerEDSEngine::itemsByIdAsyncListed(GObject *client,

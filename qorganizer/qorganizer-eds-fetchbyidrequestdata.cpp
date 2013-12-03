@@ -59,6 +59,12 @@ QString FetchByIdRequestData::currentCollectionId() const
     return QString();
 }
 
+bool FetchByIdRequestData::end() const
+{
+    QList<QOrganizerItemId> ids = request<QOrganizerItemFetchByIdRequest>()->ids();
+    return (m_current >= ids.count());
+}
+
 void FetchByIdRequestData::finish(QOrganizerManager::Error error)
 {
     QOrganizerManagerEngine::updateItemFetchByIdRequest(request<QOrganizerItemFetchByIdRequest>(),
