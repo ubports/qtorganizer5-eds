@@ -40,7 +40,7 @@ private:
     QList<QOrganizerItem> m_events;
 
 private Q_SLOTS:
-    void init()
+    void initTestCase()
     {
         EDSBaseTest::init();
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
@@ -78,13 +78,23 @@ private Q_SLOTS:
         }
     }
 
-    void cleanup()
+    void cleanupTestCase()
     {
-        delete m_engine;
-        m_engine = 0;
+        QOrganizerManager::Error error;
+        QMap<int, QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItemId> ids;
+        Q_FOREACH(QOrganizerItem i, m_events) {
+            ids << i.id();
+        }
+        m_engine->removeItems(ids, &errorMap, &error);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QCOMPARE(errorMap.count(), 0);
 
         m_collection = QOrganizerCollection();
         m_events.clear();
+
+        delete m_engine;
+        m_engine = 0;
 
         EDSBaseTest::cleanup();
     }
