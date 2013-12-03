@@ -125,7 +125,7 @@ private Q_SLOTS:
         QCOMPARE(errors.size(), 1);
         QCOMPARE(errors[0], QOrganizerManager::DoesNotExistError);
 
-        // id not exists
+        // id does not exists
         request.clear();
         request << QOrganizerItemId::fromString("qtorganizer:eds::1386099272.14397.0@organizer/20131203T193432Z-14397-1000-14367-9@organizer");
 
