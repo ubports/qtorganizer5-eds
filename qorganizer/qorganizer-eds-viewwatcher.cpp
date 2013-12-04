@@ -21,6 +21,8 @@
 #include "qorganizer-eds-fetchrequestdata.h"
 #include "qorganizer-eds-engineid.h"
 
+#include <QtCore/QCoreApplication>
+
 #include <QtOrganizer/QOrganizerAbstractRequest>
 #include <QtOrganizer/QOrganizerManagerEngine>
 #include <QtOrganizer/QOrganizerItemId>
@@ -109,11 +111,13 @@ void ViewWatcher::clear()
 
     if (m_eView) {
         e_cal_client_view_stop(m_eView, 0);
+        QCoreApplication::processEvents();
         g_clear_object(&m_eView);
     }
 
     if (m_eClient) {
         g_clear_object(&m_eClient);
+        QCoreApplication::processEvents();
     }
 }
 

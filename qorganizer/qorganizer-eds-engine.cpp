@@ -397,6 +397,7 @@ void QOrganizerEDSEngine::saveItemsAsyncModified(GObject *source_object,
                                        res,
                                        &gError);
     QCoreApplication::processEvents();
+
     if (gError) {
         qWarning() << "Fail to modify items" << gError->message;
         g_error_free(gError);
@@ -424,6 +425,7 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
                                        &uids,
                                        &gError);
     QCoreApplication::processEvents();
+
     if (gError) {
         qWarning() << "Fail to create items:" << gError->message;
         g_error_free(gError);
@@ -656,6 +658,7 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
 {
     if (sourceObject && res) {
         GError *gError = 0;
+        QCoreApplication::processEvents();
         if (data->remoteDeletable()) {
             e_source_remote_delete_finish(E_SOURCE(sourceObject), res, &gError);
         } else {
@@ -759,11 +762,10 @@ bool QOrganizerEDSEngine::waitForRequestFinished(QOrganizerAbstractRequest* req,
     Q_ASSERT(req);
     Q_UNUSED(msecs);
 
-    QEventLoop eventLoop;
     QPointer<QOrganizerAbstractRequest> r(req);
 
     while(r && (r->state() == QOrganizerAbstractRequest::ActiveState)) {
-        eventLoop.processEvents();
+        QCoreApplication::processEvents();
     }
 
     return true;

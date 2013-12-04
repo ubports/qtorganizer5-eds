@@ -42,6 +42,7 @@ EDSBaseTest::~EDSBaseTest()
 
 void EDSBaseTest::init()
 {
+    cleanup();
 }
 
 void EDSBaseTest::cleanup()
@@ -56,6 +57,7 @@ void EDSBaseTest::cleanup()
         status = true;
         if (e_source_get_remote_deletable(source)) {
             status = e_source_remote_delete_sync(source, 0, &error);
+            QTest::qWait(100);
         } else if (e_source_get_removable(source)) {
             status = e_source_remove_sync(source, 0, &error);
             QTest::qWait(100);

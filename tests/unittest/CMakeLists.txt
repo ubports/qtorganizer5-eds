@@ -23,7 +23,7 @@ macro(declare_test TESTNAME)
     add_test(${TESTNAME}
              ${DBUS_RUNNER} --keep-env
              --task ${CMAKE_CURRENT_BINARY_DIR}/${TESTNAME} --task-name ${TESTNAME} --wait-until-complete --wait-for=org.gnome.evolution.dataserver.Calendar4
-             --task ${EVOLUTION_CALENDAR_FACTORY} --task-name "evolution" -r)
+             --task ${EVOLUTION_CALENDAR_FACTORY} --task-name "evolution" --wait-until-complete)
     update_test_properties(${TESTNAME})
 endmacro(declare_test testname)
 
