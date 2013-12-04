@@ -102,8 +102,7 @@ private Q_SLOTS:
     void testFetchById()
     {
         QList<QOrganizerItemId> request;
-        request << m_events[4].id()
-                << m_events[2].id();
+        request << m_events[4].id();
 
         QOrganizerItemFetchByIdRequest req;
         req.setIds(request);
@@ -112,10 +111,24 @@ private Q_SLOTS:
         m_engine->waitForRequestFinished(&req, 0);
 
         QList<QOrganizerItem> expected;
-        expected << m_events[4]
-                 << m_events[2];
+        expected << m_events[4];
 
         QCOMPARE(expected.size(), req.items().size());
+
+        QList<QOrganizerItemDetail> dr = req.items()[0].details();
+        Q_FOREACH(QOrganizerItemDetail de, m_events[4].details()) {
+            Q_FOREACH(QOrganizerItemDetail d, dr) {
+                if (de.type() == d.type()) {
+                    if (de != d) {
+                        qDebug() << "Detail not equal";
+                        qDebug() << "\t" << de;
+                        qDebug() << "\t" << d;
+                    } else {
+                        qDebug() << "Detail equal";
+                    }
+                }
+            }
+        }
         Q_FOREACH(QOrganizerItem i, req.items()) {
             expected.removeAll(i);
         }
