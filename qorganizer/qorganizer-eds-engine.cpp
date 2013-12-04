@@ -1251,12 +1251,13 @@ void QOrganizerEDSEngine::parseDescription(ECalComponent *comp, QtOrganizer::QOr
 
     for(GSList *descList = descriptions; descList != 0; descList = descList->next) {
         ECalComponentText *description = static_cast<ECalComponentText*>(descList->data);
-        if (description) {
+        if (description && description->value) {
             itemDescription.append(QString::fromUtf8(description->value));
         }
     }
 
     item->setDescription(itemDescription.join("\n"));
+    e_cal_component_free_text_list(descriptions);
 }
 
 void QOrganizerEDSEngine::parseComments(ECalComponent *comp, QtOrganizer::QOrganizerItem *item)
@@ -1807,12 +1808,15 @@ void QOrganizerEDSEngine::parseDescription(const QOrganizerItem &item, ECalCompo
     //description
     if (!item.description().isEmpty()) {
         GSList *descriptions = 0;
+        QList<QByteArray> descList;
 
         Q_FOREACH(QString desc, item.description().split("\n")) {
             QByteArray str = desc.toUtf8();
             ECalComponentText *txt = g_new0(ECalComponentText, 1);
             txt->value = str.constData();
             descriptions = g_slist_append(descriptions, txt);
+            // keep str live until the property got updated
+            descList << str;
         }
 
         e_cal_component_set_description_list(comp, descriptions);
@@ -1824,11 +1828,15 @@ void QOrganizerEDSEngine::parseComments(const QOrganizerItem &item, ECalComponen
 {
     //comments
     GSList *comments = 0;
+    QList<QByteArray> commentList;
+
     Q_FOREACH(QString comment, item.comments()) {
         QByteArray str = comment.toUtf8();
         ECalComponentText *txt = g_new0(ECalComponentText, 1);
         txt->value = str.constData();
         comments = g_slist_append(comments, txt);
+        // keep str live until the property got updated
+        commentList << str;
     }
 
     if (comments) {
@@ -1841,11 +1849,15 @@ void QOrganizerEDSEngine::parseTags(const QOrganizerItem &item, ECalComponent *c
 {
     //tags
     GSList *categories = 0;
+    QList<QByteArray> tagList;
+
     Q_FOREACH(QString tag, item.tags()) {
         QByteArray str = tag.toUtf8();
         ECalComponentText *txt = g_new0(ECalComponentText, 1);
         txt->value = str.constData();
         categories = g_slist_append(categories, txt);
+        // keep str live until the property got updated
+        tagList << str;
     }
 
     if (categories) {
