@@ -59,6 +59,8 @@ file(MAKE_DIRECTORY ${TMP_DIR}/.local/share)
 find_program(DBUS_RUNNER dbus-test-runner)
 find_program(EVOLUTION_CALENDAR_FACTORY evolution-calendar-factory
              PATHS /usr/lib/evolution/)
+find_program(EVOLUTION_SOURCE_REGISTRY evolution-source-registry
+             PATHS /usr/lib/evolution/)
 configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 add_subdirectory(qorganizer)
