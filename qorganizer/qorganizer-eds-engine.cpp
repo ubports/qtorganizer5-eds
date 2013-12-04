@@ -658,7 +658,6 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
 {
     if (sourceObject && res) {
         GError *gError = 0;
-        QCoreApplication::processEvents();
         if (data->remoteDeletable()) {
             e_source_remote_delete_finish(E_SOURCE(sourceObject), res, &gError);
         } else {

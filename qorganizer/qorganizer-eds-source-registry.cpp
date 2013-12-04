@@ -93,7 +93,6 @@ void SourceRegistry::load()
     if (defaultCalendarSource) {
         g_object_unref(defaultCalendarSource);
     }
-
 }
 
 
