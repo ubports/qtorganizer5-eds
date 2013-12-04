@@ -63,7 +63,10 @@ find_program(EVOLUTION_SOURCE_REGISTRY evolution-source-registry
              PATHS /usr/lib/evolution/)
 configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
-OPTION(EVOLUTION_SOURCE_SERVICE_NAME "DBus name for source registry" "org.gnome.evolution.dataserver.Sources2")
+OPTION(EVOLUTION_SOURCE_SERVICE_NAME "DBus name for source registry")
+if(NOT EVOLUTION_SOURCE_SERVICE_NAME)
+    set(EVOLUTION_SOURCE_SERVICE_NAME "org.gnome.evolution.dataserver.Sources2")
+endif()
 
 add_subdirectory(qorganizer)
 if(DBUS_RUNNER)
