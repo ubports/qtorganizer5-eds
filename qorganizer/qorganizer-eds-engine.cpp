@@ -683,7 +683,6 @@ bool QOrganizerEDSEngine::waitForRequestFinished(QOrganizerAbstractRequest* req,
     Q_ASSERT(req);
     Q_UNUSED(msecs);
 
-    QEventLoop eventLoop;
     QPointer<QOrganizerAbstractRequest> r(req);
 
     while(r && (r->state() == QOrganizerAbstractRequest::ActiveState)) {
