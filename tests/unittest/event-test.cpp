@@ -46,7 +46,7 @@ private:
 private Q_SLOTS:
     void init()
     {
-        EDSBaseTest::init();
+        EDSBaseTest::init(0);
 
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
@@ -62,8 +62,7 @@ private Q_SLOTS:
 
     void cleanup()
     {
-        delete m_engine;
-        EDSBaseTest::cleanup();
+        EDSBaseTest::cleanup(m_engine);
     }
 
     //helper
@@ -113,6 +112,9 @@ private Q_SLOTS:
                                               &error);
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
+
+        // append new item to be removed after the test
+        appendToRemove(items[0].id());
 
         QOrganizerItemSortOrder sort;
         QOrganizerItemFetchHint hint;
@@ -178,6 +180,9 @@ private Q_SLOTS:
         QVERIFY(errorMap.isEmpty());
         QVERIFY(!items[0].id().isNull());
 
+        // append new item to be removed after the test
+        appendToRemove(items[0].id());
+
         m_itemRemovedTime = QDateTime();
         m_requestFinishedTime = QDateTime();
 
@@ -224,6 +229,7 @@ private Q_SLOTS:
         QCOMPARE(evs.count(), 10);
         Q_FOREACH(QOrganizerItem i, evs) {
             QVERIFY(!i.id().isNull());
+            appendToRemove(i.id());
         }
     }
 
@@ -268,6 +274,7 @@ private Q_SLOTS:
         QCOMPARE(evs.count(), 20);
         Q_FOREACH(QOrganizerItem i, evs) {
             QVERIFY(!i.id().isNull());
+            appendToRemove(i.id());
         }
     }
 
@@ -307,6 +314,8 @@ private Q_SLOTS:
         QVERIFY(saveResult);
         QCOMPARE(error, QOrganizerManager::NoError);
         QCOMPARE(evs.count(), 2);
+        appendToRemove(evs[0].id());
+        appendToRemove(evs[1].id());
         QCOMPARE(errorMap.size(), 1);
         QCOMPARE(errorMap[1], QOrganizerManager::InvalidCollectionError);
     }

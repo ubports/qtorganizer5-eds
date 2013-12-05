@@ -42,7 +42,7 @@ private:
 private Q_SLOTS:
     void initTestCase()
     {
-        EDSBaseTest::init();
+        EDSBaseTest::init(0);
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
         // create test collection
@@ -75,28 +75,17 @@ private Q_SLOTS:
             QCOMPARE(error, QOrganizerManager::NoError);
             QVERIFY(errorMap.isEmpty());
             m_events << evs[0];
+            appendToRemove(evs[0].id());
         }
     }
 
     void cleanupTestCase()
     {
-        QOrganizerManager::Error error;
-        QMap<int, QOrganizerManager::Error> errorMap;
-        QList<QOrganizerItemId> ids;
-        Q_FOREACH(QOrganizerItem i, m_events) {
-            ids << i.id();
-        }
-        m_engine->removeItems(ids, &errorMap, &error);
-        QCOMPARE(error, QOrganizerManager::NoError);
-        QCOMPARE(errorMap.count(), 0);
-
         m_collection = QOrganizerCollection();
         m_events.clear();
 
-        delete m_engine;
+        EDSBaseTest::cleanup(m_engine);
         m_engine = 0;
-
-        EDSBaseTest::cleanup();
     }
 
     void testFetchById()

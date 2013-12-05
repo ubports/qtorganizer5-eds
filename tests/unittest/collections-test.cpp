@@ -44,19 +44,17 @@ private:
 private Q_SLOTS:
     void init()
     {
-        EDSBaseTest::init();
+        EDSBaseTest::init(0);
         m_engineWrite = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
         m_engineRead = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
     }
 
     void cleanup()
     {
-        delete m_engineWrite;
-        m_engineWrite = 0;
-
         delete m_engineRead;
         m_engineRead = 0;
-        EDSBaseTest::cleanup();
+        EDSBaseTest::cleanup(m_engineWrite);
+        m_engineWrite = 0;
     }
 
     void testCreateCollection()
@@ -158,6 +156,7 @@ private Q_SLOTS:
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(errorMap.isEmpty());
         QVERIFY(!items[0].id().isNull());
+        appendToRemove(items[0].id());
 
         //verify signal
         QCOMPARE(createdItem.count(), 1);
