@@ -1839,7 +1839,7 @@ void QOrganizerEDSEngine::parseDescription(const QOrganizerItem &item, ECalCompo
             ECalComponentText *txt = g_new0(ECalComponentText, 1);
             txt->value = str.constData();
             descriptions = g_slist_append(descriptions, txt);
-            // keep str live until the property got updated
+            // keep str alive until the property gets updated
             descList << str;
         }
 
@@ -1859,7 +1859,7 @@ void QOrganizerEDSEngine::parseComments(const QOrganizerItem &item, ECalComponen
         ECalComponentText *txt = g_new0(ECalComponentText, 1);
         txt->value = str.constData();
         comments = g_slist_append(comments, txt);
-        // keep str live until the property got updated
+        // keep str alive until the property gets updated
         commentList << str;
     }
 
@@ -1880,7 +1880,7 @@ void QOrganizerEDSEngine::parseTags(const QOrganizerItem &item, ECalComponent *c
         ECalComponentText *txt = g_new0(ECalComponentText, 1);
         txt->value = str.constData();
         categories = g_slist_append(categories, txt);
-        // keep str live until the property got updated
+        // keep str alive until the property gets updated
         tagList << str;
     }
 
