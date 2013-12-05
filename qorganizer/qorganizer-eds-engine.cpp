@@ -21,6 +21,7 @@
 #include "qorganizer-eds-engineid.h"
 #include "qorganizer-eds-collection-engineid.h"
 #include "qorganizer-eds-fetchrequestdata.h"
+#include "qorganizer-eds-fetchbyidrequestdata.h"
 #include "qorganizer-eds-saverequestdata.h"
 #include "qorganizer-eds-removerequestdata.h"
 #include "qorganizer-eds-savecollectionrequestdata.h"
@@ -39,6 +40,7 @@
 #include <QtOrganizer/QOrganizerItemLocation>
 #include <QtOrganizer/QOrganizerEventTime>
 #include <QtOrganizer/QOrganizerItemFetchRequest>
+#include <QtOrganizer/QOrganizerItemFetchByIdRequest>
 #include <QtOrganizer/QOrganizerItemSaveRequest>
 #include <QtOrganizer/QOrganizerItemRemoveRequest>
 #include <QtOrganizer/QOrganizerCollectionFetchRequest>
@@ -167,6 +169,77 @@ void QOrganizerEDSEngine::itemsAsyncListed(GObject *source_object,
         data->appendResults(data->parent()->parseEvents(data->collection(), events, false));
     }
     itemsAsyncStart(data);
+}
+
+void QOrganizerEDSEngine::itemsByIdAsync(QOrganizerItemFetchByIdRequest *req)
+{
+    qDebug() << Q_FUNC_INFO;
+    FetchByIdRequestData *data = new FetchByIdRequestData(this, req);
+    itemsByIdAsyncStart(data);
+}
+
+void QOrganizerEDSEngine::itemsByIdAsyncStart(FetchByIdRequestData *data)
+{
+    qDebug() << Q_FUNC_INFO;
+    QString id = data->nextId();
+    if (!id.isEmpty()) {
+        QStringList ids = id.split("/");
+        if (ids.length() == 2) {
+            Q_ASSERT(ids.length() == 2);
+            QString collectionId = ids[0];
+            QString itemId = ids[1];
+            EClient *client = data->parent()->d->m_sourceRegistry->client(collectionId);
+            if (client) {
+                data->setClient(client);
+                e_cal_client_get_objects_for_uid(data->client(),
+                                                 itemId.toUtf8().data(),
+                                                 data->cancellable(),
+                                                 (GAsyncReadyCallback) QOrganizerEDSEngine::itemsByIdAsyncListed,
+                                                 data);
+                g_object_unref(client);
+                return;
+            }
+        }
+    } else if (data->end()) {
+        data->finish();
+        delete data;
+        return;
+    }
+    qWarning() << "Invalid item id" << id;
+    data->appendResult(QOrganizerItem());
+    itemsByIdAsyncStart(data);
+}
+
+void QOrganizerEDSEngine::itemsByIdAsyncListed(GObject *client,
+                                               GAsyncResult *res,
+                                               FetchByIdRequestData *data)
+{
+    qDebug() << Q_FUNC_INFO;
+    Q_UNUSED(client);
+    GError *gError = 0;
+    GSList *events = 0;
+    e_cal_client_get_objects_for_uid_finish(data->client(),
+                                            res,
+                                            &events,
+                                            &gError);
+    if (gError) {
+        qWarning() << "Fail to list events in calendar" << gError->message;
+        g_error_free(gError);
+        gError = 0;
+        data->appendResult(QOrganizerItem());
+    } else {
+        QList<QOrganizerItem> items = data->parent()->parseEvents(data->currentCollectionId(), events, false);
+        if (items.length() == 1) {
+            data->appendResult(items[0]);
+        } else {
+            qWarning() << "Number of events returned by fetch is invalid";
+            data->appendResult(QOrganizerItem());
+        }
+    }
+    if (events) {
+        e_cal_client_free_ecalcomp_slist(events);
+    }
+    itemsByIdAsyncStart(data);
 }
 
 QList<QOrganizerItem> QOrganizerEDSEngine::items(const QList<QOrganizerItemId> &itemIds,
@@ -324,6 +397,7 @@ void QOrganizerEDSEngine::saveItemsAsyncModified(GObject *source_object,
                                        res,
                                        &gError);
     QCoreApplication::processEvents();
+
     if (gError) {
         qWarning() << "Fail to modify items" << gError->message;
         g_error_free(gError);
@@ -351,6 +425,7 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
                                        &uids,
                                        &gError);
     QCoreApplication::processEvents();
+
     if (gError) {
         qWarning() << "Fail to create items:" << gError->message;
         g_error_free(gError);
@@ -637,6 +712,9 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
     {
         case QOrganizerAbstractRequest::ItemFetchRequest:
             itemsAsync(qobject_cast<QOrganizerItemFetchRequest*>(req));
+            break;
+        case QOrganizerAbstractRequest::ItemFetchByIdRequest:
+            itemsByIdAsync(qobject_cast<QOrganizerItemFetchByIdRequest*>(req));
             break;
         case QOrganizerAbstractRequest::CollectionFetchRequest:
             QOrganizerManagerEngine::updateCollectionFetchRequest(qobject_cast<QOrganizerCollectionFetchRequest*>(req),
@@ -1172,12 +1250,13 @@ void QOrganizerEDSEngine::parseDescription(ECalComponent *comp, QtOrganizer::QOr
 
     for(GSList *descList = descriptions; descList != 0; descList = descList->next) {
         ECalComponentText *description = static_cast<ECalComponentText*>(descList->data);
-        if (description) {
+        if (description && description->value) {
             itemDescription.append(QString::fromUtf8(description->value));
         }
     }
 
     item->setDescription(itemDescription.join("\n"));
+    e_cal_component_free_text_list(descriptions);
 }
 
 void QOrganizerEDSEngine::parseComments(ECalComponent *comp, QtOrganizer::QOrganizerItem *item)
@@ -1335,6 +1414,7 @@ QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(const QString &collection
         QOrganizerEDSEngineId *eid = new QOrganizerEDSEngineId(collection->m_collectionId,
                                                                QString::fromUtf8(uid));
         item->setId(QOrganizerItemId(eid));
+        item->setGuid(QString::fromUtf8(uid));
         item->setCollectionId(cId);
         parseDescription(comp, item);
         parseSummary(comp, item);
@@ -1725,13 +1805,18 @@ void QOrganizerEDSEngine::parseSummary(const QOrganizerItem &item, ECalComponent
 void QOrganizerEDSEngine::parseDescription(const QOrganizerItem &item, ECalComponent *comp)
 {
     //description
-    if (item.description().isEmpty()) {
+    if (!item.description().isEmpty()) {
         GSList *descriptions = 0;
-        QByteArray str = item.description().toUtf8();
-        ECalComponentText *txt = g_new0(ECalComponentText, 1);
+        QList<QByteArray> descList;
 
-        txt->value = str.constData();
-        descriptions = g_slist_append(descriptions, txt);
+        Q_FOREACH(QString desc, item.description().split("\n")) {
+            QByteArray str = desc.toUtf8();
+            ECalComponentText *txt = g_new0(ECalComponentText, 1);
+            txt->value = str.constData();
+            descriptions = g_slist_append(descriptions, txt);
+            // keep str alive until the property gets updated
+            descList << str;
+        }
 
         e_cal_component_set_description_list(comp, descriptions);
         e_cal_component_free_text_list(descriptions);
@@ -1742,11 +1827,15 @@ void QOrganizerEDSEngine::parseComments(const QOrganizerItem &item, ECalComponen
 {
     //comments
     GSList *comments = 0;
+    QList<QByteArray> commentList;
+
     Q_FOREACH(QString comment, item.comments()) {
         QByteArray str = comment.toUtf8();
         ECalComponentText *txt = g_new0(ECalComponentText, 1);
         txt->value = str.constData();
         comments = g_slist_append(comments, txt);
+        // keep str alive until the property gets updated
+        commentList << str;
     }
 
     if (comments) {
@@ -1759,11 +1848,15 @@ void QOrganizerEDSEngine::parseTags(const QOrganizerItem &item, ECalComponent *c
 {
     //tags
     GSList *categories = 0;
+    QList<QByteArray> tagList;
+
     Q_FOREACH(QString tag, item.tags()) {
         QByteArray str = tag.toUtf8();
         ECalComponentText *txt = g_new0(ECalComponentText, 1);
         txt->value = str.constData();
         categories = g_slist_append(categories, txt);
+        // keep str alive until the property gets updated
+        tagList << str;
     }
 
     if (categories) {

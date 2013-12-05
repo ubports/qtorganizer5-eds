@@ -37,6 +37,7 @@
 
 class RequestData;
 class FetchRequestData;
+class FetchByIdRequestData;
 class SaveRequestData;
 class RemoveRequestData;
 class SaveCollectionRequestData;
@@ -196,6 +197,10 @@ private:
     static void itemsAsyncStart(FetchRequestData *data);
     static void itemsAsyncConnected(GObject *source_object, GAsyncResult *res, FetchRequestData *data);
     static void itemsAsyncListed(GObject *source_object, GAsyncResult *res, FetchRequestData *data);
+
+    void itemsByIdAsync(QtOrganizer::QOrganizerItemFetchByIdRequest *req);
+    static void itemsByIdAsyncStart(FetchByIdRequestData *data);
+    static void itemsByIdAsyncListed(GObject *client, GAsyncResult *res, FetchByIdRequestData *data);
 
     void saveItemsAsync(QtOrganizer::QOrganizerItemSaveRequest *req);
     static void saveItemsAsyncCreated(GObject *source_object, GAsyncResult *res, SaveRequestData *data);

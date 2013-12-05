@@ -61,6 +61,8 @@ find_program(EVOLUTION_CALENDAR_FACTORY evolution-calendar-factory
              PATHS /usr/lib/evolution/)
 find_program(EVOLUTION_SOURCE_REGISTRY evolution-source-registry
              PATHS /usr/lib/evolution/)
+find_program(GVFSD gvfsd
+             PATHS /usr/lib/gvfs/)
 configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 OPTION(EVOLUTION_SOURCE_SERVICE_NAME "DBus name for source registry")

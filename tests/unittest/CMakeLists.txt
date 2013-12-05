@@ -24,7 +24,8 @@ macro(declare_test TESTNAME)
              ${DBUS_RUNNER} --keep-env
              --task ${CMAKE_CURRENT_BINARY_DIR}/${TESTNAME} --task-name ${TESTNAME} --wait-until-complete --wait-for=org.gnome.evolution.dataserver.Calendar4
              --task ${EVOLUTION_CALENDAR_FACTORY} --task-name "evolution" --wait-until-complete --wait-for=${EVOLUTION_SOURCE_SERVICE_NAME}
-             --task ${EVOLUTION_SOURCE_REGISTRY} --task-name "source-registry" -r)
+             --task ${EVOLUTION_SOURCE_REGISTRY} --task-name "source-registry" --wait-for=org.gtk.vfs.Daemon -r
+             --task ${GVFSD} --task-name "gvfsd" -r)
     update_test_properties(${TESTNAME})
 endmacro(declare_test testname)
 
@@ -32,6 +33,7 @@ macro(update_test_properties TESTNAME)
     set(TEST_TMP_DIR "${TMP_DIR}/${TESTNAME}")
     list(APPEND ENV_VARS_LIST "QT_QPA_PLATFORM=minimal")
     list(APPEND ENV_VARS_LIST "HOME=${TEST_TMP_DIR}")
+    list(APPEND ENV_VARS_LIST "XDG_RUNTIME_DIR=${TEST_TMP_DIR}")
     list(APPEND ENV_VARS_LIST "XDG_CACHE_HOME=${TEST_TMP_DIR}/.cache")
     list(APPEND ENV_VARS_LIST "XDG_CONFIG_HOME=${TEST_TMP_DIR}/.config")
     list(APPEND ENV_VARS_LIST "XDG_DATA_HOME=${TEST_TMP_DIR}/.local/share")
@@ -69,3 +71,4 @@ declare_test(itemid-test)
 declare_test(parseecal-test)
 declare_test(collections-test)
 declare_test(event-test)
+declare_test(fetchitem-test)

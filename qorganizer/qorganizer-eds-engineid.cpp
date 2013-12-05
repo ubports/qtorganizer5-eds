@@ -27,10 +27,15 @@ QOrganizerEDSEngineId::QOrganizerEDSEngineId()
 
 QOrganizerEDSEngineId::QOrganizerEDSEngineId(const QString &collectionId,
                                              const QString &id)
-    : QOrganizerItemEngineId(),
-      m_collectionId(collectionId),
-      m_itemId(id)
+    : QOrganizerItemEngineId()
 {
+    if (!collectionId.isNull() && !collectionId.isEmpty()) {
+        m_collectionId = collectionId.contains(":") ? collectionId.mid(collectionId.lastIndexOf(":")+1) : collectionId;
+    }
+
+    if (!id.isNull() && !id.isEmpty()) {
+        m_itemId = id.contains(":") ? id.mid(id.lastIndexOf(":")+1) : id;
+    }
 }
 
 QOrganizerEDSEngineId::~QOrganizerEDSEngineId()

@@ -5,6 +5,7 @@ set(QORGANIZER_BACKEND qtorganizer_eds)
 set(QORGANIZER_BACKEND_SRCS
     qorganizer-eds-collection-engineid.cpp
     qorganizer-eds-fetchrequestdata.cpp
+    qorganizer-eds-fetchbyidrequestdata.cpp
     qorganizer-eds-engine.cpp
     qorganizer-eds-enginedata.cpp
     qorganizer-eds-engineid.cpp
@@ -20,6 +21,7 @@ set(QORGANIZER_BACKEND_SRCS
 set(QORGANIZER_BACKEND_HDRS
     qorganizer-eds-collection-engineid.h
     qorganizer-eds-fetchrequestdata.h
+    qorganizer-eds-fetchbyidrequestdata.h
     qorganizer-eds-engine.h
     qorganizer-eds-enginedata.h
     qorganizer-eds-engineid.h
