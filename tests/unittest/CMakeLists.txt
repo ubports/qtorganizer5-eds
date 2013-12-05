@@ -24,7 +24,8 @@ macro(declare_test TESTNAME)
              ${DBUS_RUNNER} --keep-env
              --task ${CMAKE_CURRENT_BINARY_DIR}/${TESTNAME} --task-name ${TESTNAME} --wait-until-complete --wait-for=org.gnome.evolution.dataserver.Calendar4
              --task ${EVOLUTION_CALENDAR_FACTORY} --task-name "evolution" --wait-until-complete --wait-for=${EVOLUTION_SOURCE_SERVICE_NAME}
-             --task ${EVOLUTION_SOURCE_REGISTRY} --task-name "source-registry" -r)
+             --task ${EVOLUTION_SOURCE_REGISTRY} --task-name "source-registry" --wait-for=org.gtk.vfs.Daemon -r
+             --task ${GVFSD} --task-name "gvfsd" -r)
     update_test_properties(${TESTNAME})
 endmacro(declare_test testname)
 
