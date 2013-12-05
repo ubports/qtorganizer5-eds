@@ -47,9 +47,35 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
 add_custom_target(uninstall "${CMAKE_COMMAND}"
                   -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
 
-enable_testing()
+#Temporary dir used by tests
+execute_process(COMMAND mktemp -d -t qorganizer_eds_test.XXX
+                OUTPUT_VARIABLE  TMP_DIR
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+#Create the directories
+file(MAKE_DIRECTORY ${TMP_DIR}/.cache)
+file(MAKE_DIRECTORY ${TMP_DIR}/.config)
+file(MAKE_DIRECTORY ${TMP_DIR}/.local/share)
+
+find_program(DBUS_RUNNER dbus-test-runner)
+find_program(EVOLUTION_CALENDAR_FACTORY evolution-calendar-factory
+             PATHS /usr/lib/evolution/)
+find_program(EVOLUTION_SOURCE_REGISTRY evolution-source-registry
+             PATHS /usr/lib/evolution/)
+configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+
+OPTION(EVOLUTION_SOURCE_SERVICE_NAME "DBus name for source registry")
+if(NOT EVOLUTION_SOURCE_SERVICE_NAME)
+    set(EVOLUTION_SOURCE_SERVICE_NAME "org.gnome.evolution.dataserver.Sources2")
+endif()
 
 add_subdirectory(qorganizer)
-add_subdirectory(tests)
-
-configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+if(DBUS_RUNNER)
+    if(EVOLUTION_CALENDAR_FACTORY)
+        enable_testing()
+        add_subdirectory(tests)
+    else(EVOLUTION_CALENDAR_FACTORY)
+        message(WARNING "evolution-calendar-factory binary not found tests will be disabled")
+    endif(EVOLUTION_CALENDAR_FACTORY)
+else(DBUS_RUNNER)
+    message(WARNING "dbus-test-runner binary not found tests will be disabled")
+endif(DBUS_RUNNER)

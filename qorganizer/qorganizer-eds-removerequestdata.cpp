@@ -18,6 +18,7 @@
 
 #include "qorganizer-eds-removerequestdata.h"
 #include "qorganizer-eds-engineid.h"
+#include "qorganizer-eds-enginedata.h"
 
 #include <QtOrganizer/QOrganizerManagerEngine>
 #include <QtOrganizer/QOrganizerItemRemoveRequest>
@@ -56,6 +57,7 @@ GSList *RemoveRequestData::takeItemsIds(QOrganizerCollectionId collectionId)
             ECalComponentId *id = g_new0(ECalComponentId, 1);
 
             id->uid = g_strdup(QOrganizerEDSEngineId::toComponentId(item.id()).toUtf8().data());
+            id->rid = NULL;
             ids = g_slist_append(ids, id);
 
             m_pendingItems.removeAll(item);
@@ -72,7 +74,7 @@ void RemoveRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
                                                      QMap<int, QOrganizerManager::Error>(),
                                                      QOrganizerAbstractRequest::FinishedState);
 
-    m_changeSet.emitSignals(m_parent);
+    emitChangeset(&m_changeSet);
 }
 
 GSList *RemoveRequestData::compIds() const
@@ -93,7 +95,7 @@ void RemoveRequestData::commit()
     clear();
 }
 
-QOrganizerCollectionId RemoveRequestData::begin()
+QOrganizerCollectionId RemoveRequestData::next()
 {
     Q_ASSERT(!m_sessionStaterd);
     if (m_pendingCollections.count() > 0) {

@@ -28,9 +28,10 @@ class QOrganizerEDSCollectionEngineId : public QtOrganizer::QOrganizerCollection
 {
 public:
     QOrganizerEDSCollectionEngineId();
-    ~QOrganizerEDSCollectionEngineId();
     QOrganizerEDSCollectionEngineId(const QOrganizerEDSCollectionEngineId& other);
     QOrganizerEDSCollectionEngineId(const QString& idString);
+    QOrganizerEDSCollectionEngineId(ESource *source);
+    ~QOrganizerEDSCollectionEngineId();
 
     bool isEqualTo(const QtOrganizer::QOrganizerCollectionEngineId* other) const;
     bool isLessThan(const QtOrganizer::QOrganizerCollectionEngineId* other) const;
@@ -39,7 +40,6 @@ public:
     QOrganizerEDSCollectionEngineId *clone() const;
 
     QString toString() const;
-
 
     uint hash() const;
 
@@ -52,10 +52,9 @@ private:
     ESource *m_esource;
     ECalClientSourceType m_sourceType;
 
-    QOrganizerEDSCollectionEngineId(ESource *source);
-
+    friend class SourceRegistry;
+    //friend class ViewWatcher;
     friend class QOrganizerEDSEngine;
-    friend class ViewWatcher;
 };
 
 

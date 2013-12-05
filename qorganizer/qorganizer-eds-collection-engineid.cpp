@@ -64,8 +64,7 @@ QOrganizerEDSCollectionEngineId::QOrganizerEDSCollectionEngineId(const QString& 
 QOrganizerEDSCollectionEngineId::~QOrganizerEDSCollectionEngineId()
 {
     if (m_esource) {
-        g_object_unref(m_esource);
-        m_esource = 0;
+        g_clear_object(&m_esource);
     }
 }
 

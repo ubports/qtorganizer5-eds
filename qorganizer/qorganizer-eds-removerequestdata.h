@@ -36,7 +36,7 @@ public:
 
     GSList *compIds() const;
 
-    QtOrganizer::QOrganizerCollectionId begin();
+    QtOrganizer::QOrganizerCollectionId next();
     void commit();
     virtual void cancel();
 

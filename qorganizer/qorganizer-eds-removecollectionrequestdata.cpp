@@ -18,15 +18,19 @@
 
 #include "qorganizer-eds-removecollectionrequestdata.h"
 #include "qorganizer-eds-engineid.h"
+#include "qorganizer-eds-enginedata.h"
+#include "qorganizer-eds-source-registry.h"
 
 #include <QtOrganizer/QOrganizerManagerEngine>
 #include <QtOrganizer/QOrganizerCollectionRemoveRequest>
+#include <QtOrganizer/QOrganizerCollectionChangeSet>
 
 using namespace QtOrganizer;
 
 RemoveCollectionRequestData::RemoveCollectionRequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbstractRequest *req)
     : RequestData(engine, req),
-      m_currentCollection(0)
+      m_currentCollection(0),
+      m_remoteDeletable(false)
 {
     m_pendingCollections = request<QOrganizerCollectionRemoveRequest>()->collectionIds();
 }
@@ -42,34 +46,44 @@ void RemoveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error e
                                                            m_errorMap,
                                                            QOrganizerAbstractRequest::FinishedState);
 
-    // emit collection removed signal
     QList<QOrganizerCollectionId> removedIds = m_pendingCollections;
     Q_FOREACH(int index, m_errorMap.keys()) {
         removedIds.removeAt(index);
     }
 
-    // remove source from engine
-    Q_FOREACH(QOrganizerCollectionId id, removedIds) {
-        parent()->unregisterCollection(id);
-    }
-
-    Q_EMIT parent()->collectionsRemoved(removedIds);
+    QOrganizerCollectionChangeSet cs;
+    cs.insertRemovedCollections(removedIds);
+    emitChangeset(&cs);
 }
 
 void RemoveCollectionRequestData::commit(QtOrganizer::QOrganizerManager::Error error)
 {
     if (error != QOrganizerManager::NoError) {
         m_errorMap.insert(m_currentCollection, error);
+    } else {
+        QOrganizerCollectionId cId = m_pendingCollections.at(m_currentCollection);
+        parent()->d->m_sourceRegistry->remove(cId.toString());
     }
 
     m_currentCollection++;
+    m_remoteDeletable = false;
+}
+
+bool RemoveCollectionRequestData::remoteDeletable() const
+{
+    return m_remoteDeletable;
+}
+
+void RemoveCollectionRequestData::setRemoteDeletable(bool deletable)
+{
+    m_remoteDeletable = deletable;
 }
 
 ESource *RemoveCollectionRequestData::begin()
 {
     if (m_pendingCollections.count() > m_currentCollection) {
         QOrganizerCollectionId cId = m_pendingCollections.at(m_currentCollection);
-        return parent()->findSource(cId);
+        return parent()->d->m_sourceRegistry->source(cId.toString());
     } else {
         return 0;
     }

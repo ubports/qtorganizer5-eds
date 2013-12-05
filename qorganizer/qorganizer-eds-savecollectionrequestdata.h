@@ -33,14 +33,12 @@ public:
 
     GList *sources() const;
     QList<QtOrganizer::QOrganizerCollection> results() const;
-    ESource *begin() const;
     void commit(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
 
 private:
     QMap<int, QtOrganizer::QOrganizerManager::Error> m_errorMap;
     QList<QtOrganizer::QOrganizerCollection> m_results;
     GList *m_sources;
-    int m_currentSource;
 
     void parseCollections();
 

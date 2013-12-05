@@ -34,11 +34,14 @@ public:
     ESource* begin();
     void commit(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
 
+    bool remoteDeletable() const;
+    void setRemoteDeletable(bool deletable);
+
 private:
     QList<QtOrganizer::QOrganizerCollectionId> m_pendingCollections;
     QMap<int, QtOrganizer::QOrganizerManager::Error> m_errorMap;
     int m_currentCollection;
-
+    bool m_remoteDeletable;
 };
 
 #endif

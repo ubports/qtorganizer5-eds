@@ -17,6 +17,7 @@
  */
 
 #include "qorganizer-eds-saverequestdata.h"
+#include "qorganizer-eds-enginedata.h"
 
 #include <QtOrganizer/QOrganizerManagerEngine>
 #include <QtOrganizer/QOrganizerItemSaveRequest>
@@ -35,7 +36,6 @@ SaveRequestData::~SaveRequestData()
 {
 }
 
-
 void SaveRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
 {
     QOrganizerManagerEngine::updateItemSaveRequest(request<QOrganizerItemSaveRequest>(),
@@ -46,7 +46,7 @@ void SaveRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
     Q_FOREACH(QOrganizerItem item, m_result) {
         m_changeSet.insertAddedItem(item.id());
     }
-    m_changeSet.emitSignals(m_parent);
+    emitChangeset(&m_changeSet);
 }
 
 void SaveRequestData::appendResults(QList<QOrganizerItem> result)

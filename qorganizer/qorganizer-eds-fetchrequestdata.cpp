@@ -22,30 +22,31 @@
 
 using namespace QtOrganizer;
 
-FetchRequestData::FetchRequestData(QOrganizerEDSEngine *engine, QOrganizerAbstractRequest *req)
+FetchRequestData::FetchRequestData(QOrganizerEDSEngine *engine,
+                                   QStringList collections,
+                                   QOrganizerAbstractRequest *req)
     : RequestData(engine, req),
-      m_collections(engine->m_collectionsMap.values())
+      m_collections(collections)
 {
 }
 
 FetchRequestData::~FetchRequestData()
 {
-    m_parent->m_pendingFetchRequest.removeOne(this);
 }
 
-QOrganizerEDSCollectionEngineId* FetchRequestData::nextCollection()
+QString FetchRequestData::nextCollection()
 {
-    m_current = 0;
+    m_current = "";
     setClient(0);
     if (m_collections.size()) {
         m_current = m_collections.takeFirst();
         return m_current;
     } else {
-        return 0;
+        return QString();
     }
 }
 
-QOrganizerEDSCollectionEngineId* FetchRequestData::collection() const
+QString FetchRequestData::collection() const
 {
     return m_current;
 }

@@ -1,1 +1,8 @@
+#ifndef __CONFIG_H__
+#define __CONFIG_H__
 
+#define TMP_DIR                     "@TMP_DIR@"
+#define EVOLUTION_CALENDAR_FACTORY  "@EVOLUTION_CALENDAR_FACTORY@"
+#define EVOLUTION_CALENDAR_SERVICE  "org.gnome.evolution.dataserver.Calendar4"
+
+#endif

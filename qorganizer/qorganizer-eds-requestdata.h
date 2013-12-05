@@ -20,6 +20,7 @@
 #define __QORGANIZER_EDS_REQUESTDATA_H__
 
 #include "qorganizer-eds-engine.h"
+#include "qorganizer-eds-enginedata.h"
 
 #include <QtCore/QPointer>
 
@@ -43,6 +44,11 @@ public:
     template<class T>
     T* request() const {
         return qobject_cast<T*>(m_req.data());
+    }
+
+    template<class T>
+    void emitChangeset(T *cs) {
+        m_parent->d->emitSharedSignals<T>(cs);
     }
 
 protected:

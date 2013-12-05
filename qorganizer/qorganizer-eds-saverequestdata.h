@@ -20,6 +20,7 @@
 #define __QORGANIZER_EDS_SAVEREQUESTDATA_H__
 
 #include "qorganizer-eds-requestdata.h"
+#include "qorganizer-eds-engine.h"
 
 class SaveRequestData : public RequestData
 {
