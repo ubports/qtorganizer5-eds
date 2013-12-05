@@ -43,6 +43,8 @@ EDSBaseTest::~EDSBaseTest()
 void EDSBaseTest::init()
 {
     cleanup();
+    // wait to flush DBUS calls
+    QTest::qWait(1000);
 }
 
 void EDSBaseTest::cleanup()
