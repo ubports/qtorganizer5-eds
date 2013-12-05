@@ -163,6 +163,10 @@ void SourceRegistry::remove(const QString &collectionId)
 
 EClient* SourceRegistry::client(const QString &collectionId)
 {
+    if (collectionId.isEmpty()) {
+        return 0;
+    }
+
     EClient *client = m_clients.value(collectionId, 0);
     if (!client) {
         QOrganizerEDSCollectionEngineId *eid = m_collectionsMap[collectionId];

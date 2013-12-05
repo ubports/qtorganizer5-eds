@@ -203,6 +203,7 @@ private:
     static void itemsByIdAsyncListed(GObject *client, GAsyncResult *res, FetchByIdRequestData *data);
 
     void saveItemsAsync(QtOrganizer::QOrganizerItemSaveRequest *req);
+    static void saveItemsAsyncStart(SaveRequestData *data);
     static void saveItemsAsyncCreated(GObject *source_object, GAsyncResult *res, SaveRequestData *data);
     static void saveItemsAsyncModified(GObject *source_object, GAsyncResult *res, SaveRequestData *data);
 
