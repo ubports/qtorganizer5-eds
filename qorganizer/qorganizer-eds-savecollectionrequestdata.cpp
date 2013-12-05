@@ -47,13 +47,11 @@ SaveCollectionRequestData::~SaveCollectionRequestData()
 void SaveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
 {
     if (error == QOrganizerManager::NoError) {
-        qDebug() << "Save collection no error";
         GList *i = g_list_first(m_sources);
 
         for(; i != 0; i = i->next) {
             ESource *source = E_SOURCE(i->data);
             QOrganizerCollection collection = parent()->d->m_sourceRegistry->insert(source);
-            qDebug() << "new collection" << collection;
             m_results.append(collection);
         }
     } else {
