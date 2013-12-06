@@ -103,7 +103,6 @@ private Q_SLOTS:
         expected << m_events[4];
 
         QCOMPARE(expected.size(), req.items().size());
-
         QList<QOrganizerItemDetail> dr = req.items()[0].details();
         Q_FOREACH(QOrganizerItemDetail de, m_events[4].details()) {
             Q_FOREACH(QOrganizerItemDetail d, dr) {
@@ -112,16 +111,13 @@ private Q_SLOTS:
                         qDebug() << "Detail not equal";
                         qDebug() << "\t" << de;
                         qDebug() << "\t" << d;
+                        QFAIL("Retrieved item is not equal");
                     } else {
                         qDebug() << "Detail equal";
                     }
                 }
             }
         }
-        Q_FOREACH(QOrganizerItem i, req.items()) {
-            expected.removeAll(i);
-        }
-        QCOMPARE(expected.size(), 0);
     }
 
     void testFetchWithInvalidId()
