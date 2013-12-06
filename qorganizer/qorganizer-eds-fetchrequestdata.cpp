@@ -67,7 +67,7 @@ time_t FetchRequestData::endDate() const
     if (endDate.isValid()) {
         return endDate.toTime_t();
     } else {
-        return LONG_MAX;
+        return QDateTime::fromMSecsSinceEpoch(std::numeric_limits < qint64 >::max()).toTime_t();
     }
 }
 
