@@ -135,40 +135,33 @@ void QOrganizerEDSEngine::itemsAsyncStart(FetchRequestData *data)
         EClient *client = data->parent()->d->m_sourceRegistry->client(collection);
         data->setClient(client);
         g_object_unref(client);
-        e_cal_client_get_object_list_as_comps(E_CAL_CLIENT(client),
-                                              data->dateFilter().toUtf8().data(),
-                                              data->cancellable(),
-                                              (GAsyncReadyCallback) QOrganizerEDSEngine::itemsAsyncListed,
-                                              data);
+
+        e_cal_client_generate_instances(data->client(),
+                                        data->startDate(),
+                                        data->endDate(),
+                                        data->cancellable(),
+                                        (ECalRecurInstanceFn) QOrganizerEDSEngine::itemsAsyncListed,
+                                        data,
+                                        (GDestroyNotify) QOrganizerEDSEngine::itemsAsyncStart);
     } else {
         data->finish();
         delete data;
     }
 }
 
-void QOrganizerEDSEngine::itemsAsyncListed(GObject *source_object,
-                                           GAsyncResult *res,
+void QOrganizerEDSEngine::itemsAsyncListed(ECalComponent *comp,
+                                           time_t instanceStart,
+                                           time_t instanceEnd,
                                            FetchRequestData *data)
 {
-    Q_UNUSED(source_object);
     qDebug() << Q_FUNC_INFO;
-    GError *gError = 0;
+    Q_UNUSED(instanceStart);
+    Q_UNUSED(instanceEnd);
+
     GSList *events = 0;
-    e_cal_client_get_object_list_as_comps_finish(E_CAL_CLIENT(data->client()),
-                                                 res,
-                                                 &events,
-                                                 &gError);
-    if (gError) {
-        qWarning() << "Fail to list events in calendar" << gError->message;
-        g_error_free(gError);
-        gError = 0;
-        data->finish(QOrganizerManager::InvalidCollectionError);
-        delete data;
-        return;
-    } else {
-        data->appendResults(data->parent()->parseEvents(data->collection(), events, false));
-    }
-    itemsAsyncStart(data);
+    events = g_slist_append(events, comp);
+    data->appendResults(data->parent()->parseEvents(data->collection(), events, false));
+    g_slist_free(events);
 }
 
 void QOrganizerEDSEngine::itemsByIdAsync(QOrganizerItemFetchByIdRequest *req)
@@ -1596,6 +1589,7 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
         GSList *ruleList = 0;
         Q_FOREACH(QOrganizerRecurrenceRule qRule, rec.recurrenceRules()) {
             struct icalrecurrencetype *rule = g_new0(struct icalrecurrencetype, 1);
+            icalrecurrencetype_clear(rule);
             switch(qRule.frequency()) {
                 case QOrganizerRecurrenceRule::Daily:
                     rule->freq = ICAL_DAILY_RECURRENCE;
