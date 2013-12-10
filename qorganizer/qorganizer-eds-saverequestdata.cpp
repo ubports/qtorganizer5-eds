@@ -81,7 +81,7 @@ QList<QOrganizerItem> SaveRequestData::takeItemsToCreate()
 {
     QList<QOrganizerItem> result;
 
-    Q_FOREACH(QOrganizerItem i, m_currentItems) {
+    Q_FOREACH(const QOrganizerItem &i, m_currentItems) {
         if (i.id().isNull()) {
             result << i;
             m_currentItems.removeAll(i);
@@ -94,7 +94,7 @@ QList<QOrganizerItem> SaveRequestData::takeItemsToUpdate()
 {
     QList<QOrganizerItem> result;
 
-    Q_FOREACH(QOrganizerItem i, m_currentItems) {
+    Q_FOREACH(const QOrganizerItem &i, m_currentItems) {
         if (!i.id().isNull()) {
             result << i;
             m_currentItems.removeAll(i);

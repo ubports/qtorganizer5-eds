@@ -373,7 +373,7 @@ void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
         EClient *client = data->parent()->d->m_sourceRegistry->client(collectionId);
         if (!client) {
             qWarning() << "Trying to save items with invalid collection";
-            Q_FOREACH(QOrganizerItem i, items) {
+            Q_FOREACH(const QOrganizerItem &i, items) {
                 data->appendResult(i, QOrganizerManager::InvalidCollectionError);
             }
             saveItemsAsyncStart(data);
@@ -426,7 +426,7 @@ void QOrganizerEDSEngine::saveItemsAsyncModified(GObject *source_object,
         qWarning() << "Fail to modify items" << gError->message;
         g_error_free(gError);
         gError = 0;
-        Q_FOREACH(QOrganizerItem i, data->workingItems()) {
+        Q_FOREACH(const QOrganizerItem &i, data->workingItems()) {
             data->appendResult(i, QOrganizerManager::UnspecifiedError);
         }
     } else {
@@ -455,7 +455,7 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
         g_error_free(gError);
         gError = 0;
 
-        Q_FOREACH(QOrganizerItem i, data->workingItems()) {
+        Q_FOREACH(const QOrganizerItem &i, data->workingItems()) {
             data->appendResult(i, QOrganizerManager::UnspecifiedError);
         }
     } else {
