@@ -303,10 +303,10 @@ QList<QOrganizerItemId> QOrganizerEDSEngine::itemIds(const QOrganizerItemFilter 
 }
 
 QList<QOrganizerItem> QOrganizerEDSEngine::itemOccurrences(const QOrganizerItem &parentItem,
-                                                                  const QDateTime &startDateTime,
-                                                                  const QDateTime &endDateTime, int maxCount,
-                                                                  const QOrganizerItemFetchHint &fetchHint,
-                                                                  QOrganizerManager::Error *error)
+                                                           const QDateTime &startDateTime,
+                                                           const QDateTime &endDateTime, int maxCount,
+                                                           const QOrganizerItemFetchHint &fetchHint,
+                                                           QOrganizerManager::Error *error)
 {
     qDebug() << Q_FUNC_INFO;
     Q_UNUSED(fetchHint);
