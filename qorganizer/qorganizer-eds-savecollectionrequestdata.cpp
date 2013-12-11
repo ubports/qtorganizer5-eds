@@ -65,7 +65,7 @@ void SaveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error err
                                                          QOrganizerAbstractRequest::FinishedState);
 
     QList<QOrganizerCollectionId> added;
-    Q_FOREACH(QOrganizerCollection col, m_results) {
+    Q_FOREACH(const QOrganizerCollection &col, m_results) {
         added.append(col.id());
     }
 
@@ -93,7 +93,7 @@ void SaveCollectionRequestData::parseCollections()
 
     m_errorMap.clear();
     int index = 0;
-    Q_FOREACH(QOrganizerCollection collection, request<QOrganizerCollectionSaveRequest>()->collections()) {
+    Q_FOREACH(const QOrganizerCollection &collection, request<QOrganizerCollectionSaveRequest>()->collections()) {
         ESource *source = 0;
         if (collection.id().isNull()) {
             GError *gError = 0;

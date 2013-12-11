@@ -20,7 +20,10 @@
 #define __EDS_BASE_TEST__
 
 #include <QtCore>
+#include <QtOrganizer>
 #include <libecal/libecal.h>
+
+class QOrganizerEDSEngine;
 
 class EDSBaseTest
 {
@@ -29,11 +32,14 @@ public:
     ~EDSBaseTest();
 
 protected:
-    void init();
-    void cleanup();
+    void init(QOrganizerEDSEngine *engine);
+    void cleanup(QOrganizerEDSEngine *engine);
+
+    void appendToRemove(const QtOrganizer::QOrganizerItemId &id);
 
 private:
     ESourceRegistry *m_sourceRegistry;
+    QList<QtOrganizer::QOrganizerItemId> m_newItems;
 };
 
 #endif

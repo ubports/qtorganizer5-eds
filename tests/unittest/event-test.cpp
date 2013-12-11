@@ -46,7 +46,7 @@ private:
 private Q_SLOTS:
     void init()
     {
-        EDSBaseTest::init();
+        EDSBaseTest::init(0);
 
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
@@ -62,8 +62,7 @@ private Q_SLOTS:
 
     void cleanup()
     {
-        delete m_engine;
-        EDSBaseTest::cleanup();
+        EDSBaseTest::cleanup(m_engine);
     }
 
     //helper
@@ -113,6 +112,9 @@ private Q_SLOTS:
                                               &error);
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
+
+        // append new item to be removed after the test
+        appendToRemove(items[0].id());
 
         QOrganizerItemSortOrder sort;
         QOrganizerItemFetchHint hint;
@@ -178,6 +180,9 @@ private Q_SLOTS:
         QVERIFY(errorMap.isEmpty());
         QVERIFY(!items[0].id().isNull());
 
+        // append new item to be removed after the test
+        appendToRemove(items[0].id());
+
         m_itemRemovedTime = QDateTime();
         m_requestFinishedTime = QDateTime();
 
@@ -195,6 +200,124 @@ private Q_SLOTS:
         QVERIFY(!m_itemRemovedTime.isValid());
         QVERIFY(m_requestFinishedTime.isValid());
         QVERIFY(m_requestFinishedTime > m_itemRemovedTime);
+    }
+
+    void testCreateMultipleItemsWithSameCollection()
+    {
+        static QString displayLabelValue = QStringLiteral("Multiple Item:%1");
+        static QString descriptionValue = QStringLiteral("Multiple Item desc:%1");
+
+        QList<QOrganizerItem> evs;
+        for(int i=0; i<10; i++) {
+            QOrganizerTodo todo;
+            todo.setCollectionId(m_collection.id());
+            todo.setStartDateTime(QDateTime(QDate(2013, 9, 3+1), QTime(0,30,0)));
+            todo.setDisplayLabel(displayLabelValue.arg(i));
+            todo.setDescription(descriptionValue.arg(i));
+            evs << todo;
+        }
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        bool saveResult = m_engine->saveItems(&evs,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QVERIFY(errorMap.isEmpty());
+        QCOMPARE(evs.count(), 10);
+        Q_FOREACH(const QOrganizerItem &i, evs) {
+            QVERIFY(!i.id().isNull());
+            appendToRemove(i.id());
+        }
+    }
+
+    void testCreateMultipleItemsWithDiffCollections()
+    {
+        static QString displayLabelValue = QStringLiteral("Multiple Item:%1");
+        static QString descriptionValue = QStringLiteral("Multiple Item desc:%1");
+
+        QList<QOrganizerItem> evs;
+        for(int i=0; i<10; i++) {
+            QOrganizerTodo todo;
+            todo.setCollectionId(m_collection.id());
+            todo.setStartDateTime(QDateTime(QDate(2013, 9, 3+1), QTime(0,30,0)));
+            todo.setDisplayLabel(displayLabelValue.arg(i));
+            todo.setDescription(descriptionValue.arg(i));
+            evs << todo;
+        }
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QOrganizerCollection eventCollection = QOrganizerCollection();
+        eventCollection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName + "_TEMP");
+        bool saveResult = m_engine->saveCollection(&eventCollection, &error);
+        QVERIFY(saveResult);
+
+        for(int i=0; i<10; i++) {
+            QOrganizerEvent ev;
+            ev.setCollectionId(eventCollection.id());
+            ev.setStartDateTime(QDateTime(QDate(2013, 10, 3+1), QTime(0,30,0)));
+            ev.setDisplayLabel(displayLabelValue.arg(i));
+            ev.setDescription(descriptionValue.arg(i));
+            evs << ev;
+        }
+
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        saveResult = m_engine->saveItems(&evs,
+                                         QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                         &errorMap,
+                                         &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QVERIFY(errorMap.isEmpty());
+        QCOMPARE(evs.count(), 20);
+        Q_FOREACH(const QOrganizerItem &i, evs) {
+            QVERIFY(!i.id().isNull());
+            appendToRemove(i.id());
+        }
+    }
+
+    void testCauseErrorDuringCreateMultipleItems()
+    {
+        static QString displayLabelValue = QStringLiteral("Multiple Item:%1");
+        static QString descriptionValue = QStringLiteral("Multiple Item desc:%1");
+
+        QList<QOrganizerItem> evs;
+
+        QOrganizerTodo todo;
+        todo.setCollectionId(m_collection.id());
+        todo.setStartDateTime(QDateTime(QDate(2013, 9, 1), QTime(0,30,0)));
+        todo.setDisplayLabel(displayLabelValue.arg(1));
+        todo.setDescription(descriptionValue.arg(1));
+        evs << todo;
+
+        // This item will cause error, because the collection ID is invalid
+        QOrganizerEvent ev;
+        ev.setCollectionId(QOrganizerCollectionId::fromString("1386259057.30874.6@qorganizer"));
+        ev.setStartDateTime(QDateTime(QDate(2013, 10, 2), QTime(0,30,0)));
+        ev.setDisplayLabel(displayLabelValue.arg(2));
+        ev.setDescription(descriptionValue.arg(2));
+        evs << ev;
+
+        todo.setStartDateTime(QDateTime(QDate(2013, 9, 3), QTime(0,30,0)));
+        todo.setDisplayLabel(displayLabelValue.arg(3));
+        todo.setDescription(descriptionValue.arg(3));
+        evs << todo;
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        bool saveResult = m_engine->saveItems(&evs,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QCOMPARE(evs.count(), 2);
+        appendToRemove(evs[0].id());
+        appendToRemove(evs[1].id());
+        QCOMPARE(errorMap.size(), 1);
+        QCOMPARE(errorMap[1], QOrganizerManager::InvalidCollectionError);
     }
 };
 

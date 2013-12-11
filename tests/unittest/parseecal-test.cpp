@@ -319,7 +319,7 @@ private Q_SLOTS:
         QList<QOrganizerRecurrenceRule> rrules2 = event2.recurrenceRules().toList();
         QCOMPARE(rrules2.count(), rrules.count());
 
-        Q_FOREACH(QOrganizerRecurrenceRule rule2, rrules2) {
+        Q_FOREACH(const QOrganizerRecurrenceRule &rule2, rrules2) {
             switch(rule2.frequency()) {
             case QOrganizerRecurrenceRule::Daily:
                 QCOMPARE(rule2.limitCount(), dailyRule.limitCount());

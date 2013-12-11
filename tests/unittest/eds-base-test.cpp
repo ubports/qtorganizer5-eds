@@ -18,11 +18,14 @@
 
 #include "config.h"
 #include "eds-base-test.h"
+#include "qorganizer-eds-engine.h"
 
 #include <QtCore>
 #include <QtTest>
 
 #include <libecal/libecal.h>
+
+using namespace QtOrganizer;
 
 EDSBaseTest::EDSBaseTest()
 {
@@ -40,15 +43,28 @@ EDSBaseTest::~EDSBaseTest()
     g_object_unref(m_sourceRegistry);
 }
 
-void EDSBaseTest::init()
+void EDSBaseTest::init(QOrganizerEDSEngine *engine)
 {
-    cleanup();
+    cleanup(engine);
     // wait to flush DBUS calls
     QTest::qWait(1000);
 }
 
-void EDSBaseTest::cleanup()
+void EDSBaseTest::cleanup(QOrganizerEDSEngine *engine)
 {
+    // remove all new items, remove item by item because they can have diff collections
+    Q_FOREACH(const QOrganizerItemId &id, m_newItems) {
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+
+        engine->removeItems(QList<QOrganizerItemId>() << id,
+                            &errorMap,
+                            &error);
+    }
+    m_newItems.clear();
+    delete engine;
+
+    // remove all collections
     GError *error;
     gboolean status;
     GList *sources = e_source_registry_list_sources(m_sourceRegistry, 0);
@@ -78,4 +94,9 @@ void EDSBaseTest::cleanup()
 
     g_list_free_full(sources, g_object_unref);
     e_source_registry_debug_dump(m_sourceRegistry, 0);
+}
+
+void EDSBaseTest::appendToRemove(const QtOrganizer::QOrganizerItemId &id)
+{
+    m_newItems << id;
 }

@@ -64,7 +64,7 @@ int FetchRequestData::appendResults(QList<QOrganizerItem> results)
 {
     int count = 0;
     QOrganizerItemFetchRequest *req = request<QOrganizerItemFetchRequest>();
-    Q_FOREACH(QOrganizerItem item, results) {
+    Q_FOREACH(const QOrganizerItem &item, results) {
         if (QOrganizerManagerEngine::testFilter(req->filter(), item)) {
             m_results << item;
             count++;

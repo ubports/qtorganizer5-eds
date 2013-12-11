@@ -26,19 +26,29 @@ class SaveRequestData : public RequestData
 {
 public:
     SaveRequestData(QOrganizerEDSEngine *engine,
-                    QtOrganizer::QOrganizerAbstractRequest *req,
-                    QtOrganizer::QOrganizerCollectionId collectionId);
+                    QtOrganizer::QOrganizerAbstractRequest *req);
     ~SaveRequestData();
 
     void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
+
+
+    QString nextCollection();
+    QString currentCollection() const;
+    QList<QtOrganizer::QOrganizerItem> takeItemsToCreate();
+    QList<QtOrganizer::QOrganizerItem> takeItemsToUpdate();
+    bool end() const;
+    void setWorkingItems(QList<QtOrganizer::QOrganizerItem> items);
+    QList<QtOrganizer::QOrganizerItem> workingItems() const;
+
     void appendResults(QList<QtOrganizer::QOrganizerItem> results);
-
-    QtOrganizer::QOrganizerCollectionId collectionId() const;
-    bool isNew() const;
-
+    void appendResult(const QtOrganizer::QOrganizerItem &item, QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
 private:
     QList<QtOrganizer::QOrganizerItem> m_result;
-    QtOrganizer::QOrganizerCollectionId m_collectionId;
+    QMap<int, QtOrganizer::QOrganizerManager::Error> m_erros;
+    QMap<QString, QList<QtOrganizer::QOrganizerItem> > m_items;
+    QList<QtOrganizer::QOrganizerItem> m_currentItems;
+    QList<QtOrganizer::QOrganizerItem> m_workingItems;
+    QString m_currentCollection;
 };
 
 #endif

@@ -25,11 +25,16 @@
 using namespace QtOrganizer;
 
 SaveRequestData::SaveRequestData(QOrganizerEDSEngine *engine,
-                                 QtOrganizer::QOrganizerAbstractRequest *req,
-                                 QOrganizerCollectionId collectionId)
-    : RequestData(engine, req),
-      m_collectionId(collectionId)
+                                 QtOrganizer::QOrganizerAbstractRequest *req)
+    : RequestData(engine, req)
 {
+    // map items by collection
+    Q_FOREACH(const QOrganizerItem &i, request<QOrganizerItemSaveRequest>()->items()) {
+        QString collectionId = i.collectionId().toString();
+        QList<QOrganizerItem> li = m_items[collectionId];
+        li << i;
+        m_items.insert(collectionId, li);
+    }
 }
 
 SaveRequestData::~SaveRequestData()
@@ -41,9 +46,9 @@ void SaveRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
     QOrganizerManagerEngine::updateItemSaveRequest(request<QOrganizerItemSaveRequest>(),
                                                    m_result,
                                                    error,
-                                                   QMap<int, QOrganizerManager::Error>(),
+                                                   m_erros,
                                                    QOrganizerAbstractRequest::FinishedState);
-    Q_FOREACH(QOrganizerItem item, m_result) {
+    Q_FOREACH(const QOrganizerItem &item, m_result) {
         m_changeSet.insertAddedItem(item.id());
     }
     emitChangeset(&m_changeSet);
@@ -54,16 +59,73 @@ void SaveRequestData::appendResults(QList<QOrganizerItem> result)
     m_result += result;
 }
 
-QOrganizerCollectionId SaveRequestData::collectionId() const
+QString SaveRequestData::nextCollection()
 {
-    return m_collectionId;
+    if (m_items.isEmpty()) {
+        m_currentCollection = QString();
+        m_currentItems.clear();
+    } else {
+        m_currentCollection = m_items.keys().first();
+        m_currentItems = m_items.take(m_currentCollection);
+    }
+    m_workingItems.clear();
+    return m_currentCollection;
 }
 
-bool SaveRequestData::isNew() const
+QString SaveRequestData::currentCollection() const
 {
-    QList<QOrganizerItem> items = request<QOrganizerItemSaveRequest>()->items();
-    if (items.count() > 0) {
-        return items[0].id().isNull();
+    return m_currentCollection;
+}
+
+QList<QOrganizerItem> SaveRequestData::takeItemsToCreate()
+{
+    QList<QOrganizerItem> result;
+
+    Q_FOREACH(const QOrganizerItem &i, m_currentItems) {
+        if (i.id().isNull()) {
+            result << i;
+            m_currentItems.removeAll(i);
+        }
     }
-    return false;
+    return result;
+}
+
+QList<QOrganizerItem> SaveRequestData::takeItemsToUpdate()
+{
+    QList<QOrganizerItem> result;
+
+    Q_FOREACH(const QOrganizerItem &i, m_currentItems) {
+        if (!i.id().isNull()) {
+            result << i;
+            m_currentItems.removeAll(i);
+        }
+    }
+    return result;
+}
+
+bool SaveRequestData::end() const
+{
+    return m_items.isEmpty();
+}
+
+void SaveRequestData::appendResult(const QOrganizerItem &item, QOrganizerManager::Error error)
+{
+    if (error != QOrganizerManager::NoError) {
+        int index = request<QOrganizerItemSaveRequest>()->items().indexOf(item);
+        if (index != -1) {
+            m_erros.insert(index, error);
+        }
+    } else {
+        m_result << item;
+    }
+}
+
+void SaveRequestData::setWorkingItems(QList<QOrganizerItem> items)
+{
+    m_workingItems = items;
+}
+
+QList<QOrganizerItem> SaveRequestData::workingItems() const
+{
+    return m_workingItems;
 }

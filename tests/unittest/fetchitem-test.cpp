@@ -42,7 +42,7 @@ private:
 private Q_SLOTS:
     void initTestCase()
     {
-        EDSBaseTest::init();
+        EDSBaseTest::init(0);
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
         // create test collection
@@ -75,28 +75,17 @@ private Q_SLOTS:
             QCOMPARE(error, QOrganizerManager::NoError);
             QVERIFY(errorMap.isEmpty());
             m_events << evs[0];
+            appendToRemove(evs[0].id());
         }
     }
 
     void cleanupTestCase()
     {
-        QOrganizerManager::Error error;
-        QMap<int, QOrganizerManager::Error> errorMap;
-        QList<QOrganizerItemId> ids;
-        Q_FOREACH(QOrganizerItem i, m_events) {
-            ids << i.id();
-        }
-        m_engine->removeItems(ids, &errorMap, &error);
-        QCOMPARE(error, QOrganizerManager::NoError);
-        QCOMPARE(errorMap.count(), 0);
-
         m_collection = QOrganizerCollection();
         m_events.clear();
 
-        delete m_engine;
+        EDSBaseTest::cleanup(m_engine);
         m_engine = 0;
-
-        EDSBaseTest::cleanup();
     }
 
     void testFetchById()
@@ -114,25 +103,21 @@ private Q_SLOTS:
         expected << m_events[4];
 
         QCOMPARE(expected.size(), req.items().size());
-
         QList<QOrganizerItemDetail> dr = req.items()[0].details();
-        Q_FOREACH(QOrganizerItemDetail de, m_events[4].details()) {
-            Q_FOREACH(QOrganizerItemDetail d, dr) {
+        Q_FOREACH(const QOrganizerItemDetail &de, m_events[4].details()) {
+            Q_FOREACH(const QOrganizerItemDetail &d, dr) {
                 if (de.type() == d.type()) {
                     if (de != d) {
                         qDebug() << "Detail not equal";
                         qDebug() << "\t" << de;
                         qDebug() << "\t" << d;
+                        QFAIL("Retrieved item is not equal");
                     } else {
                         qDebug() << "Detail equal";
                     }
                 }
             }
         }
-        Q_FOREACH(QOrganizerItem i, req.items()) {
-            expected.removeAll(i);
-        }
-        QCOMPARE(expected.size(), 0);
     }
 
     void testFetchWithInvalidId()

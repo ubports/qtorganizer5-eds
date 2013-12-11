@@ -81,7 +81,7 @@ QOrganizerEDSEngine::QOrganizerEDSEngine(QOrganizerEDSEngineData *data)
     qDebug() << Q_FUNC_INFO;
     d->m_sharedEngines << this;
 
-    Q_FOREACH(QString collectionId, d->m_sourceRegistry->collectionsIds()){
+    Q_FOREACH(const QString &collectionId, d->m_sourceRegistry->collectionsIds()){
         onSourceAdded(collectionId);
     }
     connect(d->m_sourceRegistry, SIGNAL(sourceAdded(QString)), SLOT(onSourceAdded(QString)));
@@ -335,7 +335,6 @@ void QOrganizerEDSEngine::saveItemsAsync(QOrganizerItemSaveRequest *req)
 {
     qDebug() << Q_FUNC_INFO;
     if (req->items().count() == 0) {
-        qWarning() << "Items count is " << req->items().count();
         QOrganizerManagerEngine::updateItemSaveRequest(req,
                                                        QList<QOrganizerItem>(),
                                                        QOrganizerManager::NoError,
@@ -343,45 +342,70 @@ void QOrganizerEDSEngine::saveItemsAsync(QOrganizerItemSaveRequest *req)
                                                        QOrganizerAbstractRequest::FinishedState);
         return;
     }
+    SaveRequestData *data = new SaveRequestData(this, req);
+    saveItemsAsyncStart(data);
+}
 
-    //TODO: support multiple items
-    Q_ASSERT(req->items().count() <= 1);
+void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
+{
+    qDebug() << Q_FUNC_INFO;
+    QString collectionId = data->nextCollection();
 
-    QOrganizerItem item = req->items().at(0);
-    QOrganizerCollectionId collectionId = item.collectionId();
-
-    if (collectionId.isNull()) {
-        collectionId = d->m_sourceRegistry->defaultCollection().id();
-    }
-
-    Q_ASSERT(!collectionId.isNull());
-    SaveRequestData *data = new SaveRequestData(this, req, collectionId);
-    EClient *client = d->m_sourceRegistry->client(collectionId.toString());
-    Q_ASSERT(client);
-    data->setClient(client);
-    g_object_unref(client);
-
-    GSList *comps = parseItems(data->client(), data->request<QOrganizerItemSaveRequest>()->items());
-    if (comps) {
-        if (data->isNew()) {
-            e_cal_client_create_objects(data->client(),
-                                        comps,
-                                        data->cancellable(),
-                                        (GAsyncReadyCallback) QOrganizerEDSEngine::saveItemsAsyncCreated,
-                                        data);
-        } else {
-            e_cal_client_modify_objects(data->client(),
-                                        comps,
-                                        E_CAL_OBJ_MOD_ALL,
-                                        data->cancellable(),
-                                        (GAsyncReadyCallback) QOrganizerEDSEngine::saveItemsAsyncModified,
-                                        data);
-        }
-        g_slist_free_full(comps, (GDestroyNotify) icalcomponent_free);
-    } else {
-        qWarning() << "Fail to translate items";
-        data->finish(QOrganizerManager::BadArgumentError);
+    if (collectionId.isEmpty() && data->end()) {
+        data->finish();
         delete data;
+        return;
+    } else {
+        bool createItems = true;
+        QList<QOrganizerItem> items = data->takeItemsToCreate();
+        if (items.isEmpty()) {
+            createItems = false;
+            items = data->takeItemsToUpdate();
+        }
+        if (items.isEmpty()) {
+            saveItemsAsyncStart(data);
+        }
+
+        if (collectionId.isNull() && createItems) {
+            collectionId = data->parent()->d->m_sourceRegistry->defaultCollection().id().toString();
+        }
+
+        EClient *client = data->parent()->d->m_sourceRegistry->client(collectionId);
+        if (!client) {
+            qWarning() << "Trying to save items with invalid collection";
+            Q_FOREACH(const QOrganizerItem &i, items) {
+                data->appendResult(i, QOrganizerManager::InvalidCollectionError);
+            }
+            saveItemsAsyncStart(data);
+            return;
+        }
+
+        Q_ASSERT(client);
+        data->setClient(client);
+        g_object_unref(client);
+
+        GSList *comps = parseItems(data->client(),
+                                   items);
+        if (comps) {
+            data->setWorkingItems(items);
+            if (createItems) {
+                e_cal_client_create_objects(data->client(),
+                                            comps,
+                                            data->cancellable(),
+                                            (GAsyncReadyCallback) QOrganizerEDSEngine::saveItemsAsyncCreated,
+                                            data);
+            } else {
+                e_cal_client_modify_objects(data->client(),
+                                            comps,
+                                            E_CAL_OBJ_MOD_ALL,
+                                            data->cancellable(),
+                                            (GAsyncReadyCallback) QOrganizerEDSEngine::saveItemsAsyncModified,
+                                            data);
+            }
+            g_slist_free_full(comps, (GDestroyNotify) icalcomponent_free);
+        } else {
+            qWarning() << "Fail to translate items";
+        }
     }
 }
 
@@ -402,13 +426,14 @@ void QOrganizerEDSEngine::saveItemsAsyncModified(GObject *source_object,
         qWarning() << "Fail to modify items" << gError->message;
         g_error_free(gError);
         gError = 0;
-        data->finish(QOrganizerManager::InvalidDetailError);
-        delete data;
+        Q_FOREACH(const QOrganizerItem &i, data->workingItems()) {
+            data->appendResult(i, QOrganizerManager::UnspecifiedError);
+        }
     } else {
-        data->appendResults(data->request<QOrganizerItemSaveRequest>()->items());
-        data->finish();
-        delete data;
+        data->appendResults(data->workingItems());
     }
+
+    saveItemsAsyncStart(data);
 }
 
 void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
@@ -425,30 +450,31 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
                                        &uids,
                                        &gError);
     QCoreApplication::processEvents();
-
     if (gError) {
         qWarning() << "Fail to create items:" << gError->message;
         g_error_free(gError);
         gError = 0;
-        data->finish(QOrganizerManager::InvalidDetailError);
-        delete data;
+
+        Q_FOREACH(const QOrganizerItem &i, data->workingItems()) {
+            data->appendResult(i, QOrganizerManager::UnspecifiedError);
+        }
     } else {
-        QList<QOrganizerItem> items = data->request<QOrganizerItemSaveRequest>()->items();
+        QList<QOrganizerItem> items = data->workingItems();
         for(uint i=0, iMax=g_slist_length(uids); i < iMax; i++) {
             QOrganizerItem &item = items[i];
             const gchar *uid = static_cast<const gchar*>(g_slist_nth_data(uids, i));
 
-            item.setCollectionId(data->collectionId());
-            QOrganizerEDSEngineId *eid = new QOrganizerEDSEngineId(data->collectionId().toString(),
+            item.setCollectionId(QOrganizerCollectionId::fromString(data->currentCollection()));
+            QOrganizerEDSEngineId *eid = new QOrganizerEDSEngineId(data->currentCollection(),
                                                                    QString::fromUtf8(uid));
             item.setId(QOrganizerItemId(eid));
             item.setGuid(QString::fromUtf8(uid));
         }
         g_slist_free_full(uids, g_free);
         data->appendResults(items);
-        data->finish();
-        delete data;
     }
+
+    saveItemsAsyncStart(data);
 }
 
 bool QOrganizerEDSEngine::saveItems(QList<QtOrganizer::QOrganizerItem> *items,
@@ -458,7 +484,6 @@ bool QOrganizerEDSEngine::saveItems(QList<QtOrganizer::QOrganizerItem> *items,
 
 {
     qDebug() << Q_FUNC_INFO;
-
     QOrganizerItemSaveRequest *req = new QOrganizerItemSaveRequest(this);
     req->setItems(*items);
     req->setDetailMask(detailMask);
@@ -1548,7 +1573,7 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
     QOrganizerItemRecurrence rec = item.detail(QOrganizerItemDetail::TypeRecurrence);
     if (!rec.isEmpty()) {
         GSList *periodList = 0;
-        Q_FOREACH(QDate dt, rec.recurrenceDates()) {
+        Q_FOREACH(const QDate &dt, rec.recurrenceDates()) {
             ECalComponentPeriod *period = g_new0(ECalComponentPeriod, 1);
             period->start = icaltime_from_timet(QDateTime(dt).toTime_t(), FALSE);
             periodList = g_slist_append(periodList, period);
@@ -1558,7 +1583,7 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
         e_cal_component_free_period_list(periodList);
 
         GSList *exdateList = 0;
-        Q_FOREACH(QDate dt, rec.exceptionDates()) {
+        Q_FOREACH(const QDate &dt, rec.exceptionDates()) {
             ECalComponentDateTime *dateTime = g_new0(ECalComponentDateTime, 1);
             struct icaltimetype *itt = g_new0(struct icaltimetype, 1);
             *itt = icaltime_from_timet(QDateTime(dt).toTime_t(), FALSE);
@@ -1569,7 +1594,7 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
         e_cal_component_free_exdate_list(exdateList);
 
         GSList *ruleList = 0;
-        Q_FOREACH(QOrganizerRecurrenceRule qRule, rec.recurrenceRules()) {
+        Q_FOREACH(const QOrganizerRecurrenceRule &qRule, rec.recurrenceRules()) {
             struct icalrecurrencetype *rule = g_new0(struct icalrecurrencetype, 1);
             switch(qRule.frequency()) {
                 case QOrganizerRecurrenceRule::Daily:
@@ -1676,7 +1701,7 @@ void QOrganizerEDSEngine::parseStatus(const QtOrganizer::QOrganizerItem &item, E
 void QOrganizerEDSEngine::parseAttendeeList(const QOrganizerItem &item, ECalComponent *comp)
 {
     GSList *attendeeList = 0;
-    Q_FOREACH(QOrganizerEventAttendee attendee, item.details(QOrganizerItemDetail::TypeEventAttendee)) {
+    Q_FOREACH(const QOrganizerEventAttendee &attendee, item.details(QOrganizerItemDetail::TypeEventAttendee)) {
         ECalComponentAttendee *calAttendee = g_new0(ECalComponentAttendee, 1);
 
         calAttendee->cn = g_strdup(attendee.name().toUtf8().constData());
@@ -1809,7 +1834,7 @@ void QOrganizerEDSEngine::parseDescription(const QOrganizerItem &item, ECalCompo
         GSList *descriptions = 0;
         QList<QByteArray> descList;
 
-        Q_FOREACH(QString desc, item.description().split("\n")) {
+        Q_FOREACH(const QString &desc, item.description().split("\n")) {
             QByteArray str = desc.toUtf8();
             ECalComponentText *txt = g_new0(ECalComponentText, 1);
             txt->value = str.constData();
@@ -1829,7 +1854,7 @@ void QOrganizerEDSEngine::parseComments(const QOrganizerItem &item, ECalComponen
     GSList *comments = 0;
     QList<QByteArray> commentList;
 
-    Q_FOREACH(QString comment, item.comments()) {
+    Q_FOREACH(const QString &comment, item.comments()) {
         QByteArray str = comment.toUtf8();
         ECalComponentText *txt = g_new0(ECalComponentText, 1);
         txt->value = str.constData();
@@ -1850,7 +1875,7 @@ void QOrganizerEDSEngine::parseTags(const QOrganizerItem &item, ECalComponent *c
     GSList *categories = 0;
     QList<QByteArray> tagList;
 
-    Q_FOREACH(QString tag, item.tags()) {
+    Q_FOREACH(const QString &tag, item.tags()) {
         QByteArray str = tag.toUtf8();
         ECalComponentText *txt = g_new0(ECalComponentText, 1);
         txt->value = str.constData();
@@ -1947,7 +1972,7 @@ GSList *QOrganizerEDSEngine::parseItems(ECalClient *client, QList<QOrganizerItem
 {
     GSList *comps = 0;
 
-    Q_FOREACH(QOrganizerItem item, items) {
+    Q_FOREACH(const QOrganizerItem &item, items) {
         ECalComponent *comp = 0;
 
         switch(item.type()) {
