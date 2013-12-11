@@ -104,8 +104,8 @@ private Q_SLOTS:
 
         QCOMPARE(expected.size(), req.items().size());
         QList<QOrganizerItemDetail> dr = req.items()[0].details();
-        Q_FOREACH(QOrganizerItemDetail de, m_events[4].details()) {
-            Q_FOREACH(QOrganizerItemDetail d, dr) {
+        Q_FOREACH(const QOrganizerItemDetail &de, m_events[4].details()) {
+            Q_FOREACH(const QOrganizerItemDetail &d, dr) {
                 if (de.type() == d.type()) {
                     if (de != d) {
                         qDebug() << "Detail not equal";

@@ -29,7 +29,7 @@ SaveRequestData::SaveRequestData(QOrganizerEDSEngine *engine,
     : RequestData(engine, req)
 {
     // map items by collection
-    Q_FOREACH(QOrganizerItem i, request<QOrganizerItemSaveRequest>()->items()) {
+    Q_FOREACH(const QOrganizerItem &i, request<QOrganizerItemSaveRequest>()->items()) {
         QString collectionId = i.collectionId().toString();
         QList<QOrganizerItem> li = m_items[collectionId];
         li << i;
@@ -48,7 +48,7 @@ void SaveRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
                                                    error,
                                                    m_erros,
                                                    QOrganizerAbstractRequest::FinishedState);
-    Q_FOREACH(QOrganizerItem item, m_result) {
+    Q_FOREACH(const QOrganizerItem &item, m_result) {
         m_changeSet.insertAddedItem(item.id());
     }
     emitChangeset(&m_changeSet);
@@ -119,7 +119,6 @@ void SaveRequestData::appendResult(const QOrganizerItem &item, QOrganizerManager
         m_result << item;
     }
 }
-
 
 void SaveRequestData::setWorkingItems(QList<QOrganizerItem> items)
 {

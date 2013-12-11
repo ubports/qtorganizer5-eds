@@ -227,7 +227,7 @@ private Q_SLOTS:
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(errorMap.isEmpty());
         QCOMPARE(evs.count(), 10);
-        Q_FOREACH(QOrganizerItem i, evs) {
+        Q_FOREACH(const QOrganizerItem &i, evs) {
             QVERIFY(!i.id().isNull());
             appendToRemove(i.id());
         }
@@ -272,7 +272,7 @@ private Q_SLOTS:
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(errorMap.isEmpty());
         QCOMPARE(evs.count(), 20);
-        Q_FOREACH(QOrganizerItem i, evs) {
+        Q_FOREACH(const QOrganizerItem &i, evs) {
             QVERIFY(!i.id().isNull());
             appendToRemove(i.id());
         }
