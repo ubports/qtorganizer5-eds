@@ -81,7 +81,7 @@ QOrganizerEDSEngine::QOrganizerEDSEngine(QOrganizerEDSEngineData *data)
     qDebug() << Q_FUNC_INFO;
     d->m_sharedEngines << this;
 
-    Q_FOREACH(QString collectionId, d->m_sourceRegistry->collectionsIds()){
+    Q_FOREACH(const QString &collectionId, d->m_sourceRegistry->collectionsIds()){
         onSourceAdded(collectionId);
     }
     connect(d->m_sourceRegistry, SIGNAL(sourceAdded(QString)), SLOT(onSourceAdded(QString)));
@@ -366,7 +366,7 @@ void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
         EClient *client = data->parent()->d->m_sourceRegistry->client(collectionId);
         if (!client) {
             qWarning() << "Trying to save items with invalid collection";
-            Q_FOREACH(QOrganizerItem i, items) {
+            Q_FOREACH(const QOrganizerItem &i, items) {
                 data->appendResult(i, QOrganizerManager::InvalidCollectionError);
             }
             saveItemsAsyncStart(data);
@@ -419,7 +419,7 @@ void QOrganizerEDSEngine::saveItemsAsyncModified(GObject *source_object,
         qWarning() << "Fail to modify items" << gError->message;
         g_error_free(gError);
         gError = 0;
-        Q_FOREACH(QOrganizerItem i, data->workingItems()) {
+        Q_FOREACH(const QOrganizerItem &i, data->workingItems()) {
             data->appendResult(i, QOrganizerManager::UnspecifiedError);
         }
     } else {
@@ -448,7 +448,7 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
         g_error_free(gError);
         gError = 0;
 
-        Q_FOREACH(QOrganizerItem i, data->workingItems()) {
+        Q_FOREACH(const QOrganizerItem &i, data->workingItems()) {
             data->appendResult(i, QOrganizerManager::UnspecifiedError);
         }
     } else {
@@ -1566,7 +1566,7 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
     QOrganizerItemRecurrence rec = item.detail(QOrganizerItemDetail::TypeRecurrence);
     if (!rec.isEmpty()) {
         GSList *periodList = 0;
-        Q_FOREACH(QDate dt, rec.recurrenceDates()) {
+        Q_FOREACH(const QDate &dt, rec.recurrenceDates()) {
             ECalComponentPeriod *period = g_new0(ECalComponentPeriod, 1);
             period->start = icaltime_from_timet(QDateTime(dt).toTime_t(), FALSE);
             periodList = g_slist_append(periodList, period);
@@ -1576,7 +1576,7 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
         e_cal_component_free_period_list(periodList);
 
         GSList *exdateList = 0;
-        Q_FOREACH(QDate dt, rec.exceptionDates()) {
+        Q_FOREACH(const QDate &dt, rec.exceptionDates()) {
             ECalComponentDateTime *dateTime = g_new0(ECalComponentDateTime, 1);
             struct icaltimetype *itt = g_new0(struct icaltimetype, 1);
             *itt = icaltime_from_timet(QDateTime(dt).toTime_t(), FALSE);
@@ -1587,7 +1587,7 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
         e_cal_component_free_exdate_list(exdateList);
 
         GSList *ruleList = 0;
-        Q_FOREACH(QOrganizerRecurrenceRule qRule, rec.recurrenceRules()) {
+        Q_FOREACH(const QOrganizerRecurrenceRule &qRule, rec.recurrenceRules()) {
             struct icalrecurrencetype *rule = g_new0(struct icalrecurrencetype, 1);
             icalrecurrencetype_clear(rule);
             switch(qRule.frequency()) {
@@ -1695,7 +1695,7 @@ void QOrganizerEDSEngine::parseStatus(const QtOrganizer::QOrganizerItem &item, E
 void QOrganizerEDSEngine::parseAttendeeList(const QOrganizerItem &item, ECalComponent *comp)
 {
     GSList *attendeeList = 0;
-    Q_FOREACH(QOrganizerEventAttendee attendee, item.details(QOrganizerItemDetail::TypeEventAttendee)) {
+    Q_FOREACH(const QOrganizerEventAttendee &attendee, item.details(QOrganizerItemDetail::TypeEventAttendee)) {
         ECalComponentAttendee *calAttendee = g_new0(ECalComponentAttendee, 1);
 
         calAttendee->cn = g_strdup(attendee.name().toUtf8().constData());
@@ -1828,7 +1828,7 @@ void QOrganizerEDSEngine::parseDescription(const QOrganizerItem &item, ECalCompo
         GSList *descriptions = 0;
         QList<QByteArray> descList;
 
-        Q_FOREACH(QString desc, item.description().split("\n")) {
+        Q_FOREACH(const QString &desc, item.description().split("\n")) {
             QByteArray str = desc.toUtf8();
             ECalComponentText *txt = g_new0(ECalComponentText, 1);
             txt->value = str.constData();
@@ -1848,7 +1848,7 @@ void QOrganizerEDSEngine::parseComments(const QOrganizerItem &item, ECalComponen
     GSList *comments = 0;
     QList<QByteArray> commentList;
 
-    Q_FOREACH(QString comment, item.comments()) {
+    Q_FOREACH(const QString &comment, item.comments()) {
         QByteArray str = comment.toUtf8();
         ECalComponentText *txt = g_new0(ECalComponentText, 1);
         txt->value = str.constData();
@@ -1869,7 +1869,7 @@ void QOrganizerEDSEngine::parseTags(const QOrganizerItem &item, ECalComponent *c
     GSList *categories = 0;
     QList<QByteArray> tagList;
 
-    Q_FOREACH(QString tag, item.tags()) {
+    Q_FOREACH(const QString &tag, item.tags()) {
         QByteArray str = tag.toUtf8();
         ECalComponentText *txt = g_new0(ECalComponentText, 1);
         txt->value = str.constData();
@@ -1966,7 +1966,7 @@ GSList *QOrganizerEDSEngine::parseItems(ECalClient *client, QList<QOrganizerItem
 {
     GSList *comps = 0;
 
-    Q_FOREACH(QOrganizerItem item, items) {
+    Q_FOREACH(const QOrganizerItem &item, items) {
         ECalComponent *comp = 0;
 
         switch(item.type()) {

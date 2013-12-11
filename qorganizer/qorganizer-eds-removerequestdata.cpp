@@ -31,7 +31,7 @@ RemoveRequestData::RemoveRequestData(QOrganizerEDSEngine *engine, QtOrganizer::Q
       m_currentCompIds(0)
 {
     m_pendingItems = request<QOrganizerItemRemoveRequest>()->items();
-    Q_FOREACH(QOrganizerItem item, m_pendingItems) {
+    Q_FOREACH(const QOrganizerItem &item, m_pendingItems) {
         m_pendingCollections.insert(item.collectionId());
     }
 }
@@ -50,7 +50,7 @@ GSList *RemoveRequestData::takeItemsIds(QOrganizerCollectionId collectionId)
     GSList *ids = 0;
     QList<QtOrganizer::QOrganizerItem> items = m_pendingItems;
 
-    Q_FOREACH(QOrganizerItem item, items) {
+    Q_FOREACH(const QOrganizerItem &item, items) {
         if (item.collectionId() == collectionId) {
             m_currentIds.append(item.id());
 

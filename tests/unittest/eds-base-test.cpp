@@ -53,7 +53,7 @@ void EDSBaseTest::init(QOrganizerEDSEngine *engine)
 void EDSBaseTest::cleanup(QOrganizerEDSEngine *engine)
 {
     // remove all new items, remove item by item because they can have diff collections
-    Q_FOREACH(QOrganizerItemId id, m_newItems) {
+    Q_FOREACH(const QOrganizerItemId &id, m_newItems) {
         QtOrganizer::QOrganizerManager::Error error;
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
 
