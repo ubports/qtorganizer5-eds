@@ -51,6 +51,29 @@ QString FetchRequestData::collection() const
     return m_current;
 }
 
+time_t FetchRequestData::startDate() const
+{
+    QDateTime startDate = request<QOrganizerItemFetchRequest>()->startDate();
+    if (startDate.isValid()) {
+        return startDate.toTime_t();
+    } else {
+        return 0;
+    }
+}
+
+time_t FetchRequestData::endDate() const
+{
+    QDateTime endDate = request<QOrganizerItemFetchRequest>()->endDate();
+    if (endDate.isValid()) {
+        return endDate.toTime_t();
+    } else {
+        // Use now + 10 years as default value if not endDate is setted.
+        QDateTime now = QDateTime::currentDateTime();
+        now.addYears(10);
+        return now.toTime_t();
+    }
+}
+
 void FetchRequestData::finish(QOrganizerManager::Error error)
 {
     QOrganizerManagerEngine::updateItemFetchRequest(request<QOrganizerItemFetchRequest>(),

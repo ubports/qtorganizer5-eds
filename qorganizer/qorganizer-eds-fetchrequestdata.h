@@ -31,6 +31,8 @@ public:
 
     QString nextCollection();
     QString collection() const;
+    time_t startDate() const;
+    time_t endDate() const;
 
     void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
     int appendResults(QList<QtOrganizer::QOrganizerItem> results);
