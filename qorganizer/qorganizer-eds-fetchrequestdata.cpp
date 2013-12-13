@@ -67,7 +67,10 @@ time_t FetchRequestData::endDate() const
     if (endDate.isValid()) {
         return endDate.toTime_t();
     } else {
-        return std::numeric_limits < uint >::max();
+        // Use now + 10 years as default value if not endDate is setted.
+        QDateTime now = QDateTime::currentDateTime();
+        now.addYears(10);
+        return now.toTime_t();
     }
 }
 
