@@ -50,6 +50,7 @@ private:
     QtOrganizer::QOrganizerCollectionId m_currentCollectionId;
 
     void clear();
+    void reset();
     GSList* takeItemsIds(QtOrganizer::QOrganizerCollectionId collectionId);
 };
 

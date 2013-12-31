@@ -24,6 +24,7 @@
 #include "qorganizer-eds-fetchbyidrequestdata.h"
 #include "qorganizer-eds-saverequestdata.h"
 #include "qorganizer-eds-removerequestdata.h"
+#include "qorganizer-eds-removebyidrequestdata.h"
 #include "qorganizer-eds-savecollectionrequestdata.h"
 #include "qorganizer-eds-removecollectionrequestdata.h"
 #include "qorganizer-eds-viewwatcher.h"
@@ -43,6 +44,7 @@
 #include <QtOrganizer/QOrganizerItemFetchByIdRequest>
 #include <QtOrganizer/QOrganizerItemSaveRequest>
 #include <QtOrganizer/QOrganizerItemRemoveRequest>
+#include <QtOrganizer/QOrganizerItemRemoveByIdRequest>
 #include <QtOrganizer/QOrganizerCollectionFetchRequest>
 #include <QtOrganizer/QOrganizerCollectionSaveRequest>
 #include <QtOrganizer/QOrganizerCollectionRemoveRequest>
@@ -497,6 +499,44 @@ bool QOrganizerEDSEngine::saveItems(QList<QtOrganizer::QOrganizerItem> *items,
     return true;
 }
 
+void QOrganizerEDSEngine::removeItemsByIdAsync(QOrganizerItemRemoveByIdRequest *req)
+{
+    qDebug() << Q_FUNC_INFO;
+    if (req->itemIds().count() == 0) {
+        QOrganizerManagerEngine::updateItemRemoveByIdRequest(req,
+                                                             QOrganizerManager::NoError,
+                                                             QMap<int, QOrganizerManager::Error>(),
+                                                             QOrganizerAbstractRequest::FinishedState);
+        return;
+    }
+
+    RemoveByIdRequestData *data = new RemoveByIdRequestData(this, req);
+    removeItemsByIdAsyncStart(data);
+}
+
+void QOrganizerEDSEngine::removeItemsByIdAsyncStart(RemoveByIdRequestData *data)
+{
+    qDebug() << Q_FUNC_INFO;
+    QOrganizerCollectionId collection = data->next();
+    for(; !collection.isNull(); collection = data->next()) {
+        EClient *client = data->parent()->d->m_sourceRegistry->client(collection.toString());
+        data->setClient(client);
+        g_object_unref(client);
+        GSList *ids = data->compIds();
+        GError *gError = 0;
+        e_cal_client_remove_objects_sync(data->client(), ids, E_CAL_OBJ_MOD_ALL, 0, 0);
+        QCoreApplication::processEvents();
+        if (gError) {
+            qWarning() << "Fail to remove Items" << gError->message;
+            g_error_free(gError);
+            gError = 0;
+        }
+        data->commit();
+    }
+    data->finish();
+    delete data;
+}
+
 void QOrganizerEDSEngine::removeItemsAsync(QOrganizerItemRemoveRequest *req)
 {
     qDebug() << Q_FUNC_INFO;
@@ -745,6 +785,9 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
             break;
         case QOrganizerAbstractRequest::ItemRemoveRequest:
             removeItemsAsync(qobject_cast<QOrganizerItemRemoveRequest*>(req));
+            break;
+        case QOrganizerAbstractRequest::ItemRemoveByIdRequest:
+            removeItemsByIdAsync(qobject_cast<QOrganizerItemRemoveByIdRequest*>(req));
             break;
         case QOrganizerAbstractRequest::CollectionSaveRequest:
             saveCollectionAsync(qobject_cast<QOrganizerCollectionSaveRequest*>(req));
@@ -2019,5 +2062,3 @@ GSList *QOrganizerEDSEngine::parseItems(ECalClient *client, QList<QOrganizerItem
 
     return comps;
 }
-
-

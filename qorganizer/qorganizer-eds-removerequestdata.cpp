@@ -73,8 +73,8 @@ void RemoveRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
                                                      error,
                                                      QMap<int, QOrganizerManager::Error>(),
                                                      QOrganizerAbstractRequest::FinishedState);
-
-    emitChangeset(&m_changeSet);
+    //The signal will be fired by the view watcher. Check ViewWatcher::onObjectsRemoved
+    //emitChangeset(&m_changeSet);
 }
 
 GSList *RemoveRequestData::compIds() const
@@ -90,9 +90,7 @@ void RemoveRequestData::commit()
                                                      QMap<int, QOrganizerManager::Error>(),
                                                      QOrganizerAbstractRequest::ActiveState);
 
-    m_changeSet.insertRemovedItems(m_currentIds);
-    m_currentCollectionId = QOrganizerCollectionId();
-    clear();
+    reset();
 }
 
 QOrganizerCollectionId RemoveRequestData::next()
@@ -116,17 +114,23 @@ void RemoveRequestData::cancel()
     clear();
 }
 
-void RemoveRequestData::clear()
+void RemoveRequestData::reset()
 {
-    m_changeSet.clearAll();
+    m_currentCollectionId = QOrganizerCollectionId();
     m_currentIds.clear();
 
-    setClient(0);
     if (m_currentCompIds) {
         g_slist_free_full(m_currentCompIds, (GDestroyNotify)e_cal_component_free_id);
         m_currentCompIds = 0;
     }
     m_sessionStaterd = false;
+}
+
+void RemoveRequestData::clear()
+{
+    reset();
+    m_currentIds.clear();
+    setClient(0);
 }
 
 QOrganizerCollectionId RemoveRequestData::collectionId() const
