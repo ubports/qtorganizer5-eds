@@ -31,6 +31,9 @@ SaveRequestData::SaveRequestData(QOrganizerEDSEngine *engine,
     // map items by collection
     Q_FOREACH(const QOrganizerItem &i, request<QOrganizerItemSaveRequest>()->items()) {
         QString collectionId = i.collectionId().toString();
+        if (collectionId == QStringLiteral("qtorganizer:::"))  {
+            collectionId = QStringLiteral("");
+        }
         QList<QOrganizerItem> li = m_items[collectionId];
         li << i;
         m_items.insert(collectionId, li);
@@ -62,7 +65,7 @@ void SaveRequestData::appendResults(QList<QOrganizerItem> result)
 QString SaveRequestData::nextCollection()
 {
     if (m_items.isEmpty()) {
-        m_currentCollection = QString();
+        m_currentCollection = QString(QString::null);
         m_currentItems.clear();
     } else {
         m_currentCollection = m_items.keys().first();

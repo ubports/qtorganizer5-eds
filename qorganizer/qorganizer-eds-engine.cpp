@@ -344,7 +344,7 @@ void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
     qDebug() << Q_FUNC_INFO;
     QString collectionId = data->nextCollection();
 
-    if (collectionId.isEmpty() && data->end()) {
+    if (collectionId.isNull() && data->end()) {
         data->finish();
         delete data;
         return;
@@ -359,13 +359,13 @@ void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
             saveItemsAsyncStart(data);
         }
 
-        if (collectionId.isNull() && createItems) {
+        if (collectionId.isEmpty() && createItems) {
             collectionId = data->parent()->d->m_sourceRegistry->defaultCollection().id().toString();
         }
 
         EClient *client = data->parent()->d->m_sourceRegistry->client(collectionId);
         if (!client) {
-            qWarning() << "Trying to save items with invalid collection";
+            qWarning() << "Trying to save items with invalid collection" << collectionId;
             Q_FOREACH(const QOrganizerItem &i, items) {
                 data->appendResult(i, QOrganizerManager::InvalidCollectionError);
             }
@@ -547,7 +547,9 @@ bool QOrganizerEDSEngine::removeItems(const QList<QOrganizerItemId> &itemIds,
 QOrganizerCollection QOrganizerEDSEngine::defaultCollection(QOrganizerManager::Error* error)
 {
     qDebug() << Q_FUNC_INFO;
-    *error = QOrganizerManager::NoError;
+    if (error) {
+        *error = QOrganizerManager::NoError;
+    }
     return d->m_sourceRegistry->defaultCollection();
 }
 
@@ -2019,5 +2021,3 @@ GSList *QOrganizerEDSEngine::parseItems(ECalClient *client, QList<QOrganizerItem
 
     return comps;
 }
-
-
