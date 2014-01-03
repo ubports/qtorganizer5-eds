@@ -341,7 +341,7 @@ private Q_SLOTS:
 
         // This item will cause error, because the collection ID is invalid
         QOrganizerEvent ev;
-        QOrganizerCollectionId cid = QOrganizerCollectionId::fromString("qtorganizer:eds::XXXXXXXX.XXXXX.X@ubuntu");
+        QOrganizerCollectionId cid = QOrganizerCollectionId::fromString("qtorganizer:eds::99999.99999.9@ubuntu");
         ev.setCollectionId(cid);
         ev.setStartDateTime(QDateTime(QDate(2013, 10, 2), QTime(0,30,0)));
         ev.setDisplayLabel(displayLabelValue.arg(2));
