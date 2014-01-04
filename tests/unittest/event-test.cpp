@@ -217,14 +217,17 @@ private Q_SLOTS:
         QList<QOrganizerItem> items;
         items << event;
         bool saveResult = m_engine->saveItems(&items,
-                                            QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
-                                            &errorMap,
-                                            &error);
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
 
         QVERIFY(saveResult);
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(errorMap.isEmpty());
         QVERIFY(!items[0].id().isNull());
+
+        // give some time to EDS to commi the info
+        QTest::qWait(200);
 
         // append new item to be removed after the test
         appendToRemove(items[0].id());
