@@ -39,8 +39,8 @@ private:
     static const QString taskListTypeName;
     static int signalIndex;
 
-    int m_itemRemovedIndex;
-    int m_requestFinishedIndex;
+    QDateTime m_itemRemovedTime;
+    QDateTime m_requestFinishedTime;
     QOrganizerEDSEngine *m_engine;
     QOrganizerCollection m_collection;
 
@@ -51,8 +51,8 @@ private Q_SLOTS:
         EDSBaseTest::init(0);
 
         signalIndex = 0;
-        m_itemRemovedIndex = -1;
-        m_requestFinishedIndex = -1;
+        m_itemRemovedTime = QDateTime();
+        m_requestFinishedTime = QDateTime();
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
         QtOrganizer::QOrganizerManager::Error error;
@@ -73,13 +73,17 @@ private Q_SLOTS:
     //helper
     void itemRemoved()
     {
-        m_itemRemovedIndex = signalIndex++;
+        m_itemRemovedTime = QDateTime::currentDateTime();
+        // avoid both signals to be fired at the same time
+        QTest::qSleep(100);
     }
 
     void requestFinished(QOrganizerAbstractRequest::State state)
     {
         if (state == QOrganizerAbstractRequest::FinishedState) {
-            m_requestFinishedIndex = signalIndex++;
+            m_requestFinishedTime = QDateTime::currentDateTime();
+            // avoid both signals to be fired at the same time
+            QTest::qSleep(100);
         }
     }
 
@@ -199,8 +203,9 @@ private Q_SLOTS:
         m_engine->waitForRequestFinished(&req, -1);
 
         // check if the signal item removed was fired after the request finish
-        QTRY_COMPARE(m_requestFinishedIndex, 0);
-        QTRY_COMPARE(m_itemRemovedIndex, 1);
+        QTRY_VERIFY(m_requestFinishedTime.isValid());
+        QTRY_VERIFY(m_itemRemovedTime.isValid());
+        QVERIFY(m_itemRemovedTime > m_requestFinishedTime);
     }
 
     void testRemoveItemById()
@@ -243,8 +248,9 @@ private Q_SLOTS:
         m_engine->waitForRequestFinished(&req, -1);
 
         // check if the signal item removed was fired after the request finish
-        QTRY_COMPARE(m_requestFinishedIndex, 0);
-        QTRY_COMPARE(m_itemRemovedIndex, 1);
+        QTRY_VERIFY(m_requestFinishedTime.isValid());
+        QTRY_VERIFY(m_itemRemovedTime.isValid());
+        QVERIFY(m_itemRemovedTime > m_requestFinishedTime);
 
         // check if item was removed
         QOrganizerItemSortOrder sort;

@@ -54,8 +54,7 @@ void RemoveByIdRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
                                                          QMap<int, QOrganizerManager::Error>(),
                                                          QOrganizerAbstractRequest::FinishedState);
 
-    //The signal will be fired by the view watcher. Check ViewWatcher::onObjectsRemoved
-    //emitChangeset(&m_changeSet);
+    emitChangeset(&m_changeSet);
 }
 
 GSList *RemoveByIdRequestData::compIds() const
@@ -70,7 +69,7 @@ void RemoveByIdRequestData::commit()
                                                          QtOrganizer::QOrganizerManager::NoError,
                                                          QMap<int, QOrganizerManager::Error>(),
                                                          QOrganizerAbstractRequest::ActiveState);
-
+    m_changeSet.insertRemovedItems(m_currentIds.toList());
     reset();
 }
 
@@ -124,7 +123,7 @@ void RemoveByIdRequestData::cancel()
 void RemoveByIdRequestData::clear()
 {
     reset();
-
+    m_changeSet.clearAll();
     m_pending.clear();
     setClient(0);
 }
