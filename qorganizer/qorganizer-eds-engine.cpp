@@ -361,6 +361,7 @@ void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
 
         if (collectionId.isEmpty() && createItems) {
             collectionId = data->parent()->d->m_sourceRegistry->defaultCollection().id().toString();
+            qDebug() << "Use default collection to save item with empty collection:" << collectionId;
         }
 
         EClient *client = data->parent()->d->m_sourceRegistry->client(collectionId);

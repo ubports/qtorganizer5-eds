@@ -226,27 +226,16 @@ private Q_SLOTS:
         QVERIFY(errorMap.isEmpty());
         QVERIFY(!items[0].id().isNull());
 
-        // give some time to EDS to commi the info
-        QTest::qWait(200);
-
         // append new item to be removed after the test
         appendToRemove(items[0].id());
 
         // check if item was created on the default collection
-        QOrganizerItemSortOrder sort;
         QOrganizerItemFetchHint hint;
-        QOrganizerItemIdFilter filter;
 
         QList<QOrganizerItemId> ids;
         ids << items[0].id();
-        filter.setIds(ids);
-        items = m_engine->items(filter,
-                      QDateTime(),
-                      QDateTime(),
-                      10,
-                      sort,
-                      hint,
-                      &error);
+        qDebug() << "Check for item id:" << ids;
+        items = m_engine->items(ids, hint, 0, 0);
         QCOMPARE(items.count(), 1);
         QOrganizerCollection collection = m_engine->defaultCollection(0);
         QCOMPARE(items[0].collectionId(), collection.id());
