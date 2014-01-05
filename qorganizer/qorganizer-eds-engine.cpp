@@ -245,11 +245,9 @@ QList<QOrganizerItem> QOrganizerEDSEngine::items(const QList<QOrganizerItemId> &
                                                  QOrganizerManager::Error *error)
 {
     qDebug() << Q_FUNC_INFO;
-    QOrganizerItemIdFilter filter;
-    filter.setIds(itemIds);
 
-    QOrganizerItemFetchRequest *req = new QOrganizerItemFetchRequest(this);
-    req->setFilter(filter);
+    QOrganizerItemFetchByIdRequest *req = new QOrganizerItemFetchByIdRequest(this);
+    req->setIds(itemIds);
     req->setFetchHint(fetchHint);
 
     startRequest(req);
@@ -258,9 +256,9 @@ QList<QOrganizerItem> QOrganizerEDSEngine::items(const QList<QOrganizerItemId> &
     if (error) {
         *error = req->error();
     }
-    // TODO implement correct reply for errorMap
+
     if (errorMap) {
-        *errorMap = QMap<int, QOrganizerManager::Error>();
+        *errorMap = req->errorMap();
     }
     req->deleteLater();
     return req->items();
