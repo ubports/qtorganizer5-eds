@@ -355,8 +355,10 @@ void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
             createItems = false;
             items = data->takeItemsToUpdate();
         }
+
         if (items.isEmpty()) {
             saveItemsAsyncStart(data);
+            return;
         }
 
         if (collectionId.isEmpty() && createItems) {
@@ -453,13 +455,17 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
             data->appendResult(i, QOrganizerManager::UnspecifiedError);
         }
     } else {
+        QString currentCollectionId = data->currentCollection();
+        if (currentCollectionId.isEmpty()) {
+            currentCollectionId = data->parent()->defaultCollection(0).id().toString();
+        }
         QList<QOrganizerItem> items = data->workingItems();
         for(uint i=0, iMax=g_slist_length(uids); i < iMax; i++) {
             QOrganizerItem &item = items[i];
             const gchar *uid = static_cast<const gchar*>(g_slist_nth_data(uids, i));
 
-            item.setCollectionId(QOrganizerCollectionId::fromString(data->currentCollection()));
-            QOrganizerEDSEngineId *eid = new QOrganizerEDSEngineId(data->currentCollection(),
+            item.setCollectionId(QOrganizerCollectionId::fromString(currentCollectionId));
+            QOrganizerEDSEngineId *eid = new QOrganizerEDSEngineId(currentCollectionId,
                                                                    QString::fromUtf8(uid));
             item.setId(QOrganizerItemId(eid));
             item.setGuid(QString::fromUtf8(uid));
