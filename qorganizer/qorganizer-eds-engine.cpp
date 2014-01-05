@@ -131,7 +131,6 @@ void QOrganizerEDSEngine::itemsAsyncStart(FetchRequestData *data)
 {
     qDebug() << Q_FUNC_INFO;
     QString collection = data->nextCollection();
-    qDebug() << "Check for collection:" << collection;
     if (!collection.isEmpty()) {
         EClient *client = data->parent()->d->m_sourceRegistry->client(collection);
         data->setClient(client);
@@ -162,9 +161,7 @@ void QOrganizerEDSEngine::itemsAsyncListed(ECalComponent *comp,
     GSList *events = 0;
     events = g_slist_append(events, comp);
 
-    QList<QOrganizerItem> items = data->parent()->parseEvents(data->collection(), events, false);
-    qDebug() << "Events" << items;
-    data->appendResults(items);
+    data->appendResults(data->parent()->parseEvents(data->collection(), events, false));
     g_slist_free(events);
 }
 
