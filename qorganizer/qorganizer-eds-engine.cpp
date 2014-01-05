@@ -459,7 +459,9 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
             QOrganizerItem &item = items[i];
             const gchar *uid = static_cast<const gchar*>(g_slist_nth_data(uids, i));
 
-            item.setCollectionId(QOrganizerCollectionId::fromString(data->currentCollection()));
+            QOrganizerEDSCollectionEngineId *edsCollectionId = new QOrganizerEDSCollectionEngineId(data->currentCollection());
+            item.setCollectionId(QOrganizerCollectionId(edsCollectionId));
+
             QOrganizerEDSEngineId *eid = new QOrganizerEDSEngineId(data->currentCollection(),
                                                                    QString::fromUtf8(uid));
             item.setId(QOrganizerItemId(eid));
@@ -517,9 +519,9 @@ void QOrganizerEDSEngine::removeItemsByIdAsync(QOrganizerItemRemoveByIdRequest *
 void QOrganizerEDSEngine::removeItemsByIdAsyncStart(RemoveByIdRequestData *data)
 {
     qDebug() << Q_FUNC_INFO;
-    QOrganizerCollectionId collection = data->next();
-    for(; !collection.isNull(); collection = data->next()) {
-        EClient *client = data->parent()->d->m_sourceRegistry->client(collection.toString());
+    QString collectionId = data->next();
+    for(; !collectionId.isNull(); collectionId = data->next()) {
+        EClient *client = data->parent()->d->m_sourceRegistry->client(collectionId);
         data->setClient(client);
         g_object_unref(client);
         GSList *ids = data->compIds();

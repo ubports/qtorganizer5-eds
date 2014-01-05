@@ -186,6 +186,7 @@ private Q_SLOTS:
                                             &error);
         QVERIFY(saveResult);
         QCOMPARE(error, QOrganizerManager::NoError);
+        QCOMPARE(items.size(), 1);
         QVERIFY(errorMap.isEmpty());
         QVERIFY(!items[0].id().isNull());
 

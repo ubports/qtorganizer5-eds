@@ -74,7 +74,7 @@ void RemoveRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
                                                      QMap<int, QOrganizerManager::Error>(),
                                                      QOrganizerAbstractRequest::FinishedState);
 
-    emitChangeset(&m_changeSet);
+    //emitChangeset(&m_changeSet);
 }
 
 GSList *RemoveRequestData::compIds() const

@@ -35,10 +35,9 @@ RemoveByIdRequestData::RemoveByIdRequestData(QOrganizerEDSEngine *engine, QtOrga
         QString collectionId;
         if (strId.contains("/")) {
             collectionId = strId.split("/").first();
-            QOrganizerCollectionId cId = QOrganizerCollectionId::fromString(collectionId);
-            QSet<QOrganizerItemId> ids = m_pending.value(cId);
+            QSet<QOrganizerItemId> ids = m_pending.value(collectionId);
             ids << id;
-            m_pending.insert(cId, ids);
+            m_pending.insert(collectionId, ids);
         }
     }
 }
@@ -54,7 +53,7 @@ void RemoveByIdRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
                                                          QMap<int, QOrganizerManager::Error>(),
                                                          QOrganizerAbstractRequest::FinishedState);
 
-    emitChangeset(&m_changeSet);
+    //emitChangeset(&m_changeSet);
 }
 
 GSList *RemoveByIdRequestData::compIds() const
@@ -86,7 +85,7 @@ GSList *RemoveByIdRequestData::parseIds(QSet<QOrganizerItemId> iids)
     return ids;
 }
 
-QOrganizerCollectionId RemoveByIdRequestData::next()
+QString RemoveByIdRequestData::next()
 {
     Q_ASSERT(!m_sessionStaterd);
 
@@ -98,14 +97,14 @@ QOrganizerCollectionId RemoveByIdRequestData::next()
         m_pending.remove(m_currentCollectionId);
         return m_currentCollectionId;
     }
-    return QOrganizerCollectionId();
+    return QString(QString::null);
 }
 
 
 void RemoveByIdRequestData::reset()
 {
     m_currentIds.clear();
-    m_currentCollectionId = QOrganizerCollectionId();
+    m_currentCollectionId = QString(QString::null);
     if (m_currentCompIds) {
         g_slist_free_full(m_currentCompIds, (GDestroyNotify)e_cal_component_free_id);
         m_currentCompIds = 0;
@@ -128,7 +127,7 @@ void RemoveByIdRequestData::clear()
     setClient(0);
 }
 
-QOrganizerCollectionId RemoveByIdRequestData::collectionId() const
+QString RemoveByIdRequestData::collectionId() const
 {
     return m_currentCollectionId;
 }

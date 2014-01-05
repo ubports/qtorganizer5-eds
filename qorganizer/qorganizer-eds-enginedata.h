@@ -41,8 +41,9 @@ public:
     template<class K>
     void emitSharedSignals(K* cs)
     {
-        Q_FOREACH(QtOrganizer::QOrganizerManagerEngine* engine, m_sharedEngines)
+        Q_FOREACH(QtOrganizer::QOrganizerManagerEngine* engine, m_sharedEngines) {
             cs->emitSignals(engine);
+        }
     }
 
     ViewWatcher* watch(const QString &collectionId);
