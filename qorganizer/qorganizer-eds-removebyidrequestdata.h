@@ -16,42 +16,40 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __QORGANIZER_EDS_REMOVEQUESTDATA_H__
-#define __QORGANIZER_EDS_REMOVEQUESTDATA_H__
+#ifndef __QORGANIZER_EDS_REMOVEBYIDQUESTDATA_H__
+#define __QORGANIZER_EDS_REMOVEBYIDQUESTDATA_H__
 
 #include "qorganizer-eds-requestdata.h"
 
 #include <glib.h>
 
-class RemoveRequestData : public RequestData
+class RemoveByIdRequestData : public RequestData
 {
 public:
-    RemoveRequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbstractRequest *req);
-    ~RemoveRequestData();
+    RemoveByIdRequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbstractRequest *req);
+    ~RemoveByIdRequestData();
 
-    QList<QtOrganizer::QOrganizerCollectionId> pendingCollections() const;
-    QtOrganizer::QOrganizerCollectionId collectionId() const;
+    QString collectionId() const;
 
     void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
 
     GSList *compIds() const;
 
-    QtOrganizer::QOrganizerCollectionId next();
+    QString next();
     void commit();
     virtual void cancel();
 
 private:
-    QSet<QtOrganizer::QOrganizerCollectionId> m_pendingCollections;
-    QList<QtOrganizer::QOrganizerItem> m_pendingItems;
+    QHash<QString, QSet<QtOrganizer::QOrganizerItemId> > m_pending;
+    QSet<QtOrganizer::QOrganizerItemId> m_currentIds;
+    QString m_currentCollectionId;
 
     bool m_sessionStaterd;
     GSList *m_currentCompIds;
-    QList<QtOrganizer::QOrganizerItemId> m_currentIds;
-    QtOrganizer::QOrganizerCollectionId m_currentCollectionId;
 
-    void clear();
     void reset();
-    GSList* takeItemsIds(QtOrganizer::QOrganizerCollectionId collectionId);
+    void clear();
+    GSList *parseIds(QSet<QtOrganizer::QOrganizerItemId> iids);
 };
 
 #endif
