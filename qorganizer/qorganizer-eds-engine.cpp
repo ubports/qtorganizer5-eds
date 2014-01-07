@@ -465,12 +465,12 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
             QOrganizerItem &item = items[i];
             const gchar *uid = static_cast<const gchar*>(g_slist_nth_data(uids, i));
 
-            QOrganizerEDSEngineId *eid = new QOrganizerEDSEngineId(data->currentCollection(),
+            QOrganizerEDSEngineId *eid = new QOrganizerEDSEngineId(currentCollectionId,
                                                                    QString::fromUtf8(uid));
             item.setId(QOrganizerItemId(eid));
             item.setGuid(QString::fromUtf8(uid));
 
-            QOrganizerEDSCollectionEngineId *edsCollectionId = new QOrganizerEDSCollectionEngineId(data->currentCollection());
+            QOrganizerEDSCollectionEngineId *edsCollectionId = new QOrganizerEDSCollectionEngineId(currentCollectionId);
             item.setCollectionId(QOrganizerCollectionId(edsCollectionId));
         }
         g_slist_free_full(uids, g_free);
