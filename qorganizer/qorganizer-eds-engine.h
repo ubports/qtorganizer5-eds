@@ -40,6 +40,7 @@ class FetchRequestData;
 class FetchByIdRequestData;
 class SaveRequestData;
 class RemoveRequestData;
+class RemoveByIdRequestData;
 class SaveCollectionRequestData;
 class RemoveCollectionRequestData;
 class ViewWatcher;
@@ -206,6 +207,9 @@ private:
     static void saveItemsAsyncStart(SaveRequestData *data);
     static void saveItemsAsyncCreated(GObject *source_object, GAsyncResult *res, SaveRequestData *data);
     static void saveItemsAsyncModified(GObject *source_object, GAsyncResult *res, SaveRequestData *data);
+
+    void removeItemsByIdAsync(QtOrganizer::QOrganizerItemRemoveByIdRequest *req);
+    static void removeItemsByIdAsyncStart(RemoveByIdRequestData *data);
 
     void removeItemsAsync(QtOrganizer::QOrganizerItemRemoveRequest *req);
     static void removeItemsAsyncStart(RemoveRequestData *data);
