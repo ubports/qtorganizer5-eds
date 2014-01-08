@@ -271,6 +271,45 @@ private Q_SLOTS:
         QCOMPARE(items.count(), 0);
     }
 
+    void testCreateEventWithoutCollection()
+    {
+        static QString displayLabelValue = QStringLiteral("event without collection");
+        static QString descriptionValue = QStringLiteral("event without collection");
+
+        QOrganizerEvent event;
+        event.setStartDateTime(QDateTime(QDate(2013, 9, 3), QTime(0,30,0)));
+        event.setDisplayLabel(displayLabelValue);
+        event.setDescription(descriptionValue);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        items << event;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+
+        QVERIFY(saveResult);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QVERIFY(errorMap.isEmpty());
+        QVERIFY(!items[0].id().isNull());
+
+        // append new item to be removed after the test
+        appendToRemove(items[0].id());
+
+        // check if item was created on the default collection
+        QOrganizerItemFetchHint hint;
+
+        QList<QOrganizerItemId> ids;
+        ids << items[0].id();
+        qDebug() << "Check for item id:" << ids;
+        items = m_engine->items(ids, hint, 0, 0);
+        QCOMPARE(items.count(), 1);
+        QOrganizerCollection collection = m_engine->defaultCollection(0);
+        QCOMPARE(items[0].collectionId(), collection.id());
+    }
+
     void testCreateMultipleItemsWithSameCollection()
     {
         static QString displayLabelValue = QStringLiteral("Multiple Item:%1");
@@ -363,7 +402,11 @@ private Q_SLOTS:
 
         // This item will cause error, because the collection ID is invalid
         QOrganizerEvent ev;
-        ev.setCollectionId(QOrganizerCollectionId::fromString("1386259057.30874.6@qorganizer"));
+        QOrganizerEDSCollectionEngineId *edsCollectionId = new QOrganizerEDSCollectionEngineId("XXXXXX");
+        QOrganizerCollectionId cid(edsCollectionId);
+        QVERIFY(!cid.isNull());
+        QCOMPARE(cid.toString(), QStringLiteral("qtorganizer:eds::XXXXXX"));
+        ev.setCollectionId(cid);
         ev.setStartDateTime(QDateTime(QDate(2013, 10, 2), QTime(0,30,0)));
         ev.setDisplayLabel(displayLabelValue.arg(2));
         ev.setDescription(descriptionValue.arg(2));

@@ -162,6 +162,7 @@ void QOrganizerEDSEngine::itemsAsyncListed(ECalComponent *comp,
 
     GSList *events = 0;
     events = g_slist_append(events, comp);
+
     data->appendResults(data->parent()->parseEvents(data->collection(), events, false));
     g_slist_free(events);
 }
@@ -243,11 +244,9 @@ QList<QOrganizerItem> QOrganizerEDSEngine::items(const QList<QOrganizerItemId> &
                                                  QOrganizerManager::Error *error)
 {
     qDebug() << Q_FUNC_INFO;
-    QOrganizerItemIdFilter filter;
-    filter.setIds(itemIds);
 
-    QOrganizerItemFetchRequest *req = new QOrganizerItemFetchRequest(this);
-    req->setFilter(filter);
+    QOrganizerItemFetchByIdRequest *req = new QOrganizerItemFetchByIdRequest(this);
+    req->setIds(itemIds);
     req->setFetchHint(fetchHint);
 
     startRequest(req);
@@ -256,9 +255,9 @@ QList<QOrganizerItem> QOrganizerEDSEngine::items(const QList<QOrganizerItemId> &
     if (error) {
         *error = req->error();
     }
-    // TODO implement correct reply for errorMap
+
     if (errorMap) {
-        *errorMap = QMap<int, QOrganizerManager::Error>();
+        *errorMap = req->errorMap();
     }
     req->deleteLater();
     return req->items();
@@ -346,7 +345,7 @@ void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
     qDebug() << Q_FUNC_INFO;
     QString collectionId = data->nextCollection();
 
-    if (collectionId.isEmpty() && data->end()) {
+    if (collectionId.isNull() && data->end()) {
         data->finish();
         delete data;
         return;
@@ -357,17 +356,20 @@ void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
             createItems = false;
             items = data->takeItemsToUpdate();
         }
+
         if (items.isEmpty()) {
             saveItemsAsyncStart(data);
+            return;
         }
 
-        if (collectionId.isNull() && createItems) {
+        if (collectionId.isEmpty() && createItems) {
             collectionId = data->parent()->d->m_sourceRegistry->defaultCollection().id().toString();
+            qDebug() << "Use default collection to save item with empty collection:" << collectionId;
         }
 
         EClient *client = data->parent()->d->m_sourceRegistry->client(collectionId);
         if (!client) {
-            qWarning() << "Trying to save items with invalid collection";
+            qWarning() << "Trying to save items with invalid collection" << collectionId;
             Q_FOREACH(const QOrganizerItem &i, items) {
                 data->appendResult(i, QOrganizerManager::InvalidCollectionError);
             }
@@ -454,18 +456,22 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
             data->appendResult(i, QOrganizerManager::UnspecifiedError);
         }
     } else {
+        QString currentCollectionId = data->currentCollection();
+        if (currentCollectionId.isEmpty()) {
+            currentCollectionId = data->parent()->defaultCollection(0).id().toString();
+        }
         QList<QOrganizerItem> items = data->workingItems();
         for(uint i=0, iMax=g_slist_length(uids); i < iMax; i++) {
             QOrganizerItem &item = items[i];
             const gchar *uid = static_cast<const gchar*>(g_slist_nth_data(uids, i));
 
-            QOrganizerEDSCollectionEngineId *edsCollectionId = new QOrganizerEDSCollectionEngineId(data->currentCollection());
-            item.setCollectionId(QOrganizerCollectionId(edsCollectionId));
-
-            QOrganizerEDSEngineId *eid = new QOrganizerEDSEngineId(data->currentCollection(),
+            QOrganizerEDSEngineId *eid = new QOrganizerEDSEngineId(currentCollectionId,
                                                                    QString::fromUtf8(uid));
             item.setId(QOrganizerItemId(eid));
             item.setGuid(QString::fromUtf8(uid));
+
+            QOrganizerEDSCollectionEngineId *edsCollectionId = new QOrganizerEDSCollectionEngineId(currentCollectionId);
+            item.setCollectionId(QOrganizerCollectionId(edsCollectionId));
         }
         g_slist_free_full(uids, g_free);
         data->appendResults(items);
@@ -589,7 +595,9 @@ bool QOrganizerEDSEngine::removeItems(const QList<QOrganizerItemId> &itemIds,
 QOrganizerCollection QOrganizerEDSEngine::defaultCollection(QOrganizerManager::Error* error)
 {
     qDebug() << Q_FUNC_INFO;
-    *error = QOrganizerManager::NoError;
+    if (error) {
+        *error = QOrganizerManager::NoError;
+    }
     return d->m_sourceRegistry->defaultCollection();
 }
 
