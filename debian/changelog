@@ -1,3 +1,20 @@
+qtorganizer5-eds (0.1.1+14.04.20140108.2-0ubuntu1) trusty; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * Configured eds to run a new session for each test.
+  * Implemented support for query items by id. (LP: #1240808)
+  * Implemented support for save multiple items. This new implementation
+    allows to save several items in the same call. The items can be part
+    of the same collection or not.
+  * fixed query items with recurrence.
+  * Implemented remove item by id;. (LP: #1240505)
+  * Fixed create items without collection id. (LP: #1262296)
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 26
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 08 Jan 2014 02:58:12 +0000
+
 qtorganizer5-eds (0.1.1+14.04.20131024.4-0ubuntu2) trusty; urgency=low
 
   * No-change rebuild for new e-d-s
