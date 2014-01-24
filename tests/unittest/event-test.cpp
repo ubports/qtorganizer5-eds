@@ -431,6 +431,45 @@ private Q_SLOTS:
         QCOMPARE(errorMap.size(), 1);
         QCOMPARE(errorMap[1], QOrganizerManager::InvalidCollectionError);
     }
+
+    void testCreateAllDayEvent()
+    {
+        static QString displayLabelValue = QStringLiteral("All day title");
+        static QString descriptionValue = QStringLiteral("All day description");
+
+        QOrganizerTodo todo;
+        todo.setCollectionId(m_collection.id());
+        todo.setAllDay(true);
+        todo.setStartDateTime(QDateTime(QDate(2013, 9, 3), QTime(0,30,0)));
+        todo.setDisplayLabel(displayLabelValue);
+        todo.setDescription(descriptionValue);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        items << todo;
+        bool saveResult = m_engine->saveItems(&items,
+                                            QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                            &errorMap,
+                                            &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QVERIFY(errorMap.isEmpty());
+        QOrganizerItemId id = items[0].id();
+        QVERIFY(!id.isNull());
+
+        // append new item to be removed after the test
+        appendToRemove(id);
+
+        QOrganizerItemFetchHint hint;
+        QList<QOrganizerItemId> ids;
+        ids << items[0].id();
+        items = m_engine->items(ids, hint, &errorMap, &error);
+        QCOMPARE(items.count(), 1);
+
+        QOrganizerTodo todoResult = static_cast<QOrganizerTodo>(items[0]);
+        QCOMPARE(todoResult.isAllDay(), true);
+    }
 };
 
 const QString EventTest::defaultCollectionName = QStringLiteral("TEST_EVENT_COLLECTION");
