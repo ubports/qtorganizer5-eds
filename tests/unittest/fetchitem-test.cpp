@@ -55,12 +55,15 @@ private Q_SLOTS:
         static QString displayLabelValue = QStringLiteral("Display Label %1");
         static QString descriptionValue = QStringLiteral("Description event %1");
 
+        // use this becaue EDS does not store msecs
+        QTime currentTime = QTime::currentTime();
+        QDateTime date = QDateTime(QDateTime::currentDateTime().date(), QTime(currentTime.hour(), currentTime.minute(), currentTime.second()));
         m_events.clear();
         for(int i=0; i<10; i++) {
             QOrganizerEvent ev;
             ev.setCollectionId(m_collection.id());
-            ev.setStartDateTime(QDateTime(QDate(2013, 9, i+1), QTime(0,30,0)));
-            ev.setEndDateTime(QDateTime(QDate(2013, 9, i+1), QTime(0,45,0)));
+            ev.setStartDateTime(date);
+            ev.setEndDateTime(date.addSecs(60*30));
             ev.setDisplayLabel(displayLabelValue.arg(i));
             ev.setDescription(descriptionValue.arg(i));
 
@@ -76,6 +79,7 @@ private Q_SLOTS:
             QVERIFY(errorMap.isEmpty());
             m_events << evs[0];
             appendToRemove(evs[0].id());
+            date = date.addDays(1);
         }
     }
 
@@ -151,6 +155,17 @@ private Q_SLOTS:
         errors = reqNotFound.errorMap();
         QCOMPARE(errors.size(), 1);
         QCOMPARE(errors[0], QOrganizerManager::DoesNotExistError);
+    }
+
+    void testFetchWithoutDate()
+    {
+        QOrganizerItemFilter filter;
+        QOrganizerItemFetchHint hint;
+        QOrganizerManager::Error error;
+        QList<QOrganizerItemSortOrder> sort;
+
+        QList<QOrganizerItem> result = m_engine->items(filter, QDateTime(), QDateTime(), 100, sort, hint, &error);
+        QCOMPARE(result.size(), 10);
     }
 };
 
