@@ -69,7 +69,7 @@ time_t FetchRequestData::endDate() const
     } else {
         // Use now + 10 years as default value if not endDate is setted.
         QDateTime now = QDateTime::currentDateTime();
-        now.addYears(10);
+        now = now.addYears(10);
         return now.toTime_t();
     }
 }

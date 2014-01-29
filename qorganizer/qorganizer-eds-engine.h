@@ -171,6 +171,7 @@ private:
     static void parseAudibleReminderAttachment(ECalComponentAlarm *alarm, QtOrganizer::QOrganizerItemReminder *aDetail);
     static void parseVisualReminderAttachment(ECalComponentAlarm *alarm, QtOrganizer::QOrganizerItemReminder *aDetail);
     static void parseStartTime(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseTodoStartTime(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseEndTime(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseRecurrence(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseWeekRecurrence(struct icalrecurrencetype *rule, QtOrganizer::QOrganizerRecurrenceRule *qRule);
