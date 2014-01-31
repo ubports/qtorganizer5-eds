@@ -470,6 +470,43 @@ private Q_SLOTS:
         QOrganizerTodo todoResult = static_cast<QOrganizerTodo>(items[0]);
         QCOMPARE(todoResult.isAllDay(), true);
     }
+
+    void testCreateTodoEventWithStartDate()
+    {
+        static QString displayLabelValue = QStringLiteral("Event todo with start date");
+        static QString descriptionValue = QStringLiteral("Event todo with start date description");
+        static QDateTime startDateTime = QDateTime(QDate(2013, 9, 3), QTime(0,30,0));
+
+        // create a new item
+        QOrganizerTodo todo;
+        todo.setCollectionId(m_collection.id());
+        todo.setStartDateTime(startDateTime);
+        todo.setDisplayLabel(displayLabelValue);
+        todo.setDescription(descriptionValue);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        items << todo;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QVERIFY(errorMap.isEmpty());
+
+        // query by the new item
+        QOrganizerItemFetchHint hint;
+        QList<QOrganizerItemId> ids;
+        ids << items[0].id();
+        items = m_engine->items(ids, hint, &errorMap, &error);
+        QCOMPARE(items.count(), 1);
+
+        // compare start datetime
+        QOrganizerTodo newTodo = static_cast<QOrganizerTodo>(items[0]);
+        QCOMPARE(newTodo.startDateTime(), startDateTime);
+    }
 };
 
 const QString EventTest::defaultCollectionName = QStringLiteral("TEST_EVENT_COLLECTION");

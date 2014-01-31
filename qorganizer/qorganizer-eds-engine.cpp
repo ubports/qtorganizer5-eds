@@ -137,18 +137,23 @@ void QOrganizerEDSEngine::itemsAsyncStart(FetchRequestData *data)
         EClient *client = data->parent()->d->m_sourceRegistry->client(collection);
         data->setClient(client);
         g_object_unref(client);
-
         e_cal_client_generate_instances(data->client(),
                                         data->startDate(),
                                         data->endDate(),
                                         data->cancellable(),
                                         (ECalRecurInstanceFn) QOrganizerEDSEngine::itemsAsyncListed,
                                         data,
-                                        (GDestroyNotify) QOrganizerEDSEngine::itemsAsyncStart);
+                                        (GDestroyNotify) QOrganizerEDSEngine::itemsAsyncDone);
+
     } else {
         data->finish();
         delete data;
     }
+}
+
+void QOrganizerEDSEngine::itemsAsyncDone(FetchRequestData *data)
+{
+    itemsAsyncStart(data);
 }
 
 void QOrganizerEDSEngine::itemsAsyncListed(ECalComponent *comp,
@@ -966,6 +971,21 @@ void QOrganizerEDSEngine::parseStartTime(ECalComponent *comp, QOrganizerItem *it
     e_cal_component_free_datetime(dt);
 }
 
+void QOrganizerEDSEngine::parseTodoStartTime(ECalComponent *comp, QOrganizerItem *item)
+{
+    ECalComponentDateTime *dt = g_new0(ECalComponentDateTime, 1);
+    e_cal_component_get_dtstart(comp, dt);
+    if (dt->value) {
+        QOrganizerTodoTime etr = item->detail(QOrganizerItemDetail::TypeTodoTime);
+        etr.setStartDateTime(fromIcalTime(*dt->value));
+        if (icaltime_is_date(*dt->value) != etr.isAllDay()) {
+            etr.setAllDay(icaltime_is_date(*dt->value));
+        }
+        item->saveDetail(&etr);
+    }
+    e_cal_component_free_datetime(dt);
+}
+
 void QOrganizerEDSEngine::parseEndTime(ECalComponent *comp, QOrganizerItem *item)
 {
     ECalComponentDateTime *dt = g_new0(ECalComponentDateTime, 1);
@@ -1284,14 +1304,12 @@ QOrganizerItem *QOrganizerEDSEngine::parseEvent(ECalComponent *comp)
 QOrganizerItem *QOrganizerEDSEngine::parseToDo(ECalComponent *comp)
 {
     QOrganizerTodo *todo = new QOrganizerTodo();
-    parseStartTime(comp, todo);
+    parseTodoStartTime(comp, todo);
     parseDueDate(comp, todo);
     parseRecurrence(comp, todo);
     parsePriority(comp, todo);
     parseProgress(comp, todo);
     parseStatus(comp, todo);
-
-    //TODO: finishedDateTime
     return todo;
 }
 
