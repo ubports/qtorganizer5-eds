@@ -1,3 +1,11 @@
+qtorganizer5-eds (0.1.1+14.04.20140131-0ubuntu1) trusty; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * Make sure that allDay property get saved correct. (LP: #1265953)
+  * Fixed todo event parse. (LP: #1272333)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 31 Jan 2014 11:37:04 +0000
+
 qtorganizer5-eds (0.1.1+14.04.20140108.2-0ubuntu1) trusty; urgency=low
 
   [ Renato Araujo Oliveira Filho ]
