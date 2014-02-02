@@ -58,6 +58,9 @@
 #include <QtOrganizer/QOrganizerItemReminder>
 #include <QtOrganizer/QOrganizerItemAudibleReminder>
 #include <QtOrganizer/QOrganizerItemVisualReminder>
+#include <QtOrganizer/QOrganizerEventOccurrence>
+#include <QtOrganizer/QOrganizerTodoOccurrence>
+#include <QtOrganizer/QOrganizerItemParent>
 
 #include <glib.h>
 #include <libecal/libecal.h>
@@ -131,7 +134,6 @@ void QOrganizerEDSEngine::itemsAsync(QOrganizerItemFetchRequest *req)
 
 void QOrganizerEDSEngine::itemsAsyncStart(FetchRequestData *data)
 {
-    qDebug() << Q_FUNC_INFO;
     QString collection = data->nextCollection();
     if (!collection.isEmpty()) {
         EClient *client = data->parent()->d->m_sourceRegistry->client(collection);
@@ -165,11 +167,10 @@ void QOrganizerEDSEngine::itemsAsyncListed(ECalComponent *comp,
     Q_UNUSED(instanceStart);
     Q_UNUSED(instanceEnd);
 
-    GSList *events = 0;
-    events = g_slist_append(events, comp);
-
-    data->appendResults(data->parent()->parseEvents(data->collection(), events, false));
-    g_slist_free(events);
+    icalcomponent *icalComp = icalcomponent_new_clone(e_cal_component_get_icalcomponent(comp));
+    if (icalComp) {
+        data->appendResult(icalComp);
+    }
 }
 
 void QOrganizerEDSEngine::itemsByIdAsync(QOrganizerItemFetchByIdRequest *req)
@@ -188,15 +189,18 @@ void QOrganizerEDSEngine::itemsByIdAsyncStart(FetchByIdRequestData *data)
         if (ids.length() == 2) {
             Q_ASSERT(ids.length() == 2);
             QString collectionId = ids[0];
-            QString itemId = ids[1];
+            QString rId;
+            QString itemId = QOrganizerEDSEngineId::toComponentId(ids[1], &rId);
+
             EClient *client = data->parent()->d->m_sourceRegistry->client(collectionId);
             if (client) {
                 data->setClient(client);
-                e_cal_client_get_objects_for_uid(data->client(),
-                                                 itemId.toUtf8().data(),
-                                                 data->cancellable(),
-                                                 (GAsyncReadyCallback) QOrganizerEDSEngine::itemsByIdAsyncListed,
-                                                 data);
+                e_cal_client_get_object(data->client(),
+                                        itemId.toUtf8().data(),
+                                        rId.toUtf8().data(),
+                                        data->cancellable(),
+                                        (GAsyncReadyCallback) QOrganizerEDSEngine::itemsByIdAsyncListed,
+                                        data);
                 g_object_unref(client);
                 return;
             }
@@ -218,27 +222,19 @@ void QOrganizerEDSEngine::itemsByIdAsyncListed(GObject *client,
     qDebug() << Q_FUNC_INFO;
     Q_UNUSED(client);
     GError *gError = 0;
-    GSList *events = 0;
-    e_cal_client_get_objects_for_uid_finish(data->client(),
-                                            res,
-                                            &events,
-                                            &gError);
+    icalcomponent *icalComp = 0;
+    e_cal_client_get_object_finish(data->client(), res, &icalComp, &gError);
     if (gError) {
         qWarning() << "Fail to list events in calendar" << gError->message;
         g_error_free(gError);
         gError = 0;
         data->appendResult(QOrganizerItem());
-    } else {
-        QList<QOrganizerItem> items = data->parent()->parseEvents(data->currentCollectionId(), events, false);
-        if (items.length() == 1) {
-            data->appendResult(items[0]);
-        } else {
-            qWarning() << "Number of events returned by fetch is invalid";
-            data->appendResult(QOrganizerItem());
-        }
-    }
-    if (events) {
-        e_cal_client_free_ecalcomp_slist(events);
+    } else if (icalComp) {
+        GSList *events = g_slist_append(0, icalComp);
+        QList<QOrganizerItem> items = data->parent()->parseEvents(data->currentCollectionId(), events, true);
+        Q_ASSERT(items.size() == 1);
+        data->appendResult(items[0]);
+        g_slist_free_full(events, (GDestroyNotify) icalcomponent_free);
     }
     itemsByIdAsyncStart(data);
 }
@@ -399,7 +395,7 @@ void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
             } else {
                 e_cal_client_modify_objects(data->client(),
                                             comps,
-                                            E_CAL_OBJ_MOD_ALL,
+                                            E_CAL_OBJ_MOD_THIS,
                                             data->cancellable(),
                                             (GAsyncReadyCallback) QOrganizerEDSEngine::saveItemsAsyncModified,
                                             data);
@@ -501,15 +497,9 @@ bool QOrganizerEDSEngine::saveItems(QList<QtOrganizer::QOrganizerItem> *items,
 
     *errorMap = req->errorMap();
     *error = req->error();
+    *items = req->items();
 
-    if (*error == QOrganizerManager::NoError) {
-        *items = req->items();
-        return true;
-    } else {
-        return false;
-    }
-
-    return true;
+    return (*error == QOrganizerManager::NoError);
 }
 
 void QOrganizerEDSEngine::removeItemsByIdAsync(QOrganizerItemRemoveByIdRequest *req)
@@ -537,7 +527,7 @@ void QOrganizerEDSEngine::removeItemsByIdAsyncStart(RemoveByIdRequestData *data)
         g_object_unref(client);
         GSList *ids = data->compIds();
         GError *gError = 0;
-        e_cal_client_remove_objects_sync(data->client(), ids, E_CAL_OBJ_MOD_ALL, 0, 0);
+        e_cal_client_remove_objects_sync(data->client(), ids, E_CAL_OBJ_MOD_THIS, 0, 0);
         QCoreApplication::processEvents();
         if (gError) {
             qWarning() << "Fail to remove Items" << gError->message;
@@ -575,7 +565,7 @@ void QOrganizerEDSEngine::removeItemsAsyncStart(RemoveRequestData *data)
         g_object_unref(client);
         GSList *ids = data->compIds();
         GError *gError = 0;
-        e_cal_client_remove_objects_sync(data->client(), ids, E_CAL_OBJ_MOD_ALL, 0, 0);
+        e_cal_client_remove_objects_sync(data->client(), ids, E_CAL_OBJ_MOD_THIS, 0, 0);
         QCoreApplication::processEvents();
         if (gError) {
             qWarning() << "Fail to remove Items" << gError->message;
@@ -593,8 +583,20 @@ bool QOrganizerEDSEngine::removeItems(const QList<QOrganizerItemId> &itemIds,
                                       QOrganizerManager::Error *error)
 {
     qDebug() << Q_FUNC_INFO;
-    *error = QOrganizerManager::NoError;
-    return true;
+
+    QOrganizerItemRemoveByIdRequest *req = new QOrganizerItemRemoveByIdRequest(this);
+    req->setItemIds(itemIds);
+    startRequest(req);
+    waitForRequestFinished(req, 0);
+
+    if (errorMap) {
+        *errorMap = req->errorMap();
+    }
+    if (error) {
+        *error = req->error();
+    }
+
+    return (*error == QOrganizerManager::NoError);
 }
 
 QOrganizerCollection QOrganizerEDSEngine::defaultCollection(QOrganizerManager::Error* error)
@@ -1292,7 +1294,12 @@ void QOrganizerEDSEngine::parseAttendeeList(ECalComponent *comp, QOrganizerItem 
 
 QOrganizerItem *QOrganizerEDSEngine::parseEvent(ECalComponent *comp)
 {
-    QOrganizerEvent *event = new QOrganizerEvent();
+    QOrganizerItem *event;
+    if (hasRecurrence(comp)) {
+        event = new QOrganizerEventOccurrence();
+    } else {
+        event = new QOrganizerEvent();
+    }
     parseStartTime(comp, event);
     parseEndTime(comp, event);
     parseRecurrence(comp, event);
@@ -1303,7 +1310,12 @@ QOrganizerItem *QOrganizerEDSEngine::parseEvent(ECalComponent *comp)
 
 QOrganizerItem *QOrganizerEDSEngine::parseToDo(ECalComponent *comp)
 {
-    QOrganizerTodo *todo = new QOrganizerTodo();
+    QOrganizerItem *todo;
+    if (hasRecurrence(comp)) {
+        todo = new QOrganizerTodoOccurrence();
+    } else {
+        todo = new QOrganizerTodo();
+    }
     parseTodoStartTime(comp, todo);
     parseDueDate(comp, todo);
     parseRecurrence(comp, todo);
@@ -1503,17 +1515,7 @@ QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(const QString &collection
             case E_CAL_COMPONENT_NO_TYPE:
                 continue;
         }
-
-        //id
-        const gchar *uid = 0;
-        e_cal_component_get_uid(comp, &uid);
-        QOrganizerCollectionId cId = QOrganizerCollectionId(collection);
-
-        QOrganizerEDSEngineId *eid = new QOrganizerEDSEngineId(collection->m_collectionId,
-                                                               QString::fromUtf8(uid));
-        item->setId(QOrganizerItemId(eid));
-        item->setGuid(QString::fromUtf8(uid));
-        item->setCollectionId(cId);
+        parseId(comp, item, collection);
         parseDescription(comp, item);
         parseSummary(comp, item);
         parseComments(comp, item);
@@ -1821,6 +1823,38 @@ void QOrganizerEDSEngine::parseAttendeeList(const QOrganizerItem &item, ECalComp
     e_cal_component_set_attendee_list(comp, attendeeList);
 }
 
+bool QOrganizerEDSEngine::hasRecurrence(ECalComponent *comp)
+{
+    char *rid = e_cal_component_get_recurid_as_string(comp);
+    bool result = (rid && strcmp(rid, "0"));
+    if (rid) {
+        free(rid);
+    }
+    return result;
+}
+
+void QOrganizerEDSEngine::parseId(ECalComponent *comp,
+                                  QOrganizerItem *item,
+                                  QOrganizerEDSCollectionEngineId *edsCollectionId)
+{
+    ECalComponentId *id = e_cal_component_get_id(comp);
+    QOrganizerEDSEngineId *edsParentId = 0;
+    QOrganizerEDSEngineId *edsId = QOrganizerEDSEngineId::fromComponentId(edsCollectionId->m_collectionId, id, &edsParentId);
+
+    item->setId(QOrganizerItemId(edsId));
+    item->setGuid(QString::fromUtf8(id->uid));
+
+    if (edsParentId) {
+        QOrganizerItemParent itemParent = item->detail(QOrganizerItemDetail::TypeParent);
+        itemParent.setParentId(QOrganizerItemId(edsParentId));
+        item->saveDetail(&itemParent);
+    }
+
+    QOrganizerCollectionId cId = QOrganizerCollectionId(edsCollectionId);
+    item->setCollectionId(cId);
+    e_cal_component_free_id(id);
+}
+
 ECalComponent *QOrganizerEDSEngine::createDefaultComponent(ECalClient *client,
                                                            icalcomponent_kind iKind,
                                                            ECalComponentVType eType)
@@ -2049,33 +2083,22 @@ GSList *QOrganizerEDSEngine::parseItems(ECalClient *client, QList<QOrganizerItem
 
         switch(item.type()) {
             case QOrganizerItemType::TypeEvent:
+            case QOrganizerItemType::TypeEventOccurrence:
                 comp = parseEventItem(client, item);
                 break;
             case QOrganizerItemType::TypeTodo:
+            case QOrganizerItemType::TypeTodoOccurrence:
                 comp = parseTodoItem(client, item);
                 break;
             case QOrganizerItemType::TypeJournal:
                 comp = parseJournalItem(client, item);
                 break;
-            case QOrganizerItemType::TypeEventOccurrence:
-                qWarning() << "Component TypeEventOccurrence not supported;";
-                continue;
-            case QOrganizerItemType::TypeTodoOccurrence:
-                qWarning() << "Component TypeTodoOccurrence not supported;";
-                continue;
             case QOrganizerItemType::TypeNote:
                 qWarning() << "Component TypeNote not supported;";
             case QOrganizerItemType::TypeUndefined:
                 continue;
         }
-
-        // id
-        if (!item.id().isNull()) {
-            QOrganizerItemId id = item.id();
-            QString cId = QOrganizerEDSEngineId::toComponentId(id);
-            e_cal_component_set_uid(comp, cId.toUtf8().data());
-        }
-
+        parseId(item, comp);
         parseSummary(item, comp);
         parseDescription(item, comp);
         parseComments(item, comp);
@@ -2096,4 +2119,26 @@ GSList *QOrganizerEDSEngine::parseItems(ECalClient *client, QList<QOrganizerItem
     }
 
     return comps;
+}
+
+void QOrganizerEDSEngine::parseId(const QOrganizerItem &item, ECalComponent *comp)
+{
+    QOrganizerItemId itemId = item.id();
+    if (!itemId.isNull()) {
+        QString rId;
+        QString cId = QOrganizerEDSEngineId::toComponentId(itemId, &rId);
+
+        e_cal_component_set_uid(comp, cId.toUtf8().data());
+
+        if (!rId.isEmpty()) {
+            ECalComponentRange *recur_id;
+            struct icaltimetype tt = icaltime_from_string(rId.toUtf8().data());
+
+            recur_id = g_new0 (ECalComponentRange, 1);
+            recur_id->type = E_CAL_COMPONENT_RANGE_SINGLE;
+            recur_id->datetime.value = &tt;
+            e_cal_component_set_recurid(comp, recur_id);
+            g_free (recur_id);
+        }
+    }
 }

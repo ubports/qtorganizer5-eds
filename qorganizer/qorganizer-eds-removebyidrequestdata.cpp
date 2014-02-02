@@ -75,10 +75,10 @@ GSList *RemoveByIdRequestData::parseIds(QSet<QOrganizerItemId> iids)
 {
     GSList *ids = 0;
     Q_FOREACH(const QOrganizerItemId &iid, iids) {
-        ECalComponentId *id = g_new0(ECalComponentId, 1);
-        id->uid = g_strdup(QOrganizerEDSEngineId::toComponentId(iid).toUtf8().data());
-        id->rid = NULL;
-        ids = g_slist_append(ids, id);
+        ECalComponentId *id = QOrganizerEDSEngineId::toComponentIdObject(iid);
+        if (id) {
+            ids = g_slist_append(ids, id);
+        }
     }
 
     return ids;

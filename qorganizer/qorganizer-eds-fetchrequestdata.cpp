@@ -26,16 +26,27 @@ FetchRequestData::FetchRequestData(QOrganizerEDSEngine *engine,
                                    QStringList collections,
                                    QOrganizerAbstractRequest *req)
     : RequestData(engine, req),
+      m_components(0),
       m_collections(collections)
 {
 }
 
 FetchRequestData::~FetchRequestData()
 {
+    if (m_components) {
+        g_slist_free_full(m_components, (GDestroyNotify)icalcomponent_free);
+        m_components = 0;
+    }
 }
 
 QString FetchRequestData::nextCollection()
 {
+    if (m_components) {
+        appendResults(parent()->parseEvents(m_current, m_components, true));
+        g_slist_free_full(m_components, (GDestroyNotify)icalcomponent_free);
+        m_components = 0;
+    }
+
     m_current = "";
     setClient(0);
     if (m_collections.size()) {
@@ -83,11 +94,17 @@ void FetchRequestData::finish(QOrganizerManager::Error error)
     // TODO: emit changeset???
 }
 
+void FetchRequestData::appendResult(icalcomponent *comp)
+{
+    m_components = g_slist_append(m_components, comp);
+}
+
 int FetchRequestData::appendResults(QList<QOrganizerItem> results)
 {
     int count = 0;
     QOrganizerItemFetchRequest *req = request<QOrganizerItemFetchRequest>();
     Q_FOREACH(const QOrganizerItem &item, results) {
+        qDebug() << "APPEND" << item.detail(QOrganizerItemDetail::TypeEventTime);
         if (QOrganizerManagerEngine::testFilter(req->filter(), item)) {
             m_results << item;
             count++;
@@ -114,3 +131,4 @@ QString FetchRequestData::dateFilter()
 
     return query;
 }
+

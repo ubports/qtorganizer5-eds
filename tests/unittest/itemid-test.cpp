@@ -35,9 +35,11 @@ class ItemIdTest : public QObject
 private Q_SLOTS:
     void testRetriveItemId()
     {
-        QString id("qtorganizer:eds::system-calendar/20130814T212003Z-13580-1000-1995-22@ubuntu");
-        QCOMPARE(QOrganizerEDSEngineId::toComponentId(id),
+        QString rId;
+        QString id("qtorganizer:eds::system-calendar/20130814T212003Z-13580-1000-1995-22@ubuntu#100200023");
+        QCOMPARE(QOrganizerEDSEngineId::toComponentId(id, &rId),
                  QStringLiteral("20130814T212003Z-13580-1000-1995-22@ubuntu"));
+        QCOMPARE(rId, QStringLiteral("100200023"));
     }
 
     void testCreateFromString()
