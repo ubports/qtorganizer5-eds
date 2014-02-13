@@ -1,3 +1,13 @@
+qtorganizer5-eds (0.1.1+14.04.20140213-0ubuntu1) trusty; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * Fixed item it to contains the recurrence it. Correct parse for
+    recurrence items to create the QOrganizerTodoOccurrence or
+    QOrganizerEventOccurrence. This allow us to remove/edit a specific
+    item in recurrence items. (LP: #1274792)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 13 Feb 2014 19:22:33 +0000
+
 qtorganizer5-eds (0.1.1+14.04.20140131-0ubuntu1) trusty; urgency=low
 
   [ Renato Araujo Oliveira Filho ]
