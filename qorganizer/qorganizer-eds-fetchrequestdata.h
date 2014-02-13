@@ -20,6 +20,7 @@
 #define __QORGANIZER_EDS_FETCHREQUESTDATA_H__
 
 #include "qorganizer-eds-requestdata.h"
+#include <glib.h>
 
 class FetchRequestData : public RequestData
 {
@@ -35,10 +36,13 @@ public:
     time_t endDate() const;
 
     void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
+    void appendResult(icalcomponent *comp);
     int appendResults(QList<QtOrganizer::QOrganizerItem> results);
     QString dateFilter();
 
+
 private:
+    GSList *m_components;
     QStringList m_collections;
     QString m_current;
     QList<QtOrganizer::QOrganizerItem> m_results;

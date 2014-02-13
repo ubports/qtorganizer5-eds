@@ -45,6 +45,7 @@ class SaveCollectionRequestData;
 class RemoveCollectionRequestData;
 class ViewWatcher;
 class QOrganizerEDSEngineData;
+class QOrganizerEDSCollectionEngineId;
 
 class QOrganizerEDSEngine : public QtOrganizer::QOrganizerManagerEngine
 {
@@ -139,6 +140,7 @@ private:
     static GSList *parseItems(ECalClient *client, QList<QtOrganizer::QOrganizerItem> items);
 
     // QOrganizerItem -> ECalComponent
+    static void parseId(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseSummary(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseDescription(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseComments(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
@@ -162,6 +164,8 @@ private:
     static void parseAttendeeList(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
 
     // ECalComponent -> QOrganizerItem
+    static bool hasRecurrence(ECalComponent *comp);
+    static void parseId(ECalComponent *comp, QtOrganizer::QOrganizerItem *item, QOrganizerEDSCollectionEngineId *edsCollectionId);
     static void parseSummary(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseDescription(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseComments(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
@@ -185,6 +189,7 @@ private:
     static void parseAttendeeList(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
 
     static QDateTime fromIcalTime(struct icaltimetype value);
+
     static QtOrganizer::QOrganizerItem *parseEvent(ECalComponent *comp);
     static QtOrganizer::QOrganizerItem *parseToDo(ECalComponent *comp);
     static QtOrganizer::QOrganizerItem *parseJournal(ECalComponent *comp);
@@ -225,6 +230,7 @@ private:
     friend class SaveCollectionRequestData;
     friend class RemoveCollectionRequestData;
     friend class ViewWatcher;
+    friend class FetchRequestData;
 };
 
 #endif

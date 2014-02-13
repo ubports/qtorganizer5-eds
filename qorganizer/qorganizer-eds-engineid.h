@@ -50,8 +50,12 @@ public:
 
     static QString managerUriStatic();
     static QString managerNameStatic();
-    static QString toComponentId(const QtOrganizer::QOrganizerItemId &itemId);
-    static QString toComponentId(const QString &itemId);
+    static QString toComponentId(const QtOrganizer::QOrganizerItemId &itemId, QString *rid);
+    static QString toComponentId(const QString &itemId, QString *rid);
+    static ECalComponentId *toComponentIdObject(const QtOrganizer::QOrganizerItemId &itemId);
+    static QOrganizerEDSEngineId *fromComponentId(const QString &cId,
+                                                  ECalComponentId *id,
+                                                  QOrganizerEDSEngineId **parentId);
 
 private:
     QString m_collectionId;

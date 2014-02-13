@@ -54,12 +54,10 @@ GSList *RemoveRequestData::takeItemsIds(QOrganizerCollectionId collectionId)
         if (item.collectionId() == collectionId) {
             m_currentIds.append(item.id());
 
-            ECalComponentId *id = g_new0(ECalComponentId, 1);
-
-            id->uid = g_strdup(QOrganizerEDSEngineId::toComponentId(item.id()).toUtf8().data());
-            id->rid = NULL;
-            ids = g_slist_append(ids, id);
-
+            ECalComponentId *id = QOrganizerEDSEngineId::toComponentIdObject(item.id());
+            if (id) {
+                ids = g_slist_append(ids, id);
+            }
             m_pendingItems.removeAll(item);
         }
     }

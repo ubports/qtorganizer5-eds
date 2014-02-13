@@ -107,6 +107,7 @@ QDebug& QOrganizerEDSEngineId::debugStreamOut(QDebug& dbg) const
     dbg.nospace() << "QOrganizerEDSEngineId(" << managerNameStatic() << ", " << m_collectionId << ", " << m_itemId << ")";
     return dbg.maybeSpace();
 }
+#endif
 
 QString QOrganizerEDSEngineId::managerNameStatic()
 {
@@ -118,14 +119,47 @@ QString QOrganizerEDSEngineId::managerUriStatic()
     return QStringLiteral("qtorganizer:eds:");
 }
 
-QString QOrganizerEDSEngineId::toComponentId(const QtOrganizer::QOrganizerItemId &itemId)
+QString QOrganizerEDSEngineId::toComponentId(const QtOrganizer::QOrganizerItemId &itemId, QString *rid)
 {
-    return toComponentId(itemId.toString());
+    return toComponentId(itemId.toString(), rid);
 }
 
-QString QOrganizerEDSEngineId::toComponentId(const QString &itemId)
+QString QOrganizerEDSEngineId::toComponentId(const QString &itemId, QString *rid)
 {
-    return itemId.split("/").last();
+    QStringList ids = itemId.split("/").last().split("#");
+    if (ids.size() == 2) {
+        *rid = ids[1];
+    }
+    return ids[0];
 }
 
-#endif
+ECalComponentId *QOrganizerEDSEngineId::toComponentIdObject(const QOrganizerItemId &itemId)
+{
+    QString rId;
+    QString cId = toComponentId(itemId, &rId);
+
+    ECalComponentId *id = g_new0(ECalComponentId, 1);
+    id->uid = g_strdup(cId.toUtf8().data());
+    if (rId.isEmpty()) {
+        id->rid = NULL;
+    } else {
+        id->rid = g_strdup(rId.toUtf8().data());
+    }
+
+    return id;
+}
+
+QOrganizerEDSEngineId *QOrganizerEDSEngineId::fromComponentId(const QString &cId,
+                                                              ECalComponentId *id,
+                                                              QOrganizerEDSEngineId **parentId)
+{
+    QString iId = QString::fromUtf8(id->uid);
+    QString rId = QString::fromUtf8(id->rid);
+
+    if(!rId.isEmpty()) {
+        *parentId = new QOrganizerEDSEngineId(cId, iId);
+        iId += "#" + rId;
+    }
+
+    return new QOrganizerEDSEngineId(cId, iId);
+}
