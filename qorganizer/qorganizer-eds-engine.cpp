@@ -69,8 +69,23 @@
 using namespace QtOrganizer;
 QOrganizerEDSEngineData *QOrganizerEDSEngine::m_globalData = 0;
 
+static void QOrganizerEDSEngineMessageOutput(QtMsgType type,
+                                             const QMessageLogContext &context,
+                                             const QString &message)
+{
+    Q_UNUSED(type);
+    Q_UNUSED(context);
+    Q_UNUSED(message);
+    //nothing
+}
+
 QOrganizerEDSEngine* QOrganizerEDSEngine::createEDSEngine(const QMap<QString, QString>& parameters)
 {
+    // disable debug message if variable not exported
+    if (qgetenv("QORGANIZER_EDS_DEBUG").isEmpty()) {
+        qInstallMessageHandler(QOrganizerEDSEngineMessageOutput);
+    }
+
     Q_UNUSED(parameters);
     if (!m_globalData) {
         m_globalData = new QOrganizerEDSEngineData();

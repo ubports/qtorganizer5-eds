@@ -140,7 +140,7 @@ private Q_SLOTS:
 
         QOrganizerTodo todo;
         todo.setCollectionId(collection.id());
-        todo.setStartDateTime(QDateTime(QDate(2013, 9, 3), QTime(0,30,0)));
+        todo.setStartDateTime(QDateTime::currentDateTime());
         todo.setDisplayLabel(displayLabelValue);
         todo.setDescription(descriptionValue);
 

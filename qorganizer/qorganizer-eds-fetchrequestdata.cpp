@@ -65,24 +65,25 @@ QString FetchRequestData::collection() const
 time_t FetchRequestData::startDate() const
 {
     QDateTime startDate = request<QOrganizerItemFetchRequest>()->startDate();
-    if (startDate.isValid()) {
-        return startDate.toTime_t();
-    } else {
-        return 0;
+    if (!startDate.isValid()) {
+        QDate currentDate = QDate::currentDate();
+        startDate.setTime(QTime(0, 0, 0));
+        startDate.setDate(QDate(currentDate.year(), 1, 1));
+        qWarning() << "Start date is invalid using " << startDate;
     }
+    return startDate.toTime_t();
 }
 
 time_t FetchRequestData::endDate() const
 {
     QDateTime endDate = request<QOrganizerItemFetchRequest>()->endDate();
-    if (endDate.isValid()) {
-        return endDate.toTime_t();
-    } else {
-        // Use now + 10 years as default value if not endDate is setted.
-        QDateTime now = QDateTime::currentDateTime();
-        now = now.addYears(10);
-        return now.toTime_t();
+    if (!endDate.isValid()) {
+        QDate currentDate = QDate::currentDate();
+        endDate.setTime(QTime(0, 0, 0));
+        endDate.setDate(QDate(currentDate.year()+1, 1, 1));
+        qWarning() << "End date is invalid using " << endDate;
     }
+    return endDate.toTime_t();
 }
 
 void FetchRequestData::finish(QOrganizerManager::Error error)

@@ -95,7 +95,7 @@ private Q_SLOTS:
 
         QOrganizerTodo todo;
         todo.setCollectionId(m_collection.id());
-        todo.setStartDateTime(QDateTime(QDate(2013, 9, 3), QTime(0,30,0)));
+        todo.setStartDateTime(QDateTime::currentDateTime());
         todo.setDisplayLabel(displayLabelValue);
         todo.setDescription(descriptionValue);
 
@@ -172,7 +172,7 @@ private Q_SLOTS:
 
         QOrganizerTodo todo;
         todo.setCollectionId(m_collection.id());
-        todo.setStartDateTime(QDateTime(QDate(2013, 9, 3), QTime(0,30,0)));
+        todo.setStartDateTime(QDateTime::currentDateTime());
         todo.setDisplayLabel(displayLabelValue);
         todo.setDescription(descriptionValue);
 
@@ -216,7 +216,7 @@ private Q_SLOTS:
 
         QOrganizerTodo todo;
         todo.setCollectionId(m_collection.id());
-        todo.setStartDateTime(QDateTime(QDate(2013, 9, 3), QTime(0,30,0)));
+        todo.setStartDateTime(QDateTime::currentDateTime());
         todo.setDisplayLabel(displayLabelValue);
         todo.setDescription(descriptionValue);
 
@@ -277,7 +277,7 @@ private Q_SLOTS:
         static QString descriptionValue = QStringLiteral("event without collection");
 
         QOrganizerEvent event;
-        event.setStartDateTime(QDateTime(QDate(2013, 9, 3), QTime(0,30,0)));
+        event.setStartDateTime(QDateTime::currentDateTime());
         event.setDisplayLabel(displayLabelValue);
         event.setDescription(descriptionValue);
 
@@ -319,7 +319,7 @@ private Q_SLOTS:
         for(int i=0; i<10; i++) {
             QOrganizerTodo todo;
             todo.setCollectionId(m_collection.id());
-            todo.setStartDateTime(QDateTime(QDate(2013, 9, 3+1), QTime(0,30,0)));
+            todo.setStartDateTime(QDateTime::currentDateTime());
             todo.setDisplayLabel(displayLabelValue.arg(i));
             todo.setDescription(descriptionValue.arg(i));
             evs << todo;
