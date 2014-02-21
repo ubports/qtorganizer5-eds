@@ -1,3 +1,11 @@
+qtorganizer5-eds (0.1.1+14.04.20140221-0ubuntu1) trusty; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * Limited the number of events returned when no date interval is
+    specified. (LP: #1282129)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 21 Feb 2014 19:27:00 +0000
+
 qtorganizer5-eds (0.1.1+14.04.20140213-0ubuntu1) trusty; urgency=low
 
   [ Renato Araujo Oliveira Filho ]
