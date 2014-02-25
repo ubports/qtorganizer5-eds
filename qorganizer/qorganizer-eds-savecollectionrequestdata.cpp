@@ -20,6 +20,8 @@
 #include "qorganizer-eds-enginedata.h"
 #include "qorganizer-eds-source-registry.h"
 
+#include <QtCore/QDebug>
+
 #include <QtOrganizer/QOrganizerManagerEngine>
 #include <QtOrganizer/QOrganizerCollectionSaveRequest>
 #include <QtOrganizer/QOrganizerCollectionChangeSet>

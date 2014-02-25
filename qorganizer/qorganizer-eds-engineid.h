@@ -22,6 +22,7 @@
 #include "qorganizer-eds-collection-engineid.h"
 
 #include <QtOrganizer/QOrganizerItemEngineId>
+#include <QtOrganizer/QOrganizerItemId>
 
 #include <libecal/libecal.h>
 

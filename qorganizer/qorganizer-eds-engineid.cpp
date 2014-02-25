@@ -18,6 +18,9 @@
 
 #include "qorganizer-eds-engineid.h"
 
+#include <QtCore/QStringList>
+#include <QtCore/QDebug>
+
 using namespace QtOrganizer;
 
 QOrganizerEDSEngineId::QOrganizerEDSEngineId()

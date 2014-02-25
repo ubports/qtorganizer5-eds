@@ -1,5 +1,7 @@
 #include "qorganizer-eds-source-registry.h"
 
+#include <QtCore/QDebug>
+
 using namespace QtOrganizer;
 
 SourceRegistry::SourceRegistry(QObject *parent)

@@ -3,6 +3,8 @@
 #include "qorganizer-eds-engineid.h"
 #include "qorganizer-eds-engine.h"
 
+#include <QtCore/QDebug>
+
 using namespace QtOrganizer;
 
 QOrganizerManagerEngine* QOrganizerEDSFactory::engine(const QMap<QString, QString>& parameters, QOrganizerManager::Error* error)
