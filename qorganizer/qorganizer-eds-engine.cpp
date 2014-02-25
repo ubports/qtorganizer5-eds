@@ -1405,50 +1405,40 @@ void QOrganizerEDSEngine::parseTags(ECalComponent *comp, QtOrganizer::QOrganizer
     e_cal_component_free_categories_list(categories);
 }
 
-QByteArray QOrganizerEDSEngine::dencodeAttachment(ECalComponentAlarm *alarm)
+QUrl QOrganizerEDSEngine::dencodeAttachment(ECalComponentAlarm *alarm)
 {
-    QByteArray attachment;
+    QUrl attachment;
 
     icalattach *attach = 0;
     e_cal_component_alarm_get_attach(alarm, &attach);
     if (attach) {
-        attachment = QByteArray::fromBase64(icalattach_get_url(attach));
+        if (icalattach_get_is_url(attach)) {
+            const gchar *url = icalattach_get_url(attach);
+            attachment = QUrl(QString::fromUtf8(url));
+        }
         icalattach_unref(attach);
     }
 
     return attachment;
 }
 
-
 void QOrganizerEDSEngine::parseVisualReminderAttachment(ECalComponentAlarm *alarm, QOrganizerItemReminder *aDetail)
 {
-    QByteArray attach = dencodeAttachment(alarm);
-    if (!attach.isEmpty()) {
-        QUrl url;
-        QString txt;
-
-        QDataStream attachStream(&attach, QIODevice::ReadOnly);
-
-        attachStream >> url;
-        attachStream >> txt;
-
-        aDetail->setValue(QOrganizerItemVisualReminder::FieldDataUrl, QVariant(url));
-        aDetail->setValue(QOrganizerItemVisualReminder::FieldMessage, QVariant(txt));
+    QUrl attach = dencodeAttachment(alarm);
+    if (attach.isValid()) {
+        aDetail->setValue(QOrganizerItemVisualReminder::FieldDataUrl, attach);
     }
-}
 
+    ECalComponentText txt;
+    e_cal_component_alarm_get_description(alarm, &txt);
+    aDetail->setValue(QOrganizerItemVisualReminder::FieldMessage, QString::fromUtf8(txt.value));
+}
 
 void QOrganizerEDSEngine::parseAudibleReminderAttachment(ECalComponentAlarm *alarm, QOrganizerItemReminder *aDetail)
 {
-    QByteArray attach = dencodeAttachment(alarm);
-    if (!attach.isEmpty()) {
-        QUrl url;
-
-        QDataStream attachStream(&attach, QIODevice::ReadOnly);
-
-        attachStream >> url;
-
-        aDetail->setValue(QOrganizerItemAudibleReminder::FieldDataUrl, QVariant(url));
+    QUrl attach = dencodeAttachment(alarm);
+    if (attach.isValid()) {
+        aDetail->setValue(QOrganizerItemAudibleReminder::FieldDataUrl, attach);
     }
 }
 
@@ -2011,40 +2001,26 @@ void QOrganizerEDSEngine::parseTags(const QOrganizerItem &item, ECalComponent *c
     }
 }
 
-void QOrganizerEDSEngine::encodeAttachment(QByteArray data, ECalComponentAlarm *alarm)
+void QOrganizerEDSEngine::encodeAttachment(const QUrl &url, ECalComponentAlarm *alarm)
 {
-    gchar *b64Bytes = strdup(data.toBase64());
-    icalattach *attach = icalattach_new_from_url(b64Bytes);
-
+    icalattach *attach = icalattach_new_from_url(url.toString().toUtf8());
     e_cal_component_alarm_set_attach(alarm, attach);
-
     icalattach_unref(attach);
 }
 
 void QOrganizerEDSEngine::parseVisualReminderAttachment(const QOrganizerItemDetail &detail, ECalComponentAlarm *alarm)
 {
-    QByteArray attachBytes;
-
-    {
-        QDataStream attachData(&attachBytes, QIODevice::WriteOnly);
-
-        attachData << detail.value(QOrganizerItemVisualReminder::FieldDataUrl).toUrl();
-        attachData << detail.value(QOrganizerItemVisualReminder::FieldMessage).toString();
-    }
-
-    encodeAttachment(attachBytes, alarm);
+    ECalComponentText txt;
+    QByteArray str = detail.value(QOrganizerItemVisualReminder::FieldMessage).toString().toUtf8();
+    txt.altrep = 0;
+    txt.value = str.constData();
+    e_cal_component_alarm_set_description(alarm, &txt);
+    encodeAttachment(detail.value(QOrganizerItemVisualReminder::FieldDataUrl).toUrl(), alarm);
 }
 
 void QOrganizerEDSEngine::parseAudibleReminderAttachment(const QOrganizerItemDetail &detail, ECalComponentAlarm *alarm)
 {
-    QByteArray attachBytes;
-
-    {
-        QDataStream attachData(&attachBytes, QIODevice::WriteOnly);
-        attachData << detail.value(QOrganizerItemAudibleReminder::FieldDataUrl).toUrl();
-    }
-
-    encodeAttachment(attachBytes, alarm);
+    encodeAttachment(detail.value(QOrganizerItemAudibleReminder::FieldDataUrl).toUrl(), alarm);
 }
 
 void QOrganizerEDSEngine::parseReminders(const QOrganizerItem &item, ECalComponent *comp)
