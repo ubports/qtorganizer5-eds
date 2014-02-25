@@ -89,6 +89,14 @@ time_t FetchRequestData::endDate() const
     return endDate.toTime_t();
 }
 
+bool FetchRequestData::hasDateInterval() const
+{
+    QDateTime endDate = request<QOrganizerItemFetchRequest>()->endDate();
+    QDateTime startDate = request<QOrganizerItemFetchRequest>()->startDate();
+
+    return (endDate.isValid() && startDate.isValid());
+}
+
 void FetchRequestData::finish(QOrganizerManager::Error error)
 {
     QOrganizerManagerEngine::updateItemFetchRequest(request<QOrganizerItemFetchRequest>(),
@@ -108,7 +116,6 @@ int FetchRequestData::appendResults(QList<QOrganizerItem> results)
     int count = 0;
     QOrganizerItemFetchRequest *req = request<QOrganizerItemFetchRequest>();
     Q_FOREACH(const QOrganizerItem &item, results) {
-        qDebug() << "APPEND" << item.detail(QOrganizerItemDetail::TypeEventTime);
         if (QOrganizerManagerEngine::testFilter(req->filter(), item)) {
             m_results << item;
             count++;

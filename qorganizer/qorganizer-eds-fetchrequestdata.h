@@ -34,6 +34,7 @@ public:
     QString collection() const;
     time_t startDate() const;
     time_t endDate() const;
+    bool hasDateInterval() const;
 
     void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
     void appendResult(icalcomponent *comp);

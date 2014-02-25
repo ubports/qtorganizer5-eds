@@ -22,6 +22,7 @@
 #include "qorganizer-eds-collection-engineid.h"
 #include "qorganizer-eds-fetchrequestdata.h"
 #include "qorganizer-eds-fetchbyidrequestdata.h"
+#include "qorganizer-eds-fetchocurrencedata.h"
 #include "qorganizer-eds-saverequestdata.h"
 #include "qorganizer-eds-removerequestdata.h"
 #include "qorganizer-eds-removebyidrequestdata.h"
@@ -154,14 +155,23 @@ void QOrganizerEDSEngine::itemsAsyncStart(FetchRequestData *data)
         EClient *client = data->parent()->d->m_sourceRegistry->client(collection);
         data->setClient(client);
         g_object_unref(client);
-        e_cal_client_generate_instances(data->client(),
-                                        data->startDate(),
-                                        data->endDate(),
-                                        data->cancellable(),
-                                        (ECalRecurInstanceFn) QOrganizerEDSEngine::itemsAsyncListed,
-                                        data,
-                                        (GDestroyNotify) QOrganizerEDSEngine::itemsAsyncDone);
 
+        if (data->hasDateInterval()) {
+            e_cal_client_generate_instances(data->client(),
+                                            data->startDate(),
+                                            data->endDate(),
+                                            data->cancellable(),
+                                            (ECalRecurInstanceFn) QOrganizerEDSEngine::itemsAsyncListed,
+                                            data,
+                                            (GDestroyNotify) QOrganizerEDSEngine::itemsAsyncDone);
+        } else {
+            // if no date interval was set we return only the main events without recurrence
+            e_cal_client_get_object_list_as_comps(E_CAL_CLIENT(client),
+                                                  data->dateFilter().toUtf8().data(),
+                                                  data->cancellable(),
+                                                  (GAsyncReadyCallback) QOrganizerEDSEngine::itemsAsyncListedAsComps,
+                                                  data);
+        }
     } else {
         data->finish();
         delete data;
@@ -186,6 +196,30 @@ void QOrganizerEDSEngine::itemsAsyncListed(ECalComponent *comp,
     if (icalComp) {
         data->appendResult(icalComp);
     }
+}
+
+void QOrganizerEDSEngine::itemsAsyncListedAsComps(GObject *source,
+                                                  GAsyncResult *res,
+                                                  FetchRequestData *data)
+{
+    Q_UNUSED(source);
+    GError *gError = 0;
+    GSList *events = 0;
+    e_cal_client_get_object_list_as_comps_finish(E_CAL_CLIENT(data->client()),
+                                                 res,
+                                                 &events,
+                                                 &gError);
+    if (gError) {
+        qWarning() << "Fail to list events in calendar" << gError->message;
+        g_error_free(gError);
+        gError = 0;
+        data->finish(QOrganizerManager::InvalidCollectionError);
+        delete data;
+        return;
+    } else {
+        data->appendResults(data->parent()->parseEvents(data->collection(), events, false));
+    }
+    itemsAsyncStart(data);
 }
 
 void QOrganizerEDSEngine::itemsByIdAsync(QOrganizerItemFetchByIdRequest *req)
@@ -252,6 +286,78 @@ void QOrganizerEDSEngine::itemsByIdAsyncListed(GObject *client,
         g_slist_free_full(events, (GDestroyNotify) icalcomponent_free);
     }
     itemsByIdAsyncStart(data);
+}
+
+void QOrganizerEDSEngine::itemOcurrenceAsync(QOrganizerItemOccurrenceFetchRequest *req)
+{
+    qDebug() << Q_FUNC_INFO;
+    FetchOcurrenceData *data = new FetchOcurrenceData(this, req);
+
+    QString rId;
+    QString cId = QOrganizerEDSEngineId::toComponentId(req->parentItem().id(), &rId);
+
+    EClient *client = data->parent()->d->m_sourceRegistry->client(req->parentItem().collectionId().toString());
+    if (client) {
+        data->setClient(client);
+        e_cal_client_get_object(data->client(),
+                                cId.toUtf8(), rId.toUtf8(),
+                                data->cancellable(),
+                                (GAsyncReadyCallback) QOrganizerEDSEngine::itemOcurrenceAsyncGetObjectDone,
+                                data);
+    } else {
+        qWarning() << "Fail to find collection:" << req->parentItem().collectionId();
+        data->finish(QOrganizerManager::DoesNotExistError);
+        delete data;
+        return;
+    }
+}
+
+void QOrganizerEDSEngine::itemOcurrenceAsyncGetObjectDone(GObject *source,
+                                                          GAsyncResult *res,
+                                                          FetchOcurrenceData *data)
+{
+    Q_UNUSED(source);
+
+    GError *error = 0;
+    icalcomponent *comp = 0;
+    e_cal_client_get_object_finish(data->client(), res, &comp, &error);
+    if (error) {
+        qWarning() << "Fail to get object for id:" << data->request<QOrganizerItemOccurrenceFetchRequest>()->parentItem();
+        g_error_free(error);
+        data->finish(QOrganizerManager::DoesNotExistError);
+        delete data;
+        return;
+    }
+
+    e_cal_client_generate_instances_for_object(data->client(),
+                                               comp,
+                                               data->startDate(),
+                                               data->endDate(),
+                                               data->cancellable(),
+                                               (ECalRecurInstanceFn) QOrganizerEDSEngine::itemOcurrenceAsyncListed,
+                                               data,
+                                               (GDestroyNotify) QOrganizerEDSEngine::itemOcurrenceAsyncDone);
+}
+
+void QOrganizerEDSEngine::itemOcurrenceAsyncListed(ECalComponent *comp,
+                                                   time_t instanceStart,
+                                                   time_t instanceEnd,
+                                                   FetchOcurrenceData *data)
+{
+    qDebug() << Q_FUNC_INFO;
+    Q_UNUSED(instanceStart);
+    Q_UNUSED(instanceEnd);
+
+    icalcomponent *icalComp = icalcomponent_new_clone(e_cal_component_get_icalcomponent(comp));
+    if (icalComp) {
+        data->appendResult(icalComp);
+    }
+}
+
+void QOrganizerEDSEngine::itemOcurrenceAsyncDone(FetchOcurrenceData *data)
+{
+    data->finish();
+    delete data;
 }
 
 QList<QOrganizerItem> QOrganizerEDSEngine::items(const QList<QOrganizerItemId> &itemIds,
@@ -321,13 +427,29 @@ QList<QOrganizerItemId> QOrganizerEDSEngine::itemIds(const QOrganizerItemFilter 
 
 QList<QOrganizerItem> QOrganizerEDSEngine::itemOccurrences(const QOrganizerItem &parentItem,
                                                            const QDateTime &startDateTime,
-                                                           const QDateTime &endDateTime, int maxCount,
+                                                           const QDateTime &endDateTime,
+                                                           int maxCount,
                                                            const QOrganizerItemFetchHint &fetchHint,
                                                            QOrganizerManager::Error *error)
 {
     qDebug() << Q_FUNC_INFO;
-    Q_UNUSED(fetchHint);
-    return QList<QOrganizerItem>();
+    QOrganizerItemOccurrenceFetchRequest *req = new QOrganizerItemOccurrenceFetchRequest(this);
+
+    req->setParentItem(parentItem);
+    req->setStartDate(startDateTime);
+    req->setEndDate(endDateTime);
+    req->setMaxOccurrences(maxCount);
+    req->setFetchHint(fetchHint);
+
+    startRequest(req);
+    waitForRequestFinished(req, 0);
+
+    if (error) {
+        *error = req->error();
+    }
+
+    req->deleteLater();
+    return req->itemOccurrences();
 }
 
 QList<QOrganizerItem> QOrganizerEDSEngine::itemsForExport(const QDateTime &startDateTime,
@@ -805,6 +927,9 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
             break;
         case QOrganizerAbstractRequest::ItemFetchByIdRequest:
             itemsByIdAsync(qobject_cast<QOrganizerItemFetchByIdRequest*>(req));
+            break;
+        case QOrganizerAbstractRequest::ItemOccurrenceFetchRequest:
+            itemOcurrenceAsync(qobject_cast<QOrganizerItemOccurrenceFetchRequest*>(req));
             break;
         case QOrganizerAbstractRequest::CollectionFetchRequest:
             QOrganizerManagerEngine::updateCollectionFetchRequest(qobject_cast<QOrganizerCollectionFetchRequest*>(req),
