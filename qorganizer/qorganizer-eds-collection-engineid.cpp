@@ -19,6 +19,8 @@
 #include "qorganizer-eds-collection-engineid.h"
 #include "qorganizer-eds-engineid.h"
 
+#include <QtCore/QDebug>
+
 QOrganizerEDSCollectionEngineId::QOrganizerEDSCollectionEngineId(ESource *source)
     : m_esource(source)
 {
