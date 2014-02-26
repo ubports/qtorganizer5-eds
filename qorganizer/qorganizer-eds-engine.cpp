@@ -1167,8 +1167,9 @@ void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *i
             irec.setRecurrenceRules(qRules);
             item->saveDetail(&irec);
         }
+
+        e_cal_component_free_recur_list(ruleList);
     }
-    // TODO: free ruleList;
     // TODO: exeptions rules
 }
 
