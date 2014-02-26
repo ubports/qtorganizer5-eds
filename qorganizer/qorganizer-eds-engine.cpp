@@ -1552,11 +1552,11 @@ void QOrganizerEDSEngine::parseStartTime(const QOrganizerItem &item, ECalCompone
 {
     QOrganizerEventTime etr = item.detail(QOrganizerItemDetail::TypeEventTime);
     if (!etr.isEmpty()) {
-        ECalComponentDateTime *dt = g_new0(ECalComponentDateTime, 1);
-        dt->value = g_new0(struct icaltimetype, 1);
-        *dt->value = icaltime_from_timet(etr.startDateTime().toTime_t(), etr.isAllDay());
-        e_cal_component_set_dtstart(comp, dt);
-        e_cal_component_free_datetime(dt);
+        struct icaltimetype ict = icaltime_from_timet(etr.startDateTime().toTime_t(), etr.isAllDay());
+        ECalComponentDateTime dt;
+        dt.tzid = NULL;
+        dt.value = &ict;
+        e_cal_component_set_dtstart(comp, &dt);
     }
 }
 
@@ -1564,11 +1564,11 @@ void QOrganizerEDSEngine::parseEndTime(const QOrganizerItem &item, ECalComponent
 {
     QOrganizerEventTime etr = item.detail(QOrganizerItemDetail::TypeEventTime);
     if (!etr.isEmpty()) {
-        ECalComponentDateTime *dt = g_new0(ECalComponentDateTime, 1);
-        dt->value = g_new0(struct icaltimetype, 1);
-        *dt->value = icaltime_from_timet(etr.endDateTime().toTime_t(), etr.isAllDay());
-        e_cal_component_set_dtend(comp, dt);
-        e_cal_component_free_datetime(dt);
+        struct icaltimetype ict = icaltime_from_timet(etr.endDateTime().toTime_t(), etr.isAllDay());
+        ECalComponentDateTime dt;
+        dt.tzid = NULL;
+        dt.value = &ict;
+        e_cal_component_set_dtend(comp, &dt);
     }
 }
 
@@ -1576,11 +1576,11 @@ void QOrganizerEDSEngine::parseTodoStartTime(const QOrganizerItem &item, ECalCom
 {
     QOrganizerTodoTime etr = item.detail(QOrganizerItemDetail::TypeTodoTime);
     if (!etr.isEmpty()) {
-        ECalComponentDateTime *dt = g_new0(ECalComponentDateTime, 1);
-        dt->value = g_new0(struct icaltimetype, 1);
-        *dt->value = icaltime_from_timet(etr.startDateTime().toTime_t(), etr.isAllDay());
-        e_cal_component_set_dtstart(comp, dt);
-        e_cal_component_free_datetime(dt);
+        struct icaltimetype ict = icaltime_from_timet(etr.startDateTime().toTime_t(), etr.isAllDay());
+        ECalComponentDateTime dt;
+        dt.tzid = NULL;
+        dt.value = &ict;
+        e_cal_component_set_dtstart(comp, &dt);;
     }
 }
 
@@ -1723,7 +1723,7 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
             ruleList = g_slist_append(ruleList, rule);
         }
         e_cal_component_set_rrule_list(comp, ruleList);
-        //TODO: free ruleList
+        g_slist_free_full(ruleList, g_free);
     }
 }
 
@@ -1748,13 +1748,11 @@ void QOrganizerEDSEngine::parseDueDate(const QtOrganizer::QOrganizerItem &item, 
 {
     QOrganizerTodoTime ttr = item.detail(QOrganizerItemDetail::TypeTodoTime);
     if (!ttr.isEmpty()) {
-        ECalComponentDateTime *due = g_new0(ECalComponentDateTime, 1);
-        due->value = g_new0(struct icaltimetype, 1);
-
-        struct icaltimetype itt = icaltime_from_timet(ttr.dueDateTime().toTime_t(), ttr.isAllDay());
-        *due->value = itt;
-        e_cal_component_set_due(comp, due);
-        e_cal_component_free_datetime(due);
+        struct icaltimetype ict = icaltime_from_timet(ttr.dueDateTime().toTime_t(), ttr.isAllDay());
+        ECalComponentDateTime dt;
+        dt.tzid = NULL;
+        dt.value = &ict;
+        e_cal_component_set_due(comp, &dt);;
     }
 }
 
@@ -1927,10 +1925,11 @@ ECalComponent *QOrganizerEDSEngine::parseJournalItem(ECalClient *client, const Q
 
     QOrganizerJournalTime jtime = item.detail(QOrganizerItemDetail::TypeJournalTime);
     if (!jtime.isEmpty()) {
-        ECalComponentDateTime *dt = g_new0(ECalComponentDateTime, 1);
-        *dt->value = icaltime_from_timet(jtime.entryDateTime().toTime_t(), FALSE);
-        e_cal_component_set_dtstart(comp, dt);
-        e_cal_component_free_datetime(dt);
+        struct icaltimetype ict = icaltime_from_timet(jtime.entryDateTime().toTime_t(), FALSE);
+        ECalComponentDateTime dt;
+        dt.tzid = NULL;
+        dt.value = &ict;
+        e_cal_component_set_dtstart(comp, &dt);
     }
 
     return comp;
