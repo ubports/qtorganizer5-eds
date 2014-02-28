@@ -206,7 +206,12 @@ private Q_SLOTS:
         // check if the signal item removed was fired after the request finish
         QTRY_VERIFY(m_requestFinishedTime.isValid());
         QTRY_VERIFY(m_itemRemovedTime.isValid());
-        QVERIFY(m_itemRemovedTime > m_requestFinishedTime);
+        if (m_itemRemovedTime < m_requestFinishedTime) {
+            qDebug() << "Item removed before request finish";
+            qDebug() << "Removed time" << m_itemRemovedTime;
+            qDebug() << "RequestFinished time" << m_requestFinishedTime;
+        }
+        QVERIFY(m_itemRemovedTime >= m_requestFinishedTime);
     }
 
     void testRemoveItemById()
