@@ -1,3 +1,13 @@
+qtorganizer5-eds (0.1.1+14.04.20140228.1-0ubuntu1) trusty; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * Make sure to remove the request from internal list when it get
+    destroyed. (LP: #1284587)
+  * Implemented support for QOrganizerItemOccurrenceFetchRequest.
+  * Fixed memory leaks of ECalComponentDateTime object. (LP: #1285056)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 28 Feb 2014 23:37:02 +0000
+
 qtorganizer5-eds (0.1.1+14.04.20140228-0ubuntu1) trusty; urgency=low
 
   [ Renato Araujo Oliveira Filho ]
