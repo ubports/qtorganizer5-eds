@@ -34,9 +34,12 @@ class RecurrenceTest : public QObject, public EDSBaseTest
     Q_OBJECT
 private:
     static const QString defaultCollectionName;
+    static const QString taskListTypeName;
+    static const QString collectionTypePropertyName;
 
     QOrganizerEDSEngine *m_engine;
     QOrganizerCollection m_collection;
+    QOrganizerCollection m_todoCollection;
 
     QOrganizerItem createTestEvent()
     {
@@ -74,6 +77,47 @@ private:
         return items[0];
     }
 
+    QOrganizerCollection createTodoCollection()
+    {
+    }
+
+    QOrganizerTodo createTestTodoEvent()
+    {
+        static QString displayLabelValue = QStringLiteral("Recurrence todo event test");
+        static QString descriptionValue = QStringLiteral("Recucurrence todo event description");
+
+        QOrganizerTodo todo;
+        todo.setCollectionId(m_todoCollection.id());
+        todo.setStartDateTime(QDateTime(QDate(2013, 12, 2), QTime(0,0,0)));
+        todo.setDueDateTime(QDateTime(QDate(2013, 12, 2), QTime(0,30,0)));
+        todo.setDisplayLabel(displayLabelValue);
+        todo.setDescription(descriptionValue);
+
+        QOrganizerRecurrenceRule rule;
+        rule.setFrequency(QOrganizerRecurrenceRule::Weekly);
+        rule.setDaysOfWeek(QSet<Qt::DayOfWeek>() << Qt::Monday);
+        rule.setLimit(QDate(2013, 12, 31));
+        todo.setRecurrenceRule(rule);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        items << todo;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+
+        Q_ASSERT(saveResult);
+        Q_ASSERT(error == QtOrganizer::QOrganizerManager::NoError);
+        Q_ASSERT(items.size() == 1);
+
+        // append new item to be removed after the test
+        appendToRemove(items[0].id());
+
+        return static_cast<QOrganizerTodo>(items[0]);
+    }
+
 private Q_SLOTS:
     void init()
     {
@@ -88,6 +132,17 @@ private Q_SLOTS:
         bool saveResult = m_engine->saveCollection(&m_collection, &error);
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
+
+
+        // todo collection
+        m_todoCollection = QOrganizerCollection();
+
+        m_todoCollection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName + "_TODO");
+        m_todoCollection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
+        saveResult = m_engine->saveCollection(&m_todoCollection, &error);
+
+        QVERIFY(saveResult);
+        QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
     }
 
     void cleanup()
@@ -95,6 +150,7 @@ private Q_SLOTS:
         EDSBaseTest::cleanup(m_engine);
     }
 
+#if 0
     void testCreateWeeklyEvent()
     {
         static QString displayLabelValue = QStringLiteral("Weekly test");
@@ -308,9 +364,66 @@ private Q_SLOTS:
              QCOMPARE(time.startDateTime(), expectedDates[i]);
          }
     }
+#endif
+
+    void testQueryRecurrenceForATodoItem()
+    {
+        QOrganizerTodo recurrenceEvent = createTestTodoEvent();
+        QtOrganizer::QOrganizerManager::Error error;
+        QOrganizerItemSortOrder sort;
+        QOrganizerItemFetchHint hint;
+        QOrganizerItemFilter filter;
+        QList<QOrganizerItem> items = m_engine->items(filter,
+                                                      QDateTime(),
+                                                      QDateTime(),
+                                                      100,
+                                                      sort,
+                                                      hint,
+                                                      &error);
+
+        // this should return only the parent event
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QCOMPARE(items.count(), 1);
+        QCOMPARE(items[0].id(), recurrenceEvent.id());
+
+        // query recurrence events for the event
+        items = m_engine->itemOccurrences(recurrenceEvent,
+                                          QDateTime(QDate(2013, 11, 30), QTime(0,0,0)),
+                                          QDateTime(QDate(2014, 1, 1), QTime(0,0,0)),
+                                          100,
+                                          hint,
+                                          &error);
+
+        // check if all recurrence was returned
+        QCOMPARE(items.count(), 5);
+
+        QList<QDateTime> expectedStartDates;
+        expectedStartDates << QDateTime(QDate(2013, 12, 2), QTime(0,0,0))
+                           << QDateTime(QDate(2013, 12, 9), QTime(0,0,0))
+                           << QDateTime(QDate(2013, 12, 16), QTime(0,0,0))
+                           << QDateTime(QDate(2013, 12, 23), QTime(0,0,0))
+                           << QDateTime(QDate(2013, 12, 30), QTime(0,0,0));
+
+        QList<QDateTime> expectedDueDates;
+        expectedDueDates   << QDateTime(QDate(2013, 12, 2), QTime(0,30,0))
+                           << QDateTime(QDate(2013, 12, 9), QTime(0,30,0))
+                           << QDateTime(QDate(2013, 12, 16), QTime(0,30,0))
+                           << QDateTime(QDate(2013, 12, 23), QTime(0,30,0))
+                           << QDateTime(QDate(2013, 12, 30), QTime(0,30,0));
+
+        for(int i=0; i < 5; i++) {
+            QCOMPARE(items[i].type(), QOrganizerItemType::TypeTodoOccurrence);
+            QOrganizerTodoTime time = items[i].detail(QOrganizerItemDetail::TypeTodoTime);
+            QCOMPARE(time.startDateTime(), expectedStartDates[i]);
+            qDebug() << time.dueDateTime() ;
+            QCOMPARE(time.dueDateTime(), expectedDueDates[i]);
+        }
+    }
 };
 
 const QString RecurrenceTest::defaultCollectionName = QStringLiteral("TEST_RECURRENCE_EVENT_COLLECTION");
+const QString RecurrenceTest::taskListTypeName = QStringLiteral("Task List");
+const QString RecurrenceTest::collectionTypePropertyName = QStringLiteral("collection-type");
 
 QTEST_MAIN(RecurrenceTest)
 

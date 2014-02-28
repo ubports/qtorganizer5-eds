@@ -293,11 +293,11 @@ void QOrganizerEDSEngine::itemOcurrenceAsync(QOrganizerItemOccurrenceFetchReques
     qDebug() << Q_FUNC_INFO;
     FetchOcurrenceData *data = new FetchOcurrenceData(this, req);
 
-    QString rId;
-    QString cId = QOrganizerEDSEngineId::toComponentId(req->parentItem().id(), &rId);
-
     EClient *client = data->parent()->d->m_sourceRegistry->client(req->parentItem().collectionId().toString());
     if (client) {
+        QString rId;
+        QString cId = QOrganizerEDSEngineId::toComponentId(req->parentItem().id(), &rId);
+
         data->setClient(client);
         e_cal_client_get_object(data->client(),
                                 cId.toUtf8(), rId.toUtf8(),
@@ -1328,16 +1328,35 @@ void QOrganizerEDSEngine::parseLocation(ECalComponent *comp, QOrganizerItem *ite
 void QOrganizerEDSEngine::parseDueDate(ECalComponent *comp, QOrganizerItem *item)
 {
     ECalComponentDateTime due;
+    QDateTime dueDate;
+    bool dueIsAllDay = false;
     e_cal_component_get_due(comp, &due);
     if (due.value) {
-        QOrganizerTodoTime ttr = item->detail(QOrganizerItemDetail::TypeTodoTime);
-        ttr.setDueDateTime(fromIcalTime(*due.value));
-        if (icaltime_is_date(*due.value) != ttr.isAllDay()) {
-            ttr.setAllDay(icaltime_is_date(*due.value));
-        }
-        item->saveDetail(&ttr);
+        dueDate = fromIcalTime(*due.value);
+        dueIsAllDay = icaltime_is_date(*due.value);
     }
     e_cal_component_free_datetime(&due);
+
+    ECalComponentDateTime end;
+    QDateTime endDate;
+    bool endIsAllDay = false;
+    e_cal_component_get_dtend(comp, &end);
+    if (end.value) {
+        endDate = fromIcalTime(*end.value);
+        endIsAllDay = icaltime_is_date(*end.value);
+    }
+    e_cal_component_free_datetime(&end);
+
+    QOrganizerTodoTime ttr = item->detail(QOrganizerItemDetail::TypeTodoTime);
+    // use the biggest date as due date check : parseDueDate(QOrganizerItem, ECalComponent)
+    if (dueDate > endDate) {
+        ttr.setDueDateTime(dueDate);
+        ttr.setAllDay(dueIsAllDay);
+    } else {
+        ttr.setDueDateTime(endDate);
+        ttr.setAllDay(dueIsAllDay);
+    }
+    item->saveDetail(&ttr);
 }
 
 void QOrganizerEDSEngine::parseProgress(ECalComponent *comp, QOrganizerItem *item)
@@ -1879,6 +1898,10 @@ void QOrganizerEDSEngine::parseDueDate(const QtOrganizer::QOrganizerItem &item, 
         struct icaltimetype itt = icaltime_from_timet(ttr.dueDateTime().toTime_t(), ttr.isAllDay());
         *due->value = itt;
         e_cal_component_set_due(comp, due);
+        // since QOrganizer does not use end date for todo items, we will set that as end date too
+        // this will used in case of recurrence events, EDS does not update the due date for recurrence
+        // events.
+        e_cal_component_set_dtend(comp, due);
         e_cal_component_free_datetime(due);
     }
 }
