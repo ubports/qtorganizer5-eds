@@ -75,7 +75,7 @@ private Q_SLOTS:
     {
         m_itemRemovedTime = QDateTime::currentDateTime();
         // avoid both signals to be fired at the same time
-        QTest::qSleep(100);
+        QTest::qSleep(1000);
     }
 
     void requestFinished(QOrganizerAbstractRequest::State state)
@@ -83,7 +83,7 @@ private Q_SLOTS:
         if (state == QOrganizerAbstractRequest::FinishedState) {
             m_requestFinishedTime = QDateTime::currentDateTime();
             // avoid both signals to be fired at the same time
-            QTest::qSleep(100);
+            QTest::qSleep(1000);
         }
     }
 
@@ -206,7 +206,12 @@ private Q_SLOTS:
         // check if the signal item removed was fired after the request finish
         QTRY_VERIFY(m_requestFinishedTime.isValid());
         QTRY_VERIFY(m_itemRemovedTime.isValid());
-        QVERIFY(m_itemRemovedTime > m_requestFinishedTime);
+        if (m_itemRemovedTime < m_requestFinishedTime) {
+            qDebug() << "Item removed before request finish";
+            qDebug() << "Removed time" << m_itemRemovedTime;
+            qDebug() << "RequestFinished time" << m_requestFinishedTime;
+        }
+        QVERIFY(m_itemRemovedTime >= m_requestFinishedTime);
     }
 
     void testRemoveItemById()
