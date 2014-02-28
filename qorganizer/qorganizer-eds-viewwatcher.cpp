@@ -22,6 +22,7 @@
 #include "qorganizer-eds-engineid.h"
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QDebug>
 
 #include <QtOrganizer/QOrganizerAbstractRequest>
 #include <QtOrganizer/QOrganizerManagerEngine>
