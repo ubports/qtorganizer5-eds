@@ -18,7 +18,10 @@
 
 #include "qorganizer-eds-fetchrequestdata.h"
 
+#include <QtCore/QDebug>
+
 #include <QtOrganizer/QOrganizerItemFetchRequest>
+#include <QtOrganizer/QOrganizerItemCollectionFilter>
 
 using namespace QtOrganizer;
 
