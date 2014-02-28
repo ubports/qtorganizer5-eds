@@ -787,8 +787,10 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
 void QOrganizerEDSEngine::requestDestroyed(QOrganizerAbstractRequest* req)
 {
     qDebug() << Q_FUNC_INFO;
-    RequestData *data = m_runningRequests[req];
-    delete data;
+    RequestData *data = m_runningRequests.take(req);
+    if (data) {
+        delete data;
+    }
 }
 
 bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
