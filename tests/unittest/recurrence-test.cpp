@@ -150,7 +150,6 @@ private Q_SLOTS:
         EDSBaseTest::cleanup(m_engine);
     }
 
-#if 0
     void testCreateWeeklyEvent()
     {
         static QString displayLabelValue = QStringLiteral("Weekly test");
@@ -364,7 +363,6 @@ private Q_SLOTS:
              QCOMPARE(time.startDateTime(), expectedDates[i]);
          }
     }
-#endif
 
     void testQueryRecurrenceForATodoItem()
     {
