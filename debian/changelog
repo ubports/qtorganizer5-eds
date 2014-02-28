@@ -1,3 +1,10 @@
+qtorganizer5-eds (0.1.1+14.04.20140228-0ubuntu1) trusty; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * Fixed compilation with Qt5.2 (LP: #1280281)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 28 Feb 2014 14:58:55 +0000
+
 qtorganizer5-eds (0.1.1+14.04.20140221-0ubuntu1) trusty; urgency=low
 
   [ Renato Araujo Oliveira Filho ]
