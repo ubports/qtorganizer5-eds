@@ -38,7 +38,7 @@ private:
     QOrganizerEDSEngine *m_engine;
     QOrganizerCollection m_collection;
 
-    QOrganizerItemId createTestEvent()
+    QOrganizerItem createTestEvent()
     {
         static QString displayLabelValue = QStringLiteral("Recurrence event test");
         static QString descriptionValue = QStringLiteral("Recucurrence event description");
@@ -71,7 +71,7 @@ private:
         // append new item to be removed after the test
         appendToRemove(items[0].id());
 
-        return items[0].id();
+        return items[0];
     }
 
 private Q_SLOTS:
@@ -151,9 +151,7 @@ private Q_SLOTS:
         for(int i=0; i < 5; i++) {
             QOrganizerItemParent itemParent = items[i].detail(QOrganizerItemDetail::TypeParent);
             QOrganizerEventTime time = items[i].detail(QOrganizerItemDetail::TypeEventTime);
-            qDebug() << itemParent.parentId() << time.startDateTime();
             QCOMPARE(itemParent.parentId(), parentId);
-            qDebug() << time.startDateTime();
             QCOMPARE(time.startDateTime(), expectedDates[i]);
         }
     }
@@ -212,7 +210,7 @@ private Q_SLOTS:
 
     void testReccurenceParentId()
     {
-        QOrganizerItemId recurrenceEventId = createTestEvent();
+        QOrganizerItemId recurrenceEventId = createTestEvent().id();
 
         QtOrganizer::QOrganizerManager::Error error;
         QOrganizerItemSortOrder sort;
@@ -265,6 +263,50 @@ private Q_SLOTS:
         QCOMPARE(error, QOrganizerManager::NoError);
         QCOMPARE(items.size(), 1);
         QCOMPARE(items[0].displayLabel(), QStringLiteral("Updated item 2"));
+    }
+
+    void testQueryRecurrenceForAParentItem()
+    {
+         QOrganizerItem recurrenceEvent = createTestEvent();
+         QtOrganizer::QOrganizerManager::Error error;
+         QOrganizerItemSortOrder sort;
+         QOrganizerItemFetchHint hint;
+         QOrganizerItemFilter filter;
+         QList<QOrganizerItem> items = m_engine->items(filter,
+                                                       QDateTime(),
+                                                       QDateTime(),
+                                                       100,
+                                                       sort,
+                                                       hint,
+                                                       &error);
+
+         // this should return only the parent event
+         QCOMPARE(error, QOrganizerManager::NoError);
+         QCOMPARE(items.count(), 1);
+         QCOMPARE(items[0].id(), recurrenceEvent.id());
+
+         // query recurrence events for the event
+         items = m_engine->itemOccurrences(recurrenceEvent,
+                                           QDateTime(QDate(2013, 11, 30), QTime(0,0,0)),
+                                           QDateTime(QDate(2014, 1, 1), QTime(0,0,0)),
+                                           100,
+                                           hint,
+                                           &error);
+
+         // check if all recurrence was returned
+         QCOMPARE(items.count(), 5);
+
+         QList<QDateTime> expectedDates;
+         expectedDates << QDateTime(QDate(2013, 12, 2), QTime(0,0,0))
+                       << QDateTime(QDate(2013, 12, 9), QTime(0,0,0))
+                       << QDateTime(QDate(2013, 12, 16), QTime(0,0,0))
+                       << QDateTime(QDate(2013, 12, 23), QTime(0,0,0))
+                       << QDateTime(QDate(2013, 12, 30), QTime(0,0,0));
+         for(int i=0; i < 5; i++) {
+             QCOMPARE(items[i].type(), QOrganizerItemType::TypeEventOccurrence);
+             QOrganizerEventTime time = items[i].detail(QOrganizerItemDetail::TypeEventTime);
+             QCOMPARE(time.startDateTime(), expectedDates[i]);
+         }
     }
 };
 
