@@ -308,6 +308,89 @@ private Q_SLOTS:
              QCOMPARE(time.startDateTime(), expectedDates[i]);
          }
     }
+
+    void testCreateSunTueWedThuFriSatEvents()
+    {
+        static QString displayLabelValue = QStringLiteral("testCreateSunTueWedThuFriSatEvents test");
+        static QString descriptionValue = QStringLiteral("testCreateSunTueWedThuFriSatEvents description");
+
+        QOrganizerEvent ev;
+        ev.setCollectionId(m_collection.id());
+        ev.setStartDateTime(QDateTime(QDate(2014, 03, 1), QTime(0,0,0)));
+        ev.setEndDateTime(QDateTime(QDate(2014, 03, 1), QTime(0,30,0)));
+        ev.setDisplayLabel(displayLabelValue);
+        ev.setDescription(descriptionValue);
+
+        QOrganizerRecurrenceRule rule;
+        rule.setFrequency(QOrganizerRecurrenceRule::Weekly);
+        QSet<Qt::DayOfWeek> dasyOfWeek;
+        dasyOfWeek << Qt::Sunday
+                   << Qt::Tuesday
+                   << Qt::Wednesday
+                   << Qt::Thursday
+                   << Qt::Friday
+                   << Qt::Saturday;
+
+        rule.setDaysOfWeek(dasyOfWeek);
+        ev.setRecurrenceRule(rule);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        items << ev;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
+
+        // append new item to be removed after the test
+        QOrganizerItemId parentId = items[0].id();
+        appendToRemove(parentId);
+
+        QOrganizerItemSortOrder sort;
+        QOrganizerItemFetchHint hint;
+        QOrganizerItemFilter filter;
+
+        // check if the parent was saved correct
+        items = m_engine->items(QList<QOrganizerItemId>() << parentId, hint, &errorMap, &error);
+        QCOMPARE(items.size(), 1);
+        QOrganizerEvent result = items[0];
+        QCOMPARE(result.collectionId(), ev.collectionId());
+        QCOMPARE(result.startDateTime(), ev.startDateTime());
+        QCOMPARE(result.endDateTime(), ev.endDateTime());
+        QCOMPARE(result.displayLabel(), ev.displayLabel());
+        QCOMPARE(result.description(), ev.description());
+
+        QOrganizerRecurrenceRule savedRule = result.recurrenceRule();
+        QCOMPARE(savedRule.frequency(), rule.frequency());
+        QCOMPARE(savedRule.daysOfWeek(), rule.daysOfWeek());
+
+        items = m_engine->items(filter,
+                                QDateTime(QDate(2014, 03, 1), QTime(0,0,0)),
+                                QDateTime(QDate(2014, 03, 8), QTime(24,0,0)),
+                                100,
+                                sort,
+                                hint,
+                                &error);
+
+        QList<QDateTime> expectedDates;
+        expectedDates << QDateTime(QDate(2014, 03, 1), QTime(0,0,0))
+                      << QDateTime(QDate(2014, 03, 2), QTime(0,0,0))
+                      << QDateTime(QDate(2014, 03, 4), QTime(0,0,0))
+                      << QDateTime(QDate(2014, 03, 5), QTime(0,0,0))
+                      << QDateTime(QDate(2014, 03, 6), QTime(0,0,0))
+                      << QDateTime(QDate(2014, 03, 7), QTime(0,0,0));
+
+        QCOMPARE(items.count(), expectedDates.size());
+        for(int i=0, iMax=expectedDates.size(); i < iMax; i++) {
+            QOrganizerItemParent itemParent = items[i].detail(QOrganizerItemDetail::TypeParent);
+            QOrganizerEventTime time = items[i].detail(QOrganizerItemDetail::TypeEventTime);
+            QCOMPARE(itemParent.parentId(), parentId);
+            QCOMPARE(time.startDateTime(), expectedDates[i]);
+        }
+    }
 };
 
 const QString RecurrenceTest::defaultCollectionName = QStringLiteral("TEST_RECURRENCE_EVENT_COLLECTION");
