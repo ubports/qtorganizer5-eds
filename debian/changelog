@@ -1,3 +1,9 @@
+qtorganizer5-eds (0.1.1+14.04.20140307.1-0ubuntu1) trusty; urgency=low
+
+  * New rebuild forced
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 07 Mar 2014 07:02:56 +0000
+
 qtorganizer5-eds (0.1.1+14.04.20140307-0ubuntu1) trusty; urgency=low
 
   [ Renato Araujo Oliveira Filho ]
