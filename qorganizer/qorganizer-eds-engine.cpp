@@ -1147,15 +1147,27 @@ void QOrganizerEDSEngine::parseEndTime(ECalComponent *comp, QOrganizerItem *item
 
 void QOrganizerEDSEngine::parseWeekRecurrence(struct icalrecurrencetype *rule, QtOrganizer::QOrganizerRecurrenceRule *qRule)
 {
+    static QMap<icalrecurrencetype_weekday, Qt::DayOfWeek>  daysOfWeekMap;
+    if (daysOfWeekMap.isEmpty()) {
+        daysOfWeekMap.insert(ICAL_MONDAY_WEEKDAY, Qt::Monday);
+        daysOfWeekMap.insert(ICAL_THURSDAY_WEEKDAY, Qt::Thursday);
+        daysOfWeekMap.insert(ICAL_WEDNESDAY_WEEKDAY, Qt::Wednesday);
+        daysOfWeekMap.insert(ICAL_TUESDAY_WEEKDAY, Qt::Tuesday);
+        daysOfWeekMap.insert(ICAL_FRIDAY_WEEKDAY, Qt::Friday);
+        daysOfWeekMap.insert(ICAL_SATURDAY_WEEKDAY, Qt::Saturday);
+        daysOfWeekMap.insert(ICAL_SUNDAY_WEEKDAY, Qt::Sunday);
+    }
+
     qRule->setFrequency(QOrganizerRecurrenceRule::Weekly);
 
     QSet<Qt::DayOfWeek> daysOfWeek;
-    for (int d=0; d < Qt::Sunday; d++) {
+    for (int d=0; d <= Qt::Sunday; d++) {
         short day = rule->by_day[d];
         if (day != ICAL_RECURRENCE_ARRAY_MAX) {
-            daysOfWeek.insert(static_cast<Qt::DayOfWeek>(icalrecurrencetype_day_day_of_week(rule->by_day[d]) - 1));
+            daysOfWeek.insert(daysOfWeekMap[icalrecurrencetype_day_day_of_week(rule->by_day[d])]);
         }
     }
+
     qRule->setDaysOfWeek(daysOfWeek);
 }
 
