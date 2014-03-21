@@ -229,7 +229,9 @@ private:
     static void removeItemsAsyncStart(RemoveRequestData *data);
 
     void saveCollectionAsync(QtOrganizer::QOrganizerCollectionSaveRequest *req);
+    static void saveCollectionUpdateAsyncStart(SaveCollectionRequestData *data);
     static void saveCollectionAsyncCommited(ESourceRegistry *registry, GAsyncResult *res, SaveCollectionRequestData *data);
+    static void saveCollectionUpdateAsynCommited(ESourceRegistry *registry, GAsyncResult *res, SaveCollectionRequestData *data);
 
     void removeCollectionAsync(QtOrganizer::QOrganizerCollectionRemoveRequest *req);
     static void removeCollectionAsyncStart(GObject *sourceObject, GAsyncResult *res, RemoveCollectionRequestData *data);

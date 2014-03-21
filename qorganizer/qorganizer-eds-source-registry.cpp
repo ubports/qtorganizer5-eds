@@ -103,6 +103,11 @@ QtOrganizer::QOrganizerCollection SourceRegistry::defaultCollection() const
     return m_defaultCollection;
 }
 
+QOrganizerCollection SourceRegistry::collection(const QString &collectionId) const
+{
+    return m_collections.value(collectionId);
+}
+
 QList<QOrganizerCollection> SourceRegistry::collections() const
 {
     return m_collections.values();
@@ -276,7 +281,6 @@ void SourceRegistry::onSourceChanged(ESourceRegistry *registry,
                                      ESource *source,
                                      SourceRegistry *self)
 {
-#if 0
     qDebug() << Q_FUNC_INFO << (void*) self;
     Q_UNUSED(registry);
     QString collectionId = self->findCollection(source);
@@ -287,7 +291,6 @@ void SourceRegistry::onSourceChanged(ESourceRegistry *registry,
     } else {
         qWarning() << "Source changed not found";
     }
-#endif
 }
 
 void SourceRegistry::onSourceRemoved(ESourceRegistry *registry,
@@ -302,8 +305,32 @@ void SourceRegistry::onSourceRemoved(ESourceRegistry *registry,
 void SourceRegistry::updateCollection(QOrganizerCollection *collection,
                                       ESource *source)
 {
-    qDebug() << Q_FUNC_INFO << (void*) this;
     //TODO get metadata (color, etc..)
     collection->setMetaData(QOrganizerCollection::KeyName,
                             QString::fromUtf8(e_source_get_display_name(source)));
+
+    // name
+    collection->setMetaData(QOrganizerCollection::KeyName,
+                            QString::fromUtf8(e_source_get_display_name(source)));
+
+    // extension
+    ESourceBackend *extCalendar;
+    if (e_source_has_extension(source, E_SOURCE_EXTENSION_TASK_LIST)) {
+        extCalendar = E_SOURCE_BACKEND(e_source_get_extension(source, E_SOURCE_EXTENSION_TASK_LIST));
+        collection->setExtendedMetaData(COLLECTION_CALLENDAR_TYPE_METADATA, E_SOURCE_EXTENSION_TASK_LIST);
+    } else if (e_source_has_extension(source, E_SOURCE_EXTENSION_MEMO_LIST)) {
+        extCalendar = E_SOURCE_BACKEND(e_source_get_extension(source, E_SOURCE_EXTENSION_MEMO_LIST));
+        collection->setExtendedMetaData(COLLECTION_CALLENDAR_TYPE_METADATA, E_SOURCE_EXTENSION_MEMO_LIST);
+    } else {
+        extCalendar = E_SOURCE_BACKEND(e_source_get_extension(source, E_SOURCE_EXTENSION_CALENDAR));
+        collection->setExtendedMetaData(COLLECTION_CALLENDAR_TYPE_METADATA, E_SOURCE_EXTENSION_CALENDAR);
+    }
+
+    // color
+    const gchar *color = e_source_selectable_get_color(E_SOURCE_SELECTABLE(extCalendar));
+    collection->setMetaData(QOrganizerCollection::KeyColor, QString::fromUtf8(color));
+
+    // selected
+    bool selected = (e_source_selectable_get_selected(E_SOURCE_SELECTABLE(extCalendar)) == TRUE);
+    collection->setExtendedMetaData(COLLECTION_SELECTED_METADATA, selected);
 }
