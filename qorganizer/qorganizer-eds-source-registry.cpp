@@ -17,8 +17,6 @@ SourceRegistry::SourceRegistry(QObject *parent)
 
 SourceRegistry::~SourceRegistry()
 {
-    qDebug() << Q_FUNC_INFO << (void*) this;
-
     clear();
 
     if (m_sourceRegistry) {
@@ -272,7 +270,6 @@ void SourceRegistry::onSourceAdded(ESourceRegistry *registry,
                                    ESource *source,
                                    SourceRegistry *self)
 {
-    qDebug() << Q_FUNC_INFO << (void*) self;
     Q_UNUSED(registry);
     self->insert(source);
 }
@@ -281,7 +278,6 @@ void SourceRegistry::onSourceChanged(ESourceRegistry *registry,
                                      ESource *source,
                                      SourceRegistry *self)
 {
-    qDebug() << Q_FUNC_INFO << (void*) self;
     Q_UNUSED(registry);
     QString collectionId = self->findCollection(source);
     if (!collectionId.isEmpty() && self->m_collections.contains(collectionId)) {
@@ -297,7 +293,6 @@ void SourceRegistry::onSourceRemoved(ESourceRegistry *registry,
                                      ESource *source,
                                      SourceRegistry *self)
 {
-    qDebug() << Q_FUNC_INFO << (void*) self;
     Q_UNUSED(registry);
     self->remove(source);
 }

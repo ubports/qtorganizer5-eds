@@ -70,23 +70,8 @@
 using namespace QtOrganizer;
 QOrganizerEDSEngineData *QOrganizerEDSEngine::m_globalData = 0;
 
-static void QOrganizerEDSEngineMessageOutput(QtMsgType type,
-                                             const QMessageLogContext &context,
-                                             const QString &message)
-{
-    Q_UNUSED(type);
-    Q_UNUSED(context);
-    Q_UNUSED(message);
-    //nothing
-}
-
 QOrganizerEDSEngine* QOrganizerEDSEngine::createEDSEngine(const QMap<QString, QString>& parameters)
 {
-    // disable debug message if variable not exported
-    if (qgetenv("QORGANIZER_EDS_DEBUG").isEmpty()) {
-        qInstallMessageHandler(QOrganizerEDSEngineMessageOutput);
-    }
-
     Q_UNUSED(parameters);
     if (!m_globalData) {
         m_globalData = new QOrganizerEDSEngineData();
@@ -99,7 +84,6 @@ QOrganizerEDSEngine* QOrganizerEDSEngine::createEDSEngine(const QMap<QString, QS
 QOrganizerEDSEngine::QOrganizerEDSEngine(QOrganizerEDSEngineData *data)
     : d(data)
 {
-    qDebug() << Q_FUNC_INFO;
     d->m_sharedEngines << this;
 
     Q_FOREACH(const QString &collectionId, d->m_sourceRegistry->collectionsIds()){
@@ -112,8 +96,6 @@ QOrganizerEDSEngine::QOrganizerEDSEngine(QOrganizerEDSEngineData *data)
 
 QOrganizerEDSEngine::~QOrganizerEDSEngine()
 {
-    qDebug() << Q_FUNC_INFO;
-
     Q_FOREACH(QOrganizerAbstractRequest *req, m_runningRequests.keys()) {
         req->cancel();
     }
@@ -141,7 +123,6 @@ QMap<QString, QString> QOrganizerEDSEngine::managerParameters() const
 
 void QOrganizerEDSEngine::itemsAsync(QOrganizerItemFetchRequest *req)
 {
-    qDebug() << Q_FUNC_INFO;
     FetchRequestData *data = new FetchRequestData(this,
                                                   d->m_sourceRegistry->collectionsIds(),
                                                   req);
@@ -188,7 +169,6 @@ void QOrganizerEDSEngine::itemsAsyncListed(ECalComponent *comp,
                                            time_t instanceEnd,
                                            FetchRequestData *data)
 {
-    qDebug() << Q_FUNC_INFO;
     Q_UNUSED(instanceStart);
     Q_UNUSED(instanceEnd);
 
@@ -224,14 +204,12 @@ void QOrganizerEDSEngine::itemsAsyncListedAsComps(GObject *source,
 
 void QOrganizerEDSEngine::itemsByIdAsync(QOrganizerItemFetchByIdRequest *req)
 {
-    qDebug() << Q_FUNC_INFO;
     FetchByIdRequestData *data = new FetchByIdRequestData(this, req);
     itemsByIdAsyncStart(data);
 }
 
 void QOrganizerEDSEngine::itemsByIdAsyncStart(FetchByIdRequestData *data)
 {
-    qDebug() << Q_FUNC_INFO;
     QString id = data->nextId();
     if (!id.isEmpty()) {
         QStringList ids = id.split("/");
@@ -268,7 +246,6 @@ void QOrganizerEDSEngine::itemsByIdAsyncListed(GObject *client,
                                                GAsyncResult *res,
                                                FetchByIdRequestData *data)
 {
-    qDebug() << Q_FUNC_INFO;
     Q_UNUSED(client);
     GError *gError = 0;
     icalcomponent *icalComp = 0;
@@ -290,7 +267,6 @@ void QOrganizerEDSEngine::itemsByIdAsyncListed(GObject *client,
 
 void QOrganizerEDSEngine::itemOcurrenceAsync(QOrganizerItemOccurrenceFetchRequest *req)
 {
-    qDebug() << Q_FUNC_INFO;
     FetchOcurrenceData *data = new FetchOcurrenceData(this, req);
 
     QString rId;
@@ -317,7 +293,6 @@ void QOrganizerEDSEngine::itemOcurrenceAsyncGetObjectDone(GObject *source,
                                                           FetchOcurrenceData *data)
 {
     Q_UNUSED(source);
-
     GError *error = 0;
     icalcomponent *comp = 0;
     e_cal_client_get_object_finish(data->client(), res, &comp, &error);
@@ -344,7 +319,6 @@ void QOrganizerEDSEngine::itemOcurrenceAsyncListed(ECalComponent *comp,
                                                    time_t instanceEnd,
                                                    FetchOcurrenceData *data)
 {
-    qDebug() << Q_FUNC_INFO;
     Q_UNUSED(instanceStart);
     Q_UNUSED(instanceEnd);
 
@@ -365,8 +339,6 @@ QList<QOrganizerItem> QOrganizerEDSEngine::items(const QList<QOrganizerItemId> &
                                                  QMap<int, QOrganizerManager::Error> *errorMap,
                                                  QOrganizerManager::Error *error)
 {
-    qDebug() << Q_FUNC_INFO;
-
     QOrganizerItemFetchByIdRequest *req = new QOrganizerItemFetchByIdRequest(this);
     req->setIds(itemIds);
     req->setFetchHint(fetchHint);
@@ -393,7 +365,6 @@ QList<QOrganizerItem> QOrganizerEDSEngine::items(const QOrganizerItemFilter &fil
                                                  const QOrganizerItemFetchHint &fetchHint,
                                                  QOrganizerManager::Error *error)
 {
-    qDebug() << Q_FUNC_INFO;
     QOrganizerItemFetchRequest *req = new QOrganizerItemFetchRequest(this);
 
     req->setFilter(filter);
@@ -420,8 +391,11 @@ QList<QOrganizerItemId> QOrganizerEDSEngine::itemIds(const QOrganizerItemFilter 
                                                      const QList<QOrganizerItemSortOrder> &sortOrders,
                                                      QOrganizerManager::Error *error)
 {
-    qDebug() << Q_FUNC_INFO;
+    qWarning() << Q_FUNC_INFO << "Not implemented";
     QList<QOrganizerItemId> items;
+    if (error) {
+        *error = QOrganizerManager::NotSupportedError;
+    }
     return items;
 }
 
@@ -432,7 +406,6 @@ QList<QOrganizerItem> QOrganizerEDSEngine::itemOccurrences(const QOrganizerItem 
                                                            const QOrganizerItemFetchHint &fetchHint,
                                                            QOrganizerManager::Error *error)
 {
-    qDebug() << Q_FUNC_INFO;
     QOrganizerItemOccurrenceFetchRequest *req = new QOrganizerItemOccurrenceFetchRequest(this);
 
     req->setParentItem(parentItem);
@@ -459,13 +432,16 @@ QList<QOrganizerItem> QOrganizerEDSEngine::itemsForExport(const QDateTime &start
                                                                  const QOrganizerItemFetchHint &fetchHint,
                                                                  QOrganizerManager::Error *error)
 {
-    qDebug() << Q_FUNC_INFO;
+    qWarning() << Q_FUNC_INFO << "Not implemented";
+    if (error) {
+        *error = QOrganizerManager::NotSupportedError;
+    }
     return QList<QOrganizerItem>();
+
 }
 
 void QOrganizerEDSEngine::saveItemsAsync(QOrganizerItemSaveRequest *req)
 {
-    qDebug() << Q_FUNC_INFO;
     if (req->items().count() == 0) {
         QOrganizerManagerEngine::updateItemSaveRequest(req,
                                                        QList<QOrganizerItem>(),
@@ -480,7 +456,6 @@ void QOrganizerEDSEngine::saveItemsAsync(QOrganizerItemSaveRequest *req)
 
 void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
 {
-    qDebug() << Q_FUNC_INFO;
     QString collectionId = data->nextCollection();
 
     if (collectionId.isNull() && data->end()) {
@@ -502,12 +477,10 @@ void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
 
         if (collectionId.isEmpty() && createItems) {
             collectionId = data->parent()->d->m_sourceRegistry->defaultCollection().id().toString();
-            qDebug() << "Use default collection to save item with empty collection:" << collectionId;
         }
 
         EClient *client = data->parent()->d->m_sourceRegistry->client(collectionId);
         if (!client) {
-            qWarning() << "Trying to save items with invalid collection" << collectionId;
             Q_FOREACH(const QOrganizerItem &i, items) {
                 data->appendResult(i, QOrganizerManager::InvalidCollectionError);
             }
@@ -548,7 +521,6 @@ void QOrganizerEDSEngine::saveItemsAsyncModified(GObject *source_object,
                                                 GAsyncResult *res,
                                                 SaveRequestData *data)
 {
-    qDebug() << Q_FUNC_INFO;
     Q_UNUSED(source_object);
 
     GError *gError = 0;
@@ -575,7 +547,6 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
                                                 GAsyncResult *res,
                                                 SaveRequestData *data)
 {
-    qDebug() << Q_FUNC_INFO;
     Q_UNUSED(source_object);
 
     GError *gError = 0;
@@ -624,7 +595,6 @@ bool QOrganizerEDSEngine::saveItems(QList<QtOrganizer::QOrganizerItem> *items,
                                     QtOrganizer::QOrganizerManager::Error *error)
 
 {
-    qDebug() << Q_FUNC_INFO;
     QOrganizerItemSaveRequest *req = new QOrganizerItemSaveRequest(this);
     req->setItems(*items);
     req->setDetailMask(detailMask);
@@ -641,7 +611,6 @@ bool QOrganizerEDSEngine::saveItems(QList<QtOrganizer::QOrganizerItem> *items,
 
 void QOrganizerEDSEngine::removeItemsByIdAsync(QOrganizerItemRemoveByIdRequest *req)
 {
-    qDebug() << Q_FUNC_INFO;
     if (req->itemIds().count() == 0) {
         QOrganizerManagerEngine::updateItemRemoveByIdRequest(req,
                                                              QOrganizerManager::NoError,
@@ -656,7 +625,6 @@ void QOrganizerEDSEngine::removeItemsByIdAsync(QOrganizerItemRemoveByIdRequest *
 
 void QOrganizerEDSEngine::removeItemsByIdAsyncStart(RemoveByIdRequestData *data)
 {
-    qDebug() << Q_FUNC_INFO;
     QString collectionId = data->next();
     for(; !collectionId.isNull(); collectionId = data->next()) {
         EClient *client = data->parent()->d->m_sourceRegistry->client(collectionId);
@@ -679,7 +647,6 @@ void QOrganizerEDSEngine::removeItemsByIdAsyncStart(RemoveByIdRequestData *data)
 
 void QOrganizerEDSEngine::removeItemsAsync(QOrganizerItemRemoveRequest *req)
 {
-    qDebug() << Q_FUNC_INFO;
     if (req->items().count() == 0) {
         QOrganizerManagerEngine::updateItemRemoveRequest(req,
                                                          QOrganizerManager::NoError,
@@ -694,7 +661,6 @@ void QOrganizerEDSEngine::removeItemsAsync(QOrganizerItemRemoveRequest *req)
 
 void QOrganizerEDSEngine::removeItemsAsyncStart(RemoveRequestData *data)
 {
-    qDebug() << Q_FUNC_INFO;
     QOrganizerCollectionId collection = data->next();
     for(; !collection.isNull(); collection = data->next()) {
         EClient *client = data->parent()->d->m_sourceRegistry->client(collection.toString());
@@ -719,8 +685,6 @@ bool QOrganizerEDSEngine::removeItems(const QList<QOrganizerItemId> &itemIds,
                                       QMap<int, QOrganizerManager::Error> *errorMap,
                                       QOrganizerManager::Error *error)
 {
-    qDebug() << Q_FUNC_INFO;
-
     QOrganizerItemRemoveByIdRequest *req = new QOrganizerItemRemoveByIdRequest(this);
     req->setItemIds(itemIds);
     startRequest(req);
@@ -738,7 +702,7 @@ bool QOrganizerEDSEngine::removeItems(const QList<QOrganizerItemId> &itemIds,
 
 QOrganizerCollection QOrganizerEDSEngine::defaultCollection(QOrganizerManager::Error* error)
 {
-    qDebug() << Q_FUNC_INFO;
+    qWarning() << Q_FUNC_INFO << "Not implemented";
     if (error) {
         *error = QOrganizerManager::NoError;
     }
@@ -748,7 +712,6 @@ QOrganizerCollection QOrganizerEDSEngine::defaultCollection(QOrganizerManager::E
 QOrganizerCollection QOrganizerEDSEngine::collection(const QOrganizerCollectionId& collectionId,
                                                      QOrganizerManager::Error* error)
 {
-    qDebug() << Q_FUNC_INFO;
     QOrganizerCollection collection = d->m_sourceRegistry->collection(collectionId.toString());
     if (collection.id().isNull() && error) {
         *error = QOrganizerManager::DoesNotExistError;
@@ -759,8 +722,6 @@ QOrganizerCollection QOrganizerEDSEngine::collection(const QOrganizerCollectionI
 
 QList<QOrganizerCollection> QOrganizerEDSEngine::collections(QOrganizerManager::Error* error)
 {
-    qDebug() << Q_FUNC_INFO;
-
     QOrganizerCollectionFetchRequest *req = new QOrganizerCollectionFetchRequest(this);
 
     startRequest(req);
@@ -777,7 +738,6 @@ QList<QOrganizerCollection> QOrganizerEDSEngine::collections(QOrganizerManager::
 
 bool QOrganizerEDSEngine::saveCollection(QOrganizerCollection* collection, QOrganizerManager::Error* error)
 {
-    qDebug() << Q_FUNC_INFO;
     QOrganizerCollectionSaveRequest *req = new QOrganizerCollectionSaveRequest(this);
     req->setCollection(*collection);
 
@@ -796,8 +756,6 @@ bool QOrganizerEDSEngine::saveCollection(QOrganizerCollection* collection, QOrga
 
 void QOrganizerEDSEngine::saveCollectionAsync(QOrganizerCollectionSaveRequest *req)
 {
-    qDebug() << Q_FUNC_INFO;
-
     if (req->collections().count() == 0) {
         QOrganizerManagerEngine::updateCollectionSaveRequest(req,
                                                              QList<QOrganizerCollection>(),
@@ -827,7 +785,6 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
                                                       GAsyncResult *res,
                                                       SaveCollectionRequestData *data)
 {
-    qDebug() << Q_FUNC_INFO;
     GError *gError = 0;
     e_source_registry_create_sources_finish(registry, res, &gError);
     QCoreApplication::processEvents();
@@ -882,8 +839,6 @@ void QOrganizerEDSEngine::saveCollectionUpdateAsynCommited(ESourceRegistry *regi
 
 bool QOrganizerEDSEngine::removeCollection(const QOrganizerCollectionId& collectionId, QOrganizerManager::Error* error)
 {
-    qDebug() << Q_FUNC_INFO;
-
     QOrganizerCollectionRemoveRequest *req = new QOrganizerCollectionRemoveRequest(this);
     req->setCollectionId(collectionId);
 
@@ -896,8 +851,6 @@ bool QOrganizerEDSEngine::removeCollection(const QOrganizerCollectionId& collect
 
 void QOrganizerEDSEngine::removeCollectionAsync(QtOrganizer::QOrganizerCollectionRemoveRequest *req)
 {
-    qDebug() << Q_FUNC_INFO;
-
     if (req->collectionIds().count() == 0) {
         QOrganizerManagerEngine::updateCollectionRemoveRequest(req,
                                                              QOrganizerManager::NoError,
@@ -954,7 +907,6 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
 
 void QOrganizerEDSEngine::requestDestroyed(QOrganizerAbstractRequest* req)
 {
-    qDebug() << Q_FUNC_INFO;
     RequestData *data = m_runningRequests.take(req);
     if (data) {
         delete data;
@@ -963,8 +915,6 @@ void QOrganizerEDSEngine::requestDestroyed(QOrganizerAbstractRequest* req)
 
 bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
 {
-    qDebug() << Q_FUNC_INFO;
-
     if (!req)
         return false;
 
@@ -1011,7 +961,6 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
 
 bool QOrganizerEDSEngine::cancelRequest(QOrganizerAbstractRequest* req)
 {
-    qDebug() << Q_FUNC_INFO;
     RequestData *data = m_runningRequests.take(req);
     if (data) {
         data->cancel();
@@ -1023,7 +972,6 @@ bool QOrganizerEDSEngine::cancelRequest(QOrganizerAbstractRequest* req)
 
 bool QOrganizerEDSEngine::waitForRequestFinished(QOrganizerAbstractRequest* req, int msecs)
 {
-    qDebug() << Q_FUNC_INFO;
     Q_ASSERT(req);
     Q_UNUSED(msecs);
 
@@ -1125,13 +1073,11 @@ QList<QOrganizerItemType::ItemType> QOrganizerEDSEngine::supportedItemTypes() co
 
 void QOrganizerEDSEngine::onSourceAdded(const QString &collectionId)
 {
-    qDebug() << Q_FUNC_INFO << collectionId;
     d->watch(collectionId);
 }
 
 void QOrganizerEDSEngine::onSourceRemoved(const QString &collectionId)
 {
-    qDebug() << Q_FUNC_INFO << (void*) this;
     d->unWatch(collectionId);
 }
 
@@ -2077,7 +2023,6 @@ ECalComponent *QOrganizerEDSEngine::createDefaultComponent(ECalClient *client,
 
 ECalComponent *QOrganizerEDSEngine::parseEventItem(ECalClient *client, const QOrganizerItem &item)
 {
-    qDebug() << Q_FUNC_INFO;
     ECalComponent *comp = createDefaultComponent(client, ICAL_VEVENT_COMPONENT, E_CAL_COMPONENT_EVENT);
 
     parseStartTime(item, comp);
@@ -2091,7 +2036,6 @@ ECalComponent *QOrganizerEDSEngine::parseEventItem(ECalClient *client, const QOr
 
 ECalComponent *QOrganizerEDSEngine::parseTodoItem(ECalClient *client, const QOrganizerItem &item)
 {
-    qDebug() << Q_FUNC_INFO;
     ECalComponent *comp = createDefaultComponent(client, ICAL_VTODO_COMPONENT, E_CAL_COMPONENT_TODO);
 
     parseTodoStartTime(item, comp);
@@ -2106,7 +2050,6 @@ ECalComponent *QOrganizerEDSEngine::parseTodoItem(ECalClient *client, const QOrg
 
 ECalComponent *QOrganizerEDSEngine::parseJournalItem(ECalClient *client, const QOrganizerItem &item)
 {
-    qDebug() << Q_FUNC_INFO;
     ECalComponent *comp = createDefaultComponent(client, ICAL_VJOURNAL_COMPONENT, E_CAL_COMPONENT_JOURNAL);
 
     QOrganizerJournalTime jtime = item.detail(QOrganizerItemDetail::TypeJournalTime);

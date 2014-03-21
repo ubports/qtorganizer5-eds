@@ -91,9 +91,6 @@ void ViewWatcher::viewReady(GObject *sourceObject, GAsyncResult *res, ViewWatche
                        << gError->message;
             g_error_free(gError);
             gError = 0;
-        } else {
-            qDebug() << "Listening for changes on ("
-                     << self->m_collectionId << ")";
         }
     }
     g_clear_object(&self->m_cancellable);
@@ -155,7 +152,6 @@ void ViewWatcher::onObjectsAdded(ECalClientView *view,
                                  GSList *objects,
                                  ViewWatcher *self)
 {
-    qDebug() << Q_FUNC_INFO << (void*)self;
     Q_UNUSED(view);
 
     QOrganizerItemChangeSet changeSet;
@@ -167,7 +163,6 @@ void ViewWatcher::onObjectsRemoved(ECalClientView *view,
                                    GSList *objects,
                                    ViewWatcher *self)
 {
-    qDebug() << Q_FUNC_INFO << (void*)self;
     Q_UNUSED(view);
     QOrganizerItemChangeSet changeSet;
 
@@ -185,7 +180,6 @@ void ViewWatcher::onObjectsModified(ECalClientView *view,
                                     GSList *objects,
                                     ViewWatcher *self)
 {
-    qDebug() << Q_FUNC_INFO << (void*)self;
     Q_UNUSED(view);
 
     QOrganizerItemChangeSet changeSet;
