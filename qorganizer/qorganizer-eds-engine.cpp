@@ -1708,7 +1708,7 @@ void QOrganizerEDSEngine::parseStartTime(const QOrganizerItem &item, ECalCompone
         QByteArray tzId;
         struct icaltimetype ict = fromQDateTime(etr.startDateTime(), etr.isAllDay(), &tzId);
         ECalComponentDateTime dt;
-        dt.tzid = tzId.constData();
+        dt.tzid = tzId.isEmpty() ? NULL : tzId.constData();
         dt.value = &ict;
         e_cal_component_set_dtstart(comp, &dt);
     }
@@ -1721,7 +1721,7 @@ void QOrganizerEDSEngine::parseEndTime(const QOrganizerItem &item, ECalComponent
         QByteArray tzId;
         struct icaltimetype ict = fromQDateTime(etr.endDateTime(), etr.isAllDay(), &tzId);
         ECalComponentDateTime dt;
-        dt.tzid = tzId.constData();
+        dt.tzid = tzId.isEmpty() ? NULL : tzId.constData();
         dt.value = &ict;
         e_cal_component_set_dtend(comp, &dt);
     }
@@ -1734,9 +1734,8 @@ void QOrganizerEDSEngine::parseTodoStartTime(const QOrganizerItem &item, ECalCom
         QByteArray tzId;
         struct icaltimetype ict = fromQDateTime(etr.startDateTime(), etr.isAllDay(), &tzId);
         ECalComponentDateTime dt;
-        dt.tzid = tzId.constData();
+        dt.tzid = tzId.isEmpty() ? NULL : tzId.constData();
         dt.value = &ict;
-        qDebug() << "Save start datetime as" << dt.tzid;
         e_cal_component_set_dtstart(comp, &dt);;
     }
 }
@@ -1908,7 +1907,7 @@ void QOrganizerEDSEngine::parseDueDate(const QtOrganizer::QOrganizerItem &item, 
         QByteArray tzId;
         struct icaltimetype ict = fromQDateTime(ttr.dueDateTime(), ttr.isAllDay(), &tzId);
         ECalComponentDateTime dt;
-        dt.tzid = tzId.constData();
+        dt.tzid = tzId.isEmpty() ? NULL : tzId.constData();
         dt.value = &ict;
         e_cal_component_set_due(comp, &dt);;
     }
@@ -2086,7 +2085,7 @@ ECalComponent *QOrganizerEDSEngine::parseJournalItem(ECalClient *client, const Q
         QByteArray tzId;
         struct icaltimetype ict = fromQDateTime(jtime.entryDateTime(), false, &tzId);
         ECalComponentDateTime dt;
-        dt.tzid = tzId.constData();
+        dt.tzid = tzId.isEmpty() ? NULL : tzId.constData();
         dt.value = &ict;
         e_cal_component_set_dtstart(comp, &dt);
     }
