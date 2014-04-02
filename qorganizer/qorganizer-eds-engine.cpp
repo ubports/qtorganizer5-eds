@@ -1095,10 +1095,13 @@ void QOrganizerEDSEngine::onViewChanged(QOrganizerItemChangeSet *change)
 
 QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const char *tzId)
 {
-    uint tmTime = icaltime_as_timet(value);
+    uint tmTime;
     if (tzId) {
+        const icaltimezone *timezone = const_cast<const icaltimezone *>(icaltimezone_get_builtin_timezone(tzId));
+        tmTime = icaltime_as_timet_with_zone(value, timezone);
         return QDateTime::fromTime_t(tmTime, QTimeZone(tzId));
     } else {
+        tmTime = icaltime_as_timet(value);
         return QDateTime::fromTime_t(tmTime);
     }
 }
@@ -1107,10 +1110,16 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
                                                 bool allDay,
                                                 QByteArray *tzId)
 {
+
     if (dateTime.timeSpec() == Qt::TimeZone) {
+        const icaltimezone *timezone = 0;
         *tzId = dateTime.timeZone().id();
+        timezone = const_cast<const icaltimezone *>(icaltimezone_get_builtin_timezone(tzId->constData()));
+        return icaltime_from_timet_with_zone(dateTime.toTime_t(), allDay, timezone);
+    } else {
+        return icaltime_from_timet(dateTime.toTime_t(), allDay);
     }
-    return icaltime_from_timet(dateTime.toTime_t(), allDay);
+
 }
 
 void QOrganizerEDSEngine::parseStartTime(ECalComponent *comp, QOrganizerItem *item)
