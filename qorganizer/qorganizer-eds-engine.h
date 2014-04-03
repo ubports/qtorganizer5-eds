@@ -190,7 +190,8 @@ private:
     static void parseStatus(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseAttendeeList(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
 
-    static QDateTime fromIcalTime(struct icaltimetype value);
+    static QDateTime fromIcalTime(struct icaltimetype value, const char *tzId);
+    static icaltimetype fromQDateTime(const QDateTime &dateTime, bool allDay, QByteArray *tzId);
 
     static QtOrganizer::QOrganizerItem *parseEvent(ECalComponent *comp);
     static QtOrganizer::QOrganizerItem *parseToDo(ECalComponent *comp);

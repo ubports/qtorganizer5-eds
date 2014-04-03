@@ -34,9 +34,8 @@
 
 #include <QtCore/qdebug.h>
 #include <QtCore/QPointer>
-#include <QtCore/qstringbuilder.h>
-#include <QtCore/quuid.h>
 #include <QtCore/QCoreApplication>
+#include <QtCore/QTimeZone>
 
 #include <QtOrganizer/QOrganizerEventAttendee>
 #include <QtOrganizer/QOrganizerItemLocation>
@@ -1094,10 +1093,37 @@ void QOrganizerEDSEngine::onViewChanged(QOrganizerItemChangeSet *change)
     change->emitSignals(this);
 }
 
-QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value)
+QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const char *tzId)
 {
-    uint tmTime = icaltime_as_timet(value);
-    return QDateTime::fromTime_t(tmTime);
+    uint tmTime;
+
+    if (tzId) {
+        QByteArray tzName(tzId);
+        // keep only the timezone name.
+        tzName = tzName.replace("/freeassociation.sourceforge.net/Tzfile/", "");
+        const icaltimezone *timezone = const_cast<const icaltimezone *>(icaltimezone_get_builtin_timezone(tzName.constData()));
+        tmTime = icaltime_as_timet_with_zone(value, timezone);
+        return QDateTime::fromTime_t(tmTime, QTimeZone(tzId));
+    } else {
+        tmTime = icaltime_as_timet(value);
+        return QDateTime::fromTime_t(tmTime);
+    }
+}
+
+icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
+                                                bool allDay,
+                                                QByteArray *tzId)
+{
+
+    if (dateTime.timeSpec() == Qt::TimeZone) {
+        const icaltimezone *timezone = 0;
+        *tzId = dateTime.timeZone().id();
+        timezone = const_cast<const icaltimezone *>(icaltimezone_get_builtin_timezone(tzId->constData()));
+        return icaltime_from_timet_with_zone(dateTime.toTime_t(), allDay, timezone);
+    } else {
+        return icaltime_from_timet(dateTime.toTime_t(), allDay);
+    }
+
 }
 
 void QOrganizerEDSEngine::parseStartTime(ECalComponent *comp, QOrganizerItem *item)
@@ -1106,7 +1132,7 @@ void QOrganizerEDSEngine::parseStartTime(ECalComponent *comp, QOrganizerItem *it
     e_cal_component_get_dtstart(comp, dt);
     if (dt->value) {
         QOrganizerEventTime etr = item->detail(QOrganizerItemDetail::TypeEventTime);
-        etr.setStartDateTime(fromIcalTime(*dt->value));
+        etr.setStartDateTime(fromIcalTime(*dt->value, dt->tzid));
         if (icaltime_is_date(*dt->value) != etr.isAllDay()) {
             etr.setAllDay(icaltime_is_date(*dt->value));
         }
@@ -1121,7 +1147,7 @@ void QOrganizerEDSEngine::parseTodoStartTime(ECalComponent *comp, QOrganizerItem
     e_cal_component_get_dtstart(comp, dt);
     if (dt->value) {
         QOrganizerTodoTime etr = item->detail(QOrganizerItemDetail::TypeTodoTime);
-        etr.setStartDateTime(fromIcalTime(*dt->value));
+        etr.setStartDateTime(fromIcalTime(*dt->value, dt->tzid));
         if (icaltime_is_date(*dt->value) != etr.isAllDay()) {
             etr.setAllDay(icaltime_is_date(*dt->value));
         }
@@ -1136,7 +1162,7 @@ void QOrganizerEDSEngine::parseEndTime(ECalComponent *comp, QOrganizerItem *item
     e_cal_component_get_dtend(comp, dt);
     if (dt->value) {
         QOrganizerEventTime etr = item->detail(QOrganizerItemDetail::TypeEventTime);
-        etr.setEndDateTime(fromIcalTime(*dt->value));
+        etr.setEndDateTime(fromIcalTime(*dt->value, dt->tzid));
         if (icaltime_is_date(*dt->value) != etr.isAllDay()) {
             etr.setAllDay(icaltime_is_date(*dt->value));
         }
@@ -1217,7 +1243,7 @@ void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *i
         e_cal_component_get_rdate_list(comp, &periodList);
         for(GSList *i = periodList; i != 0; i = i->next) {
             ECalComponentPeriod *period = (ECalComponentPeriod*) i->data;
-            QDateTime dt = fromIcalTime(period->start);
+            QDateTime dt = fromIcalTime(period->start, 0);
             dates.insert(dt.date());
             //TODO: period.end, period.duration
         }
@@ -1235,7 +1261,7 @@ void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *i
         e_cal_component_get_exdate_list(comp, &exdateList);
         for(GSList *i = exdateList; i != 0; i = i->next) {
             ECalComponentDateTime* dateTime = (ECalComponentDateTime*) i->data;
-            QDateTime dt = fromIcalTime(*dateTime->value);
+            QDateTime dt = fromIcalTime(*dateTime->value, dateTime->tzid);
             dates.insert(dt.date());
         }
         e_cal_component_free_exdate_list(exdateList);
@@ -1280,7 +1306,7 @@ void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *i
             if (rule->count > 0) {
                 qRule.setLimit(rule->count);
             } else {
-                QDateTime dt = fromIcalTime(rule->until);
+                QDateTime dt = fromIcalTime(rule->until, 0);
                 if (dt.isValid()) {
                     qRule.setLimit(dt.date());
                 } else {
@@ -1346,7 +1372,7 @@ void QOrganizerEDSEngine::parseDueDate(ECalComponent *comp, QOrganizerItem *item
     e_cal_component_get_due(comp, &due);
     if (due.value) {
         QOrganizerTodoTime ttr = item->detail(QOrganizerItemDetail::TypeTodoTime);
-        ttr.setDueDateTime(fromIcalTime(*due.value));
+        ttr.setDueDateTime(fromIcalTime(*due.value, due.tzid));
         if (icaltime_is_date(*due.value) != ttr.isAllDay()) {
             ttr.setAllDay(icaltime_is_date(*due.value));
         }
@@ -1488,7 +1514,7 @@ QOrganizerItem *QOrganizerEDSEngine::parseJournal(ECalComponent *comp)
     e_cal_component_get_dtstart(comp, &dt);
     if (dt.value) {
         QOrganizerJournalTime jtime;
-        jtime.setEntryDateTime(fromIcalTime(*dt.value));
+        jtime.setEntryDateTime(fromIcalTime(*dt.value, dt.tzid));
         journal->saveDetail(&jtime);
     }
     e_cal_component_free_datetime(&dt);
@@ -1692,9 +1718,10 @@ void QOrganizerEDSEngine::parseStartTime(const QOrganizerItem &item, ECalCompone
 {
     QOrganizerEventTime etr = item.detail(QOrganizerItemDetail::TypeEventTime);
     if (!etr.isEmpty()) {
-        struct icaltimetype ict = icaltime_from_timet(etr.startDateTime().toTime_t(), etr.isAllDay());
+        QByteArray tzId;
+        struct icaltimetype ict = fromQDateTime(etr.startDateTime(), etr.isAllDay(), &tzId);
         ECalComponentDateTime dt;
-        dt.tzid = NULL;
+        dt.tzid = tzId.isEmpty() ? NULL : tzId.constData();
         dt.value = &ict;
         e_cal_component_set_dtstart(comp, &dt);
     }
@@ -1704,9 +1731,10 @@ void QOrganizerEDSEngine::parseEndTime(const QOrganizerItem &item, ECalComponent
 {
     QOrganizerEventTime etr = item.detail(QOrganizerItemDetail::TypeEventTime);
     if (!etr.isEmpty()) {
-        struct icaltimetype ict = icaltime_from_timet(etr.endDateTime().toTime_t(), etr.isAllDay());
+        QByteArray tzId;
+        struct icaltimetype ict = fromQDateTime(etr.endDateTime(), etr.isAllDay(), &tzId);
         ECalComponentDateTime dt;
-        dt.tzid = NULL;
+        dt.tzid = tzId.isEmpty() ? NULL : tzId.constData();
         dt.value = &ict;
         e_cal_component_set_dtend(comp, &dt);
     }
@@ -1716,9 +1744,10 @@ void QOrganizerEDSEngine::parseTodoStartTime(const QOrganizerItem &item, ECalCom
 {
     QOrganizerTodoTime etr = item.detail(QOrganizerItemDetail::TypeTodoTime);
     if (!etr.isEmpty()) {
-        struct icaltimetype ict = icaltime_from_timet(etr.startDateTime().toTime_t(), etr.isAllDay());
+        QByteArray tzId;
+        struct icaltimetype ict = fromQDateTime(etr.startDateTime(), etr.isAllDay(), &tzId);
         ECalComponentDateTime dt;
-        dt.tzid = NULL;
+        dt.tzid = tzId.isEmpty() ? NULL : tzId.constData();
         dt.value = &ict;
         e_cal_component_set_dtstart(comp, &dt);;
     }
@@ -1888,9 +1917,10 @@ void QOrganizerEDSEngine::parseDueDate(const QtOrganizer::QOrganizerItem &item, 
 {
     QOrganizerTodoTime ttr = item.detail(QOrganizerItemDetail::TypeTodoTime);
     if (!ttr.isEmpty()) {
-        struct icaltimetype ict = icaltime_from_timet(ttr.dueDateTime().toTime_t(), ttr.isAllDay());
+        QByteArray tzId;
+        struct icaltimetype ict = fromQDateTime(ttr.dueDateTime(), ttr.isAllDay(), &tzId);
         ECalComponentDateTime dt;
-        dt.tzid = NULL;
+        dt.tzid = tzId.isEmpty() ? NULL : tzId.constData();
         dt.value = &ict;
         e_cal_component_set_due(comp, &dt);;
     }
@@ -2065,9 +2095,10 @@ ECalComponent *QOrganizerEDSEngine::parseJournalItem(ECalClient *client, const Q
 
     QOrganizerJournalTime jtime = item.detail(QOrganizerItemDetail::TypeJournalTime);
     if (!jtime.isEmpty()) {
-        struct icaltimetype ict = icaltime_from_timet(jtime.entryDateTime().toTime_t(), FALSE);
+        QByteArray tzId;
+        struct icaltimetype ict = fromQDateTime(jtime.entryDateTime(), false, &tzId);
         ECalComponentDateTime dt;
-        dt.tzid = NULL;
+        dt.tzid = tzId.isEmpty() ? NULL : tzId.constData();
         dt.value = &ict;
         e_cal_component_set_dtstart(comp, &dt);
     }
