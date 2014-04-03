@@ -1,3 +1,13 @@
+qtorganizer5-eds (0.1.1+14.04.20140403.1-0ubuntu1) trusty; urgency=low
+
+  [ Ubuntu daily release ]
+  * New rebuild forced
+
+  [ Renato Araujo Oliveira Filho ]
+  * Initial implementation of time zone support. (LP: #1267814)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 03 Apr 2014 21:23:15 +0000
+
 qtorganizer5-eds (0.1.1+14.04.20140307.1-0ubuntu1) trusty; urgency=low
 
   * New rebuild forced
