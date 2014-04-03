@@ -1096,8 +1096,12 @@ void QOrganizerEDSEngine::onViewChanged(QOrganizerItemChangeSet *change)
 QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const char *tzId)
 {
     uint tmTime;
+
     if (tzId) {
-        const icaltimezone *timezone = const_cast<const icaltimezone *>(icaltimezone_get_builtin_timezone(tzId));
+        QByteArray tzName(tzId);
+        // keep only the timezone name.
+        tzName = tzName.replace("/freeassociation.sourceforge.net/Tzfile/", "");
+        const icaltimezone *timezone = const_cast<const icaltimezone *>(icaltimezone_get_builtin_timezone(tzName.constData()));
         tmTime = icaltime_as_timet_with_zone(value, timezone);
         return QDateTime::fromTime_t(tmTime, QTimeZone(tzId));
     } else {
