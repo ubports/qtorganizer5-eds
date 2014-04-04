@@ -1,3 +1,16 @@
+qtorganizer5-eds (0.1.1+14.04.20140404-0ubuntu1) trusty; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * Implemented support to save changes on collections. Export eds
+    collection color into QOrganizerCollection using
+    "QOrganizerCollection::KeyColor" metadata. Export eds collection
+    type into QOrganizerCollection using "collection-type" extended
+    metadata. Export eds collection selected or not into
+    QOrganizerCollection using "collection-selected" extended metadata.
+    (LP: #1295180)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 04 Apr 2014 19:29:15 +0000
+
 qtorganizer5-eds (0.1.1+14.04.20140403.1-0ubuntu1) trusty; urgency=low
 
   [ Ubuntu daily release ]
