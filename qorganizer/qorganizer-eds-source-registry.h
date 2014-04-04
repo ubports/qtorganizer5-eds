@@ -28,6 +28,9 @@
 
 #include "qorganizer-eds-collection-engineid.h"
 
+#define COLLECTION_CALLENDAR_TYPE_METADATA  "collection-type"
+#define COLLECTION_SELECTED_METADATA        "collection-selected"
+
 class SourceRegistry : public QObject
 {
     Q_OBJECT
@@ -38,6 +41,7 @@ public:
     ESourceRegistry *object() const;
     void load();
     QtOrganizer::QOrganizerCollection defaultCollection() const;
+    QtOrganizer::QOrganizerCollection collection(const QString &collectionId) const;
     QList<QtOrganizer::QOrganizerCollection> collections() const;
     QStringList collectionsIds() const;
     QList<QOrganizerEDSCollectionEngineId*> collectionsEngineIds() const;
@@ -49,6 +53,9 @@ public:
     void remove(const QString &collectionId);
     EClient *client(const QString &collectionId);
     void clear();
+
+    static QtOrganizer::QOrganizerCollection parseSource(ESource *source,
+                                                         QOrganizerEDSCollectionEngineId **edsId);
 
 Q_SIGNALS:
     void sourceAdded(const QString &collectionId);
@@ -72,9 +79,7 @@ private:
 
     QString findCollection(ESource *source) const;
     QtOrganizer::QOrganizerCollection registerSource(ESource *source);
-    void updateCollection(QtOrganizer::QOrganizerCollection *collection, ESource *source);
-    QtOrganizer::QOrganizerCollection parseSource(ESource *source,
-                                                  QOrganizerEDSCollectionEngineId **edsId);
+    static void updateCollection(QtOrganizer::QOrganizerCollection *collection, ESource *source);
 
 
     // glib callback

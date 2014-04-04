@@ -30,15 +30,26 @@ public:
 
     void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
     bool isNew(int index) const;
+    bool prepareToCreate();
+    bool prepareToUpdate();
+    void setRegistry(ESourceRegistry *registry);
+    ESourceRegistry *registry() const;
 
-    GList *sources() const;
-    QList<QtOrganizer::QOrganizerCollection> results() const;
-    void commit(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
+    GList *sourcesToCreate() const;
+    void commitSourceCreated();
+    void commitSourceUpdated(ESource *source, QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
+    ESource *nextSourceToUpdate();
 
 private:
+    GList *m_currentSources;
+    ESourceRegistry *m_registry;
+
     QMap<int, QtOrganizer::QOrganizerManager::Error> m_errorMap;
-    QList<QtOrganizer::QOrganizerCollection> m_results;
-    GList *m_sources;
+    QMap<int, QtOrganizer::QOrganizerCollection> m_results;
+    QMap<int, ESource*> m_sources;    
+    QMap<int, ESource*> m_sourcesToCreate;
+    QMap<int, ESource*> m_sourcesToUpdate;
+    QtOrganizer::QOrganizerCollectionChangeSet m_changeSet;
 
     void parseCollections();
 

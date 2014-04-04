@@ -744,11 +744,16 @@ QOrganizerCollection QOrganizerEDSEngine::defaultCollection(QOrganizerManager::E
     return d->m_sourceRegistry->defaultCollection();
 }
 
-QOrganizerCollection QOrganizerEDSEngine::collection(const QOrganizerCollectionId& collectionId, QOrganizerManager::Error* error)
+QOrganizerCollection QOrganizerEDSEngine::collection(const QOrganizerCollectionId& collectionId,
+                                                     QOrganizerManager::Error* error)
 {
     qDebug() << Q_FUNC_INFO;
-    *error = QOrganizerManager::DoesNotExistError;
-    return QOrganizerCollection();
+    QOrganizerCollection collection = d->m_sourceRegistry->collection(collectionId.toString());
+    if (collection.id().isNull() && error) {
+        *error = QOrganizerManager::DoesNotExistError;
+    }
+
+    return collection;
 }
 
 QList<QOrganizerCollection> QOrganizerEDSEngine::collections(QOrganizerManager::Error* error)
@@ -802,14 +807,19 @@ void QOrganizerEDSEngine::saveCollectionAsync(QOrganizerCollectionSaveRequest *r
     }
 
     ESourceRegistry *registry = d->m_sourceRegistry->object();
-    g_object_ref(registry);
-
     SaveCollectionRequestData *requestData = new SaveCollectionRequestData(this, req);
-    e_source_registry_create_sources(registry,
-                                     requestData->sources(),
-                                     requestData->cancellable(),
-                                     (GAsyncReadyCallback) QOrganizerEDSEngine::saveCollectionAsyncCommited,
-                                     requestData);
+    requestData->setRegistry(registry);
+
+    if (requestData->prepareToCreate()) {
+        e_source_registry_create_sources(registry,
+                                         requestData->sourcesToCreate(),
+                                         requestData->cancellable(),
+                                         (GAsyncReadyCallback) QOrganizerEDSEngine::saveCollectionAsyncCommited,
+                                         requestData);
+    } else {
+        requestData->prepareToUpdate();
+        saveCollectionUpdateAsyncStart(requestData);
+    }
 }
 
 void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
@@ -825,12 +835,48 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
         qWarning() << "Fail to create sources:" << gError->message;
         g_error_free(gError);
         data->finish(QOrganizerManager::InvalidCollectionError);
+        delete data;
+    } else {
+        data->commitSourceCreated();
+        data->prepareToUpdate();
+        saveCollectionUpdateAsyncStart(data);
+    }
+}
+
+void QOrganizerEDSEngine::saveCollectionUpdateAsyncStart(SaveCollectionRequestData *data)
+{
+    ESource *source = data->nextSourceToUpdate();
+    if (source) {
+        e_source_registry_commit_source(data->registry(),
+                                        source,
+                                        data->cancellable(),
+                                        (GAsyncReadyCallback) QOrganizerEDSEngine::saveCollectionUpdateAsynCommited,
+                                        data);
     } else {
         data->finish();
+        delete data;
+    }
+}
+
+void QOrganizerEDSEngine::saveCollectionUpdateAsynCommited(ESourceRegistry *registry,
+                                                           GAsyncResult *res,
+                                                           SaveCollectionRequestData *data)
+{
+    GError *gError = 0;
+    ESource *currentSource = data->nextSourceToUpdate();
+
+    e_source_registry_commit_source_finish(registry, res, &gError);
+    QCoreApplication::processEvents();
+
+    if (gError) {
+        qWarning() << "Fail to update collection" << gError->message;
+        g_error_free(gError);
+        data->commitSourceUpdated(currentSource, QOrganizerManager::InvalidCollectionError);
+    } else {
+        data->commitSourceUpdated(currentSource);
     }
 
-    delete data;
-    g_object_unref(registry);
+    saveCollectionUpdateAsyncStart(data);
 }
 
 bool QOrganizerEDSEngine::removeCollection(const QOrganizerCollectionId& collectionId, QOrganizerManager::Error* error)

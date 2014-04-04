@@ -28,75 +28,121 @@
 
 using namespace QtOrganizer;
 
-#define COLLECTION_CALLENDAR_TYPE_METADATA "collection-type"
-
 SaveCollectionRequestData::SaveCollectionRequestData(QOrganizerEDSEngine *engine,
                                                      QtOrganizer::QOrganizerAbstractRequest *req)
     : RequestData(engine, req),
-      m_sources(0)
+      m_currentSources(0),
+      m_registry(0)
 {
     parseCollections();
 }
 
 SaveCollectionRequestData::~SaveCollectionRequestData()
 {
-    if (m_sources) {
-        g_list_free_full(m_sources, g_object_unref);
-        m_sources = 0;
+    if (m_registry) {
+        g_object_unref(m_registry);
+        m_registry = 0;
+    }
+
+    if (m_currentSources) {
+        g_list_free_full(m_currentSources, g_object_unref);
+        m_currentSources = 0;
     }
 }
 
 void SaveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
 {
-    if (error == QOrganizerManager::NoError) {
-        GList *i = g_list_first(m_sources);
-
-        for(; i != 0; i = i->next) {
-            ESource *source = E_SOURCE(i->data);
-            QOrganizerCollection collection = parent()->d->m_sourceRegistry->insert(source);
-            m_results.append(collection);
-        }
-    } else {
-        qDebug() << "save collection error" << error;
-    }
-
     QOrganizerManagerEngine::updateCollectionSaveRequest(request<QOrganizerCollectionSaveRequest>(),
-                                                         m_results,
+                                                         m_results.values(),
                                                          error,
                                                          m_errorMap,
                                                          QOrganizerAbstractRequest::FinishedState);
 
-    QList<QOrganizerCollectionId> added;
-    Q_FOREACH(const QOrganizerCollection &col, m_results) {
-        added.append(col.id());
+    emitChangeset(&m_changeSet);
+    m_changeSet.clearAll();
+}
+
+void SaveCollectionRequestData::commitSourceCreated()
+{
+    GList *i = g_list_first(m_currentSources);
+
+    for(; i != 0; i = i->next) {
+        ESource *source = E_SOURCE(i->data);
+        QOrganizerCollection collection = parent()->d->m_sourceRegistry->insert(source);
+        m_results.insert(m_sources.key(source), collection);
+        m_changeSet.insertAddedCollection(collection.id());
     }
-
-    QOrganizerCollectionChangeSet cs;
-    cs.insertAddedCollections(added);
-    emitChangeset(&cs);
 }
 
-GList *SaveCollectionRequestData::sources() const
+void SaveCollectionRequestData::commitSourceUpdated(ESource *source,
+                                                    QOrganizerManager::Error error)
 {
-    return m_sources;
+    int index = m_sourcesToUpdate.firstKey();
+    m_sourcesToUpdate.remove(index);
+
+    if (error == QOrganizerManager::NoError) {
+        QOrganizerEDSCollectionEngineId *id;
+        QOrganizerCollection collection = SourceRegistry::parseSource(source, &id);
+        m_results.insert(index, collection);
+        m_changeSet.insertChangedCollection(collection.id());
+    } else {
+        m_errorMap.insert(index, error);
+    }
 }
 
-QList<QOrganizerCollection> SaveCollectionRequestData::results() const
+ESource *SaveCollectionRequestData::nextSourceToUpdate()
 {
-    return m_results;
+    if (m_sourcesToUpdate.size() > 0) {
+        return m_sourcesToUpdate.first();
+    } else {
+        return 0;
+    }
+}
+
+bool SaveCollectionRequestData::prepareToCreate()
+{
+    Q_FOREACH(ESource *source, m_sourcesToCreate.values()) {
+        m_currentSources = g_list_append(m_currentSources, source);
+    }
+    return (g_list_length(m_currentSources) > 0);
+}
+
+bool SaveCollectionRequestData::prepareToUpdate()
+{
+    return (m_sourcesToUpdate.size() > 0);
+}
+
+void SaveCollectionRequestData::setRegistry(ESourceRegistry *registry)
+{
+    if (m_registry) {
+        g_object_unref(m_registry);
+        m_registry = 0;
+    }
+    if (registry) {
+        m_registry = registry;
+        g_object_ref(m_registry);
+    }
+}
+
+ESourceRegistry *SaveCollectionRequestData::registry() const
+{
+    return m_registry;
+}
+
+GList *SaveCollectionRequestData::sourcesToCreate() const
+{
+    return m_currentSources;
 }
 
 void SaveCollectionRequestData::parseCollections()
 {
-    if (m_sources) {
-        g_list_free_full(m_sources, g_object_unref);
-        m_sources = 0;
-    }
-
+    m_sources.clear();
     m_errorMap.clear();
+
     int index = 0;
     Q_FOREACH(const QOrganizerCollection &collection, request<QOrganizerCollectionSaveRequest>()->collections()) {
         ESource *source = 0;
+        bool isNew = true;
         if (collection.id().isNull()) {
             GError *gError = 0;
             source = e_source_new(0, 0, &gError);
@@ -106,15 +152,11 @@ void SaveCollectionRequestData::parseCollections()
                 g_error_free(gError);
                 Q_ASSERT(false);
             }
+            e_source_set_parent(source, "local-stub");
         } else {
-            qDebug() << "Collection update not implemented";
-            Q_ASSERT(false);
+            source = m_parent->d->m_sourceRegistry->source(collection.id().toString());
+            isNew = false;
         }
-
-        e_source_set_parent(source, "local-stub");
-        QString name = collection.metaData(QOrganizerCollection::KeyName).toString();
-        e_source_set_display_name(source, name.toUtf8().data());
-
 
         QVariant callendarType = collection.extendedMetaData(COLLECTION_CALLENDAR_TYPE_METADATA);
         ESourceBackend *extCalendar = 0;
@@ -127,15 +169,38 @@ void SaveCollectionRequestData::parseCollections()
             extCalendar = E_SOURCE_BACKEND(e_source_get_extension(source, E_SOURCE_EXTENSION_CALENDAR));
         }
 
-        if (extCalendar) {
-            e_source_backend_set_backend_name(extCalendar, "local");
-        } else {
-            qWarning() << "Fail to get source callendar";
+
+        if (source) {
+            if (isNew) {
+                if (extCalendar) {
+                    e_source_backend_set_backend_name(extCalendar, "local");
+                } else {
+                    qWarning() << "Fail to get source callendar";
+                }
+            }
+
+            // update name
+            QString name = collection.metaData(QOrganizerCollection::KeyName).toString();
+            e_source_set_display_name(source, name.toUtf8().data());
+
+            // update color
+            QString color = collection.metaData(QOrganizerCollection::KeyColor).toString();
+            e_source_selectable_set_color(E_SOURCE_SELECTABLE(extCalendar), color.toUtf8().data());
+
+            // update selected
+            bool selected = collection.extendedMetaData(COLLECTION_SELECTED_METADATA).toBool();
+            e_source_selectable_set_selected(E_SOURCE_SELECTABLE(extCalendar), selected);
+
+            m_sources.insert(index, source);
+            if (isNew) {
+                m_sourcesToCreate.insert(index, source);
+            } else {
+                m_sourcesToUpdate.insert(index, source);
+            }
+            index++;
         }
-        m_sources = g_list_append(m_sources, source);
-        index++;
     }
 
-    qDebug() << "Request with" << g_list_length(m_sources) << "sources";
+    qDebug() << "Request with" << m_sources.size() << "sources";
 }
 
