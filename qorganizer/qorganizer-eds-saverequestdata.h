@@ -39,6 +39,7 @@ public:
     bool end() const;
     void setWorkingItems(QList<QtOrganizer::QOrganizerItem> items);
     QList<QtOrganizer::QOrganizerItem> workingItems() const;
+    int updateMode() const;
 
     void appendResults(QList<QtOrganizer::QOrganizerItem> results);
     void appendResult(const QtOrganizer::QOrganizerItem &item, QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);

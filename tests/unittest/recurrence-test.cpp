@@ -45,8 +45,8 @@ private:
 
         QOrganizerEvent ev;
         ev.setCollectionId(m_collection.id());
-        ev.setStartDateTime(QDateTime(QDate(2013, 12, 2), QTime(0,0,0)));
-        ev.setEndDateTime(QDateTime(QDate(2013, 12, 2), QTime(0,30,0)));
+        ev.setStartDateTime(QDateTime(QDate(2013, 12, 2), QTime(0,0,0), QTimeZone("America/Recife")));
+        ev.setEndDateTime(QDateTime(QDate(2013, 12, 2), QTime(0,30,0), QTimeZone("America/Recife")));
         ev.setDisplayLabel(displayLabelValue);
         ev.setDescription(descriptionValue);
 
@@ -210,9 +210,9 @@ private Q_SLOTS:
         }
     }
 
-    void testReccurenceParentId()
+    void testModifyReccurenceEvents()
     {
-        QOrganizerItemId recurrenceEventId = createTestEvent().id();
+        createTestEvent().id();
 
         QtOrganizer::QOrganizerManager::Error error;
         QOrganizerItemSortOrder sort;
@@ -228,7 +228,7 @@ private Q_SLOTS:
                       hint,
                       &error);
         QCOMPARE(items.count(), 5);
-                QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
 
         // remove only one item
         bool removeResult = m_engine->removeItems(QList<QtOrganizer::QOrganizerItemId>() << items[3].id(), &errorMap, &error);
@@ -253,7 +253,7 @@ private Q_SLOTS:
         updateItem.setDisplayLabel("Updated item 2");
         updateItems << updateItem;
 
-        bool saveResult = m_engine->saveItems(&updateItems,  mask, &errorMap, &error);
+        bool saveResult = m_engine->saveItems(&updateItems, mask, &errorMap, &error);
         QCOMPARE(saveResult, true);
         QCOMPARE(errorMap.size(), 0);
         QCOMPARE(error, QOrganizerManager::NoError);
@@ -392,6 +392,105 @@ private Q_SLOTS:
             QCOMPARE(itemParent.parentId(), parentId);
             QCOMPARE(time.startDateTime(), expectedDates[i]);
         }
+    }
+
+    void testModifyAllRecurrence()
+    {
+        static const QString newDisplayLabel("New Display label for all items");
+        QOrganizerItem item = createTestEvent();
+
+        // edit all items
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QtOrganizer::QOrganizerManager::Error error;
+        QList<QOrganizerItem> updateItems;
+        QList<QtOrganizer::QOrganizerItemDetail::DetailType> mask;
+
+        item.setDisplayLabel(newDisplayLabel);
+        updateItems << item;
+
+        bool saveResult = m_engine->saveItems(&updateItems, mask, &errorMap, &error);
+        QCOMPARE(saveResult, true);
+        QCOMPARE(errorMap.size(), 0);
+        QCOMPARE(error, QOrganizerManager::NoError);
+
+        QOrganizerItemSortOrder sort;
+        QOrganizerItemFetchHint hint;
+        QOrganizerItemFilter filter;
+        QList<QOrganizerItem> items = m_engine->items(filter,
+                                                      QDateTime(QDate(2013, 11, 30), QTime(0,0,0)),
+                                                      QDateTime(QDate(2014, 1, 1), QTime(0,0,0)),
+                                                      100,
+                                                      sort,
+                                                      hint,
+                                                      &error);
+        QCOMPARE(items.count(), 5);
+        Q_FOREACH(const QOrganizerItem &i, items) {
+            QCOMPARE(i.displayLabel(), newDisplayLabel);
+        }
+    }
+
+    void testModifyPriorEvents()
+    {
+        static const QString newDisplayLabel("New Display label for prior items");
+        static const QDateTime startInteval(QDateTime(QDate(2013, 12, 2), QTime(0,0,0), QTimeZone("America/Recife")));
+        static const QDateTime endInteval(QDateTime(QDate(2014, 1, 1), QTime(0,0,0), QTimeZone("America/Recife")));
+
+        QOrganizerItem item = createTestEvent();
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QOrganizerItemFetchHint hint;
+        QList<QOrganizerItem> items;
+
+        items = m_engine->itemOccurrences(item,
+                                          startInteval,
+                                          endInteval,
+                                          100,
+                                          hint,
+                                          &error);
+
+        QCOMPARE(items.count(), 5);
+        // edit only events before 16/12/2013
+        QOrganizerEventOccurrence changeItem = static_cast<QOrganizerEventOccurrence>(items[2]);
+        QDate changeItemDate(2013, 12, 16);
+        QCOMPARE(changeItem.startDateTime().date(), changeItemDate);
+
+        // edit only one item
+        changeItem.setDisplayLabel(newDisplayLabel);
+        changeItem.setDescription("New Event Description");
+
+        QtOrganizer::QOrganizerItemSaveRequest req(m_engine);
+        changeItem.setDisplayLabel(newDisplayLabel);
+        req.setItem(changeItem);
+        req.setProperty("update-mode", 1 << 1);
+
+        m_engine->startRequest(&req);
+        m_engine->waitForRequestFinished(&req, 0);
+        QCOMPARE(req.error(), QtOrganizer::QOrganizerManager::NoError);
+
+        QOrganizerItemSortOrder sort;
+        QOrganizerItemFilter filter;
+
+        items = m_engine->items(filter,
+                                startInteval,
+                                endInteval,
+                                100,
+                                sort,
+                                hint,
+                                &error);
+
+        QCOMPARE(items.count(), 5);
+//FIXME
+#if 0
+        Q_FOREACH(const QOrganizerItem &i, items) {
+            QOrganizerEventOccurrence event = static_cast<QOrganizerEventOccurrence>(i);
+            qDebug() << i.displayLabel() << event.startDateTime().time() << i.description();
+            //if (event.startDateTime().date() <= changeItemDate) {
+            //    QCOMPARE(i.displayLabel(), newDisplayLabel);
+            //} else {
+            //    QCOMPARE(i.displayLabel(), item.displayLabel());
+            //}
+        }
+#endif
     }
 };
 

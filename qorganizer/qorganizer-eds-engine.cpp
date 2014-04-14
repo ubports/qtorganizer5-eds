@@ -303,6 +303,7 @@ void QOrganizerEDSEngine::itemOcurrenceAsync(QOrganizerItemOccurrenceFetchReques
                                 data->cancellable(),
                                 (GAsyncReadyCallback) QOrganizerEDSEngine::itemOcurrenceAsyncGetObjectDone,
                                 data);
+        g_object_unref(client);
     } else {
         qWarning() << "Fail to find collection:" << req->parentItem().collectionId();
         data->finish(QOrganizerManager::DoesNotExistError);
@@ -518,8 +519,10 @@ void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
         data->setClient(client);
         g_object_unref(client);
 
+        bool hasRecurrence = false;
         GSList *comps = parseItems(data->client(),
-                                   items);
+                                   items,
+                                   &hasRecurrence);
         if (comps) {
             data->setWorkingItems(items);
             if (createItems) {
@@ -529,9 +532,20 @@ void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
                                             (GAsyncReadyCallback) QOrganizerEDSEngine::saveItemsAsyncCreated,
                                             data);
             } else {
+                //WORKAROUND: There is no api to say what kind of update we want in case of update recurrence
+                // items (E_CAL_OBJ_MOD_ALL, E_CAL_OBJ_MOD_THIS, E_CAL_OBJ_MOD_THISNADPRIOR, E_CAL_OBJ_MOD_THIS_AND_FUTURE)
+                // as temporary solution the user can use "update-mode" property in QOrganizerItemSaveRequest object,
+                // if not was specified, we will try to guess based on the event list.
+                // If the event list does not cotain any recurrence event we will use E_CAL_OBJ_MOD_ALL
+                // If the event list cotains any recurrence event we will use E_CAL_OBJ_MOD_THIS
+                // all other cases should be explicitly specified using "update-mode" property
+                int updateMode = data->updateMode();
+                if (updateMode == -1) {
+                    updateMode = hasRecurrence ? E_CAL_OBJ_MOD_THIS : E_CAL_OBJ_MOD_ALL;
+                }
                 e_cal_client_modify_objects(data->client(),
                                             comps,
-                                            E_CAL_OBJ_MOD_THIS,
+                                            static_cast<ECalObjModType>(updateMode),
                                             data->cancellable(),
                                             (GAsyncReadyCallback) QOrganizerEDSEngine::saveItemsAsyncModified,
                                             data);
@@ -551,9 +565,10 @@ void QOrganizerEDSEngine::saveItemsAsyncModified(GObject *source_object,
     Q_UNUSED(source_object);
 
     GError *gError = 0;
-    e_cal_client_modify_objects_finish(E_CAL_CLIENT(data->client()),
+    gboolean result = e_cal_client_modify_objects_finish(E_CAL_CLIENT(data->client()),
                                        res,
                                        &gError);
+
     QCoreApplication::processEvents();
 
     if (gError) {
@@ -2305,12 +2320,17 @@ void QOrganizerEDSEngine::parseReminders(const QOrganizerItem &item, ECalCompone
     }
 }
 
-GSList *QOrganizerEDSEngine::parseItems(ECalClient *client, QList<QOrganizerItem> items)
+GSList *QOrganizerEDSEngine::parseItems(ECalClient *client,
+                                        QList<QOrganizerItem> items,
+                                        bool *hasRecurrence)
 {
     GSList *comps = 0;
 
     Q_FOREACH(const QOrganizerItem &item, items) {
         ECalComponent *comp = 0;
+
+        *hasRecurrence = ((item.type() == QOrganizerItemType::TypeTodoOccurrence) ||
+                          (item.type() == QOrganizerItemType::TypeEventOccurrence));
 
         switch(item.type()) {
             case QOrganizerItemType::TypeEvent:
