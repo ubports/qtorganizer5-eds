@@ -1289,6 +1289,7 @@ void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *i
         e_cal_component_get_rdate_list(comp, &periodList);
         for(GSList *i = periodList; i != 0; i = i->next) {
             ECalComponentPeriod *period = (ECalComponentPeriod*) i->data;
+            //TODO: get timezone info
             QDateTime dt = fromIcalTime(period->start, 0);
             dates.insert(dt.date());
             //TODO: period.end, period.duration
@@ -1348,17 +1349,15 @@ void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *i
                     break;
             }
 
-
-            if (rule->count > 0) {
-                qRule.setLimit(rule->count);
-            } else {
-                QDateTime dt = fromIcalTime(rule->until, 0);
+            if (icaltime_is_date(rule->until)) {
+                QDate dt = QDate::fromString(icaltime_as_ical_string(rule->until), "yyyyMMdd");
                 if (dt.isValid()) {
-                    qRule.setLimit(dt.date());
-                } else {
-                    qRule.clearLimit();
+                    qRule.setLimit(dt);
                 }
+            } else {
+                qRule.setLimit(rule->count);
             }
+
             qRule.setInterval(rule->interval);
 
             QSet<int> positions;
