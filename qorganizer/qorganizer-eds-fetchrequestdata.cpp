@@ -134,11 +134,17 @@ QString FetchRequestData::dateFilter()
         return QStringLiteral("#t"); // match all
     }
 
+    gchar *startDateStr = isodate_from_time_t(startDate.toTime_t());
+    gchar *endDateStr = isodate_from_time_t(endDate.toTime_t());
+
 
     QString query = QString("(occur-in-time-range? "
                             "(make-time \"%1\") (make-time \"%2\"))")
-            .arg(isodate_from_time_t(startDate.toTime_t()))
-            .arg(isodate_from_time_t(endDate.toTime_t()));
+            .arg(startDateStr)
+            .arg(endDateStr);
+
+    g_free(startDateStr);
+    g_free(endDateStr);
 
     return query;
 }
