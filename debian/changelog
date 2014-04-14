@@ -1,3 +1,58 @@
+qtorganizer5-eds (0.1.1+14.04.20140404-0ubuntu1) trusty; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * Implemented support to save changes on collections. Export eds
+    collection color into QOrganizerCollection using
+    "QOrganizerCollection::KeyColor" metadata. Export eds collection
+    type into QOrganizerCollection using "collection-type" extended
+    metadata. Export eds collection selected or not into
+    QOrganizerCollection using "collection-selected" extended metadata.
+    (LP: #1295180)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 04 Apr 2014 19:29:15 +0000
+
+qtorganizer5-eds (0.1.1+14.04.20140403.1-0ubuntu1) trusty; urgency=low
+
+  [ Ubuntu daily release ]
+  * New rebuild forced
+
+  [ Renato Araujo Oliveira Filho ]
+  * Initial implementation of time zone support. (LP: #1267814)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 03 Apr 2014 21:23:15 +0000
+
+qtorganizer5-eds (0.1.1+14.04.20140307.1-0ubuntu1) trusty; urgency=low
+
+  * New rebuild forced
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 07 Mar 2014 07:02:56 +0000
+
+qtorganizer5-eds (0.1.1+14.04.20140307-0ubuntu1) trusty; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * Fixed parse from icalrecurrencetype to
+    QtOrganizer::QOrganizerRecurrenceRule for weekly recurrence. (LP:
+    #1285958)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 07 Mar 2014 04:49:19 +0000
+
+qtorganizer5-eds (0.1.1+14.04.20140228.1-0ubuntu1) trusty; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * Make sure to remove the request from internal list when it get
+    destroyed. (LP: #1284587)
+  * Implemented support for QOrganizerItemOccurrenceFetchRequest.
+  * Fixed memory leaks of ECalComponentDateTime object. (LP: #1285056)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 28 Feb 2014 23:37:02 +0000
+
+qtorganizer5-eds (0.1.1+14.04.20140228-0ubuntu1) trusty; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * Fixed compilation with Qt5.2 (LP: #1280281)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 28 Feb 2014 14:58:55 +0000
+
 qtorganizer5-eds (0.1.1+14.04.20140221-0ubuntu1) trusty; urgency=low
 
   [ Renato Araujo Oliveira Filho ]

@@ -32,12 +32,14 @@
 #include <QtOrganizer/QOrganizerItemChangeSet>
 #include <QtOrganizer/QOrganizerCollectionId>
 #include <QtOrganizer/QOrganizerItemReminder>
+#include <QtOrganizer/QOrganizerItemOccurrenceFetchRequest>
 
 #include <libecal/libecal.h>
 
 class RequestData;
 class FetchRequestData;
 class FetchByIdRequestData;
+class FetchOcurrenceData;
 class SaveRequestData;
 class RemoveRequestData;
 class RemoveByIdRequestData;
@@ -188,7 +190,8 @@ private:
     static void parseStatus(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseAttendeeList(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
 
-    static QDateTime fromIcalTime(struct icaltimetype value);
+    static QDateTime fromIcalTime(struct icaltimetype value, const char *tzId);
+    static icaltimetype fromQDateTime(const QDateTime &dateTime, bool allDay, QByteArray *tzId);
 
     static QtOrganizer::QOrganizerItem *parseEvent(ECalComponent *comp);
     static QtOrganizer::QOrganizerItem *parseToDo(ECalComponent *comp);
@@ -204,10 +207,16 @@ private:
     static void itemsAsyncStart(FetchRequestData *data);
     static void itemsAsyncListed(ECalComponent *comp, time_t instanceStart, time_t instanceEnd, FetchRequestData *data);
     static void itemsAsyncDone(FetchRequestData *data);
+    static void itemsAsyncListedAsComps(GObject *source, GAsyncResult *res, FetchRequestData *data);
 
     void itemsByIdAsync(QtOrganizer::QOrganizerItemFetchByIdRequest *req);
     static void itemsByIdAsyncStart(FetchByIdRequestData *data);
     static void itemsByIdAsyncListed(GObject *client, GAsyncResult *res, FetchByIdRequestData *data);
+
+    void itemOcurrenceAsync(QtOrganizer::QOrganizerItemOccurrenceFetchRequest *req);
+    static void itemOcurrenceAsyncGetObjectDone(GObject *source, GAsyncResult *res, FetchOcurrenceData *data);
+    static void itemOcurrenceAsyncListed(ECalComponent *comp, time_t instanceStart, time_t instanceEnd, FetchOcurrenceData *data);
+    static void itemOcurrenceAsyncDone(FetchOcurrenceData *data);
 
     void saveItemsAsync(QtOrganizer::QOrganizerItemSaveRequest *req);
     static void saveItemsAsyncStart(SaveRequestData *data);
@@ -221,7 +230,9 @@ private:
     static void removeItemsAsyncStart(RemoveRequestData *data);
 
     void saveCollectionAsync(QtOrganizer::QOrganizerCollectionSaveRequest *req);
+    static void saveCollectionUpdateAsyncStart(SaveCollectionRequestData *data);
     static void saveCollectionAsyncCommited(ESourceRegistry *registry, GAsyncResult *res, SaveCollectionRequestData *data);
+    static void saveCollectionUpdateAsynCommited(ESourceRegistry *registry, GAsyncResult *res, SaveCollectionRequestData *data);
 
     void removeCollectionAsync(QtOrganizer::QOrganizerCollectionRemoveRequest *req);
     static void removeCollectionAsyncStart(GObject *sourceObject, GAsyncResult *res, RemoveCollectionRequestData *data);
@@ -231,6 +242,7 @@ private:
     friend class RemoveCollectionRequestData;
     friend class ViewWatcher;
     friend class FetchRequestData;
+    friend class FetchOcurrenceData;
 };
 
 #endif

@@ -62,6 +62,7 @@ private Q_SLOTS:
         QOrganizerCollection collection;
         QtOrganizer::QOrganizerManager::Error error;
         collection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName);
+        collection.setMetaData(QOrganizerCollection::KeyColor, QStringLiteral("red"));
 
         QList<QOrganizerCollection> collections = m_engineRead->collections(&error);
         int initalCollectionCount = collections.count();
@@ -73,9 +74,43 @@ private Q_SLOTS:
         collections = m_engineWrite->collections(&error);
         QCOMPARE(collections.count(), initalCollectionCount + 1);
 
-        // wait some time for the changes to propagate
         collections = m_engineRead->collections(&error);
         QCOMPARE(collections.count(), initalCollectionCount + 1);
+
+        // Check if data was correct saved
+        QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), &error);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyName).toString(), defaultCollectionName);
+        QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyColor).toString(), QStringLiteral("red"));
+        QCOMPARE(newCollection.extendedMetaData("collection-type").toString(), QStringLiteral("Calendar"));
+        QCOMPARE(newCollection.extendedMetaData("collection-selected").toBool(), false);
+    }
+
+    void testUpdateCollection()
+    {
+        QOrganizerCollection collection;
+        QtOrganizer::QOrganizerManager::Error error;
+        collection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName);
+        collection.setMetaData(QOrganizerCollection::KeyColor, "red");
+
+        QVERIFY(m_engineWrite->saveCollection(&collection, &error));
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QVERIFY(!collection.id().isNull());
+
+        // update the collection
+        QSignalSpy updateCollection(m_engineWrite, SIGNAL(collectionsChanged(QList<QOrganizerCollectionId>)));
+        collection.setMetaData(QOrganizerCollection::KeyColor, "blue");
+        collection.setExtendedMetaData("collection-selected", true);
+        QVERIFY(m_engineWrite->saveCollection(&collection, &error));
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QTRY_COMPARE(updateCollection.count(), 1);
+
+        // Check if the collection was stored correct
+        QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), &error);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyName).toString(), defaultCollectionName);
+        QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyColor).toString(), QStringLiteral("blue"));
+        QCOMPARE(newCollection.extendedMetaData("collection-selected").toBool(), true);
     }
 
     void testRemoveCollection()
@@ -117,7 +152,7 @@ private Q_SLOTS:
         QVERIFY(!collection.id().isNull());
 
         //verify signal
-        QCOMPARE(createdCollection.count(), 1);
+        QTRY_COMPARE(createdCollection.count(), 1);
         QList<QVariant> args = createdCollection.takeFirst();
         QCOMPARE(args.count(), 1);
 
@@ -159,7 +194,7 @@ private Q_SLOTS:
         appendToRemove(items[0].id());
 
         //verify signal
-        QCOMPARE(createdItem.count(), 1);
+        QTRY_COMPARE(createdItem.count(), 1);
         QList<QVariant> args = createdItem.takeFirst();
         QCOMPARE(args.count(), 1);
 

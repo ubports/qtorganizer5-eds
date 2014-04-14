@@ -206,7 +206,12 @@ private Q_SLOTS:
         // check if the signal item removed was fired after the request finish
         QTRY_VERIFY(m_requestFinishedTime.isValid());
         QTRY_VERIFY(m_itemRemovedTime.isValid());
-        QVERIFY(m_itemRemovedTime > m_requestFinishedTime);
+        if (m_itemRemovedTime < m_requestFinishedTime) {
+            qDebug() << "Item removed before request finish";
+            qDebug() << "Removed time" << m_itemRemovedTime;
+            qDebug() << "RequestFinished time" << m_requestFinishedTime;
+        }
+        QVERIFY(m_itemRemovedTime >= m_requestFinishedTime);
     }
 
     void testRemoveItemById()
@@ -505,6 +510,46 @@ private Q_SLOTS:
 
         // compare start datetime
         QOrganizerTodo newTodo = static_cast<QOrganizerTodo>(items[0]);
+        QCOMPARE(newTodo.startDateTime(), startDateTime);
+    }
+
+    void testCreateWithDiffTimeZone()
+    {
+        static QString displayLabelValue = QStringLiteral("Event with diff timezone");
+        static QString descriptionValue = QStringLiteral("Event with diff timezone description");
+        static QDateTime startDateTime = QDateTime(QDate(2013, 9, 3), QTime(0, 30, 0), QTimeZone("Asia/Bangkok"));
+
+        // create a new item
+        QOrganizerTodo todo;
+        todo.setCollectionId(m_collection.id());
+        todo.setStartDateTime(startDateTime);
+        todo.setDisplayLabel(displayLabelValue);
+        todo.setDescription(descriptionValue);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        items << todo;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QVERIFY(errorMap.isEmpty());
+
+        // query by the new item
+        QOrganizerItemFetchHint hint;
+        QList<QOrganizerItemId> ids;
+        ids << items[0].id();
+        items = m_engine->items(ids, hint, &errorMap, &error);
+        QCOMPARE(items.count(), 1);
+
+        // compare start datetime
+        QOrganizerTodo newTodo = static_cast<QOrganizerTodo>(items[0]);
+        QDateTime newStartDateTime = newTodo.startDateTime();
+        QCOMPARE(newStartDateTime.timeSpec(), Qt::TimeZone);
+        QCOMPARE(newStartDateTime.timeZone(), QTimeZone("Asia/Bangkok"));
         QCOMPARE(newTodo.startDateTime(), startDateTime);
     }
 };
