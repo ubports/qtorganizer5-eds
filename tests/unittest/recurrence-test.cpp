@@ -299,11 +299,11 @@ private Q_SLOTS:
          QCOMPARE(items.count(), 5);
 
          QList<QDateTime> expectedDates;
-         expectedDates << QDateTime(QDate(2013, 12, 2), QTime(0,0,0))
-                       << QDateTime(QDate(2013, 12, 9), QTime(0,0,0))
-                       << QDateTime(QDate(2013, 12, 16), QTime(0,0,0))
-                       << QDateTime(QDate(2013, 12, 23), QTime(0,0,0))
-                       << QDateTime(QDate(2013, 12, 30), QTime(0,0,0));
+         expectedDates << QDateTime(QDate(2013, 12, 2), QTime(0,0,0), QTimeZone("America/Recife"))
+                       << QDateTime(QDate(2013, 12, 9), QTime(0,0,0), QTimeZone("America/Recife"))
+                       << QDateTime(QDate(2013, 12, 16), QTime(0,0,0), QTimeZone("America/Recife"))
+                       << QDateTime(QDate(2013, 12, 23), QTime(0,0,0), QTimeZone("America/Recife"))
+                       << QDateTime(QDate(2013, 12, 30), QTime(0,0,0), QTimeZone("America/Recife"));
          for(int i=0; i < 5; i++) {
              QCOMPARE(items[i].type(), QOrganizerItemType::TypeEventOccurrence);
              QOrganizerEventTime time = items[i].detail(QOrganizerItemDetail::TypeEventTime);
@@ -318,8 +318,8 @@ private Q_SLOTS:
 
         QOrganizerEvent ev;
         ev.setCollectionId(m_collection.id());
-        ev.setStartDateTime(QDateTime(QDate(2014, 03, 1), QTime(0,0,0)));
-        ev.setEndDateTime(QDateTime(QDate(2014, 03, 1), QTime(0,30,0)));
+        ev.setStartDateTime(QDateTime(QDate(2014, 03, 1), QTime(0,0,0), QTimeZone("America/Recife")));
+        ev.setEndDateTime(QDateTime(QDate(2014, 03, 1), QTime(0,30,0), QTimeZone("America/Recife")));
         ev.setDisplayLabel(displayLabelValue);
         ev.setDescription(descriptionValue);
 
@@ -378,12 +378,12 @@ private Q_SLOTS:
                                 &error);
 
         QList<QDateTime> expectedDates;
-        expectedDates << QDateTime(QDate(2014, 03, 1), QTime(0,0,0))
-                      << QDateTime(QDate(2014, 03, 2), QTime(0,0,0))
-                      << QDateTime(QDate(2014, 03, 4), QTime(0,0,0))
-                      << QDateTime(QDate(2014, 03, 5), QTime(0,0,0))
-                      << QDateTime(QDate(2014, 03, 6), QTime(0,0,0))
-                      << QDateTime(QDate(2014, 03, 7), QTime(0,0,0));
+        expectedDates << QDateTime(QDate(2014, 03, 1), QTime(0,0,0), QTimeZone("America/Recife"))
+                      << QDateTime(QDate(2014, 03, 2), QTime(0,0,0), QTimeZone("America/Recife"))
+                      << QDateTime(QDate(2014, 03, 4), QTime(0,0,0), QTimeZone("America/Recife"))
+                      << QDateTime(QDate(2014, 03, 5), QTime(0,0,0), QTimeZone("America/Recife"))
+                      << QDateTime(QDate(2014, 03, 6), QTime(0,0,0), QTimeZone("America/Recife"))
+                      << QDateTime(QDate(2014, 03, 7), QTime(0,0,0), QTimeZone("America/Recife"));
 
         QCOMPARE(items.count(), expectedDates.size());
         for(int i=0, iMax=expectedDates.size(); i < iMax; i++) {
