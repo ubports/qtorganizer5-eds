@@ -1,3 +1,18 @@
+qtorganizer5-eds (0.1.1+14.04.20140415.1-0ubuntu1) trusty; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * Optimize eventid parse, and avoid memory leak. (LP: #1306112)
+  * Used alarm component description as message field for visual
+    reminders. (LP: #1284375)
+  * Implemented support to update recurrence items with different modes.
+    All (E_CAL_OBJ_MOD_ALL);. A single instance (E_CAL_OBJ_MOD_THIS),. A
+    specific set of instances (E_CAL_OBJ_MOD_THIS_AND_PRIOR and
+    E_CAL_OBJ_MOD_THIS_AND_FUTURE) (LP: #1283859)
+  * Fixed recurrence date limit parse. (LP: #1292554)
+  * Removed all debug messages. (LP: #1294426)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 15 Apr 2014 19:43:13 +0000
+
 qtorganizer5-eds (0.1.1+14.04.20140404-0ubuntu1) trusty; urgency=low
 
   [ Renato Araujo Oliveira Filho ]
