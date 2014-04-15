@@ -139,7 +139,7 @@ private:
     QMap<QtOrganizer::QOrganizerAbstractRequest*, RequestData*> m_runningRequests;
 
     QList<QtOrganizer::QOrganizerItem> parseEvents(const QString &collectionId, GSList *events, bool isIcalEvents);
-    static GSList *parseItems(ECalClient *client, QList<QtOrganizer::QOrganizerItem> items);
+    static GSList *parseItems(ECalClient *client, QList<QtOrganizer::QOrganizerItem> items, bool *hasRecurrence);
 
     // QOrganizerItem -> ECalComponent
     static void parseId(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);

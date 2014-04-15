@@ -22,6 +22,8 @@
 #include <QtOrganizer/QOrganizerManagerEngine>
 #include <QtOrganizer/QOrganizerItemSaveRequest>
 
+#define UPDATE_MODE_PROPRETY        "update-mode"
+
 using namespace QtOrganizer;
 
 SaveRequestData::SaveRequestData(QOrganizerEDSEngine *engine,
@@ -131,4 +133,17 @@ void SaveRequestData::setWorkingItems(QList<QOrganizerItem> items)
 QList<QOrganizerItem> SaveRequestData::workingItems() const
 {
     return m_workingItems;
+}
+
+int SaveRequestData::updateMode() const
+{
+    // due the lack of API we will use the QObject proprety "update-mode" to allow specify wich kind of
+    // update the developer want
+    QOrganizerItemSaveRequest *req = request<QOrganizerItemSaveRequest>();
+    QVariant updateMode = req->property(UPDATE_MODE_PROPRETY);
+    if (updateMode.isValid()) {
+        return updateMode.toInt();
+    } else {
+        return -1;
+    }
 }
