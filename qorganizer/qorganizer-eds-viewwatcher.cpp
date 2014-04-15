@@ -138,12 +138,14 @@ QList<QOrganizerItemId> ViewWatcher::parseItemIds(GSList *objects)
 
     for (GSList *l = objects; l; l = l->next) {
         const gchar *uid = 0;
-        ECalComponent *comp;
+        icalcomponent *icalcomp = static_cast<icalcomponent*>(l->data);
+        icalproperty *prop = icalcomponent_get_first_property(icalcomp, ICAL_UID_PROPERTY);
+        if (prop) {
+            uid = icalproperty_get_uid(prop);
+        } else {
+            qWarning() << "Fail to parse component ID";
+        }
 
-        icalcomponent *clone = icalcomponent_new_clone(static_cast<icalcomponent*>(l->data));
-        comp = e_cal_component_new_from_icalcomponent(clone);
-
-        e_cal_component_get_uid(comp, &uid);
         QOrganizerEDSEngineId *itemId = new QOrganizerEDSEngineId(m_collectionId,
                                                                   QString::fromUtf8(uid));
         result << QOrganizerItemId(itemId);
