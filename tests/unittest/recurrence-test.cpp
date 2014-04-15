@@ -287,6 +287,13 @@ private Q_SLOTS:
          QCOMPARE(items.count(), 1);
          QCOMPARE(items[0].id(), recurrenceEvent.id());
 
+         QOrganizerEvent parentEvent = static_cast<QOrganizerEvent>(items[0]);
+         QCOMPARE(parentEvent.recurrenceRules().size(), 1);
+
+         // Check if the limit date was saved correct
+         QOrganizerRecurrenceRule rrule = parentEvent.recurrenceRule();
+         QCOMPARE(rrule.limitDate(), QDate(2013, 12, 31));
+
          // query recurrence events for the event
          items = m_engine->itemOccurrences(recurrenceEvent,
                                            QDateTime(QDate(2013, 11, 30), QTime(0,0,0)),
