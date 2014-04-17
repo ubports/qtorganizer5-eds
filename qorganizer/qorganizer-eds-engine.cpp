@@ -1645,6 +1645,8 @@ void QOrganizerEDSEngine::parseReminders(ECalComponent *comp, QtOrganizer::QOrga
         e_cal_component_alarm_get_trigger(alarm, &trigger);
         if (trigger.type == E_CAL_COMPONENT_ALARM_TRIGGER_RELATIVE_START) {
             aDetail->setSecondsBeforeStart(icaldurationtype_as_int(trigger.u.rel_duration) * -1);
+        } else {
+            aDetail->setSecondsBeforeStart(0);
         }
 
         ECalComponentAlarmRepeat aRepeat;
@@ -2176,18 +2178,22 @@ void QOrganizerEDSEngine::parseTags(const QOrganizerItem &item, ECalComponent *c
 
 void QOrganizerEDSEngine::encodeAttachment(const QUrl &url, ECalComponentAlarm *alarm)
 {
-    icalattach *attach = icalattach_new_from_url(url.toString().toUtf8());
-    e_cal_component_alarm_set_attach(alarm, attach);
-    icalattach_unref(attach);
+    if (!url.isEmpty()) {
+        icalattach *attach = icalattach_new_from_url(url.toString().toUtf8());
+        e_cal_component_alarm_set_attach(alarm, attach);
+        icalattach_unref(attach);
+    }
 }
 
 void QOrganizerEDSEngine::parseVisualReminderAttachment(const QOrganizerItemDetail &detail, ECalComponentAlarm *alarm)
 {
     ECalComponentText txt;
     QByteArray str = detail.value(QOrganizerItemVisualReminder::FieldMessage).toString().toUtf8();
-    txt.altrep = 0;
-    txt.value = str.constData();
-    e_cal_component_alarm_set_description(alarm, &txt);
+    if (!str.isEmpty()) {
+        txt.altrep = 0;
+        txt.value = str.constData();
+        e_cal_component_alarm_set_description(alarm, &txt);
+    }
     encodeAttachment(detail.value(QOrganizerItemVisualReminder::FieldDataUrl).toUrl(), alarm);
 }
 
@@ -2204,7 +2210,6 @@ void QOrganizerEDSEngine::parseReminders(const QOrganizerItem &item, ECalCompone
 
     Q_FOREACH(const QOrganizerItemDetail &detail, reminders) {
         const QOrganizerItemReminder *reminder = static_cast<const QOrganizerItemReminder*>(&detail);
-
         ECalComponentAlarm *alarm = e_cal_component_alarm_new();
         switch(reminder->type())
         {

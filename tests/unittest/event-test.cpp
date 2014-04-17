@@ -165,6 +165,83 @@ private Q_SLOTS:
         QCOMPARE(vReminder2.message(), vReminder.message());
     }
 
+    void testCreateEventWithEmptyReminder()
+    {
+        static QString displayLabelValue = QStringLiteral("Todo test with empty reminder");
+        static QString descriptionValue = QStringLiteral("Todo description with empty reminder");
+
+        QOrganizerTodo todo;
+        todo.setCollectionId(m_collection.id());
+        todo.setStartDateTime(QDateTime::currentDateTime());
+        todo.setDisplayLabel(displayLabelValue);
+        todo.setDescription(descriptionValue);
+
+        QOrganizerItemVisualReminder vReminder;
+        vReminder.setDataUrl(QUrl(""));
+        vReminder.setMessage("reminder message");
+
+        QOrganizerItemAudibleReminder aReminder;
+        aReminder.setSecondsBeforeStart(0);
+        aReminder.setDataUrl(QString());
+
+        todo.saveDetail(&aReminder);
+        todo.saveDetail(&vReminder);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        items << todo;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
+
+        // append new item to be removed after the test
+        appendToRemove(items[0].id());
+
+        QOrganizerItemSortOrder sort;
+        QOrganizerItemFetchHint hint;
+        QOrganizerItemIdFilter filter;
+
+        QList<QOrganizerItemId> ids;
+        ids << items[0].id();
+        filter.setIds(ids);
+        items = m_engine->items(filter,
+                      QDateTime(),
+                      QDateTime(),
+                      10,
+                      sort,
+                      hint,
+                      &error);
+        QCOMPARE(items.count(), 1);
+
+        // audible
+        QList<QOrganizerItemDetail> reminders = items[0].details(QOrganizerItemDetail::TypeAudibleReminder);
+        QCOMPARE(reminders.size(), 1);
+
+        QOrganizerItemAudibleReminder aReminder2 = reminders[0];
+        QCOMPARE(aReminder2.isEmpty(), false);
+        QCOMPARE(aReminder2.secondsBeforeStart(), 0);
+        QCOMPARE(aReminder2.repetitionCount(), 0);
+        QCOMPARE(aReminder2.repetitionDelay(), 0);
+        QVERIFY(aReminder2.dataUrl().isEmpty());
+
+        // visual
+        reminders = items[0].details(QOrganizerItemDetail::TypeVisualReminder);
+        QCOMPARE(reminders.size(), 1);
+
+        QOrganizerItemVisualReminder vReminder2 = reminders[0];
+        //vReminder.setRepetition(1, 0);
+        QCOMPARE(vReminder2.isEmpty(), false);
+        QCOMPARE(vReminder2.secondsBeforeStart(), vReminder.secondsBeforeStart());
+        QCOMPARE(vReminder2.repetitionCount(), vReminder.repetitionCount());
+        QCOMPARE(vReminder2.repetitionDelay(), vReminder.repetitionDelay());
+        QVERIFY(vReminder2.dataUrl().isEmpty());
+        QCOMPARE(vReminder2.message(), QString("reminder message"));
+    }
+
     void testRemoveEvent()
     {
         static QString displayLabelValue = QStringLiteral("event to be removed");
