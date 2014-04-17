@@ -50,13 +50,14 @@ RequestData::~RequestData()
 GCancellable* RequestData::cancellable() const
 {
     g_cancellable_reset(m_cancellable);
-    g_object_ref(m_cancellable);
+    //g_object_ref(m_cancellable);
     return m_cancellable;
 }
 
 bool RequestData::isLive() const
 {
-    return !m_req.isNull();
+    return (!m_req.isNull() &&
+            (m_req->state() == QOrganizerAbstractRequest::ActiveState));
 }
 
 ECalClient *RequestData::client() const
@@ -71,13 +72,21 @@ QOrganizerEDSEngine *RequestData::parent() const
 
 void RequestData::cancel()
 {
+    QOrganizerManagerEngine::updateRequestState(m_req, QOrganizerAbstractRequest::CanceledState);
     if (m_cancellable) {
         g_cancellable_cancel(m_cancellable);
         m_parent->waitForRequestFinished(m_req, 0);
         g_object_unref(m_cancellable);
         m_cancellable = 0;
     }
-    QOrganizerManagerEngine::updateRequestState(m_req, QOrganizerAbstractRequest::CanceledState);
+}
+
+bool RequestData::cancelled() const
+{
+    if (!m_req.isNull()) {
+        return (m_req->state() == QOrganizerAbstractRequest::CanceledState);
+    }
+    return false;
 }
 
 void RequestData::setClient(EClient *client)

@@ -40,6 +40,7 @@ public:
     virtual void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError) = 0;
     QOrganizerEDSEngine *parent() const;
     virtual void cancel();
+    bool cancelled() const;
 
     template<class T>
     T* request() const {

@@ -237,6 +237,8 @@ private:
     void removeCollectionAsync(QtOrganizer::QOrganizerCollectionRemoveRequest *req);
     static void removeCollectionAsyncStart(GObject *sourceObject, GAsyncResult *res, RemoveCollectionRequestData *data);
 
+    static void releaseRequestData(RequestData *data);
+
     friend class RequestData;
     friend class SaveCollectionRequestData;
     friend class RemoveCollectionRequestData;

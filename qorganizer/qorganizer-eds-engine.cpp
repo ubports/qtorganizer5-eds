@@ -130,6 +130,12 @@ void QOrganizerEDSEngine::itemsAsync(QOrganizerItemFetchRequest *req)
 
 void QOrganizerEDSEngine::itemsAsyncStart(FetchRequestData *data)
 {
+    // check if request was destroyed by the caller
+    if (!data->isLive()) {
+        releaseRequestData(data);
+        return;
+    }
+
     QString collection = data->nextCollection();
     if (!collection.isEmpty()) {
         EClient *client = data->parent()->d->m_sourceRegistry->client(collection);
@@ -171,6 +177,12 @@ void QOrganizerEDSEngine::itemsAsyncListed(ECalComponent *comp,
     Q_UNUSED(instanceStart);
     Q_UNUSED(instanceEnd);
 
+    // check if request was destroyed by the caller
+    if (!data->isLive()) {
+        releaseRequestData(data);
+        return;
+    }
+
     icalcomponent *icalComp = icalcomponent_new_clone(e_cal_component_get_icalcomponent(comp));
     if (icalComp) {
         data->appendResult(icalComp);
@@ -192,13 +204,20 @@ void QOrganizerEDSEngine::itemsAsyncListedAsComps(GObject *source,
         qWarning() << "Fail to list events in calendar" << gError->message;
         g_error_free(gError);
         gError = 0;
-        data->finish(QOrganizerManager::InvalidCollectionError);
+        if (data->isLive()) {
+            data->finish(QOrganizerManager::InvalidCollectionError);
+        }
         delete data;
         return;
-    } else {
-        data->appendResults(data->parent()->parseEvents(data->collection(), events, false));
     }
-    itemsAsyncStart(data);
+
+    // check if request was destroyed by the caller
+    if (data->isLive()) {
+        data->appendResults(data->parent()->parseEvents(data->collection(), events, false));
+        itemsAsyncStart(data);
+    } else {
+        releaseRequestData(data);
+    }
 }
 
 void QOrganizerEDSEngine::itemsByIdAsync(QOrganizerItemFetchByIdRequest *req)
@@ -209,6 +228,12 @@ void QOrganizerEDSEngine::itemsByIdAsync(QOrganizerItemFetchByIdRequest *req)
 
 void QOrganizerEDSEngine::itemsByIdAsyncStart(FetchByIdRequestData *data)
 {
+    // check if request was destroyed by the caller
+    if (!data->isLive()) {
+        releaseRequestData(data);
+        return;
+    }
+
     QString id = data->nextId();
     if (!id.isEmpty()) {
         QStringList ids = id.split("/");
@@ -254,14 +279,19 @@ void QOrganizerEDSEngine::itemsByIdAsyncListed(GObject *client,
         g_error_free(gError);
         gError = 0;
         data->appendResult(QOrganizerItem());
-    } else if (icalComp) {
+    } else if (icalComp && data->isLive()) {
         GSList *events = g_slist_append(0, icalComp);
         QList<QOrganizerItem> items = data->parent()->parseEvents(data->currentCollectionId(), events, true);
         Q_ASSERT(items.size() == 1);
         data->appendResult(items[0]);
         g_slist_free_full(events, (GDestroyNotify) icalcomponent_free);
     }
-    itemsByIdAsyncStart(data);
+
+    if (data->isLive()) {
+        itemsByIdAsyncStart(data);
+    } else {
+        releaseRequestData(data);
+    }
 }
 
 void QOrganizerEDSEngine::itemOcurrenceAsync(QOrganizerItemOccurrenceFetchRequest *req)
@@ -284,7 +314,6 @@ void QOrganizerEDSEngine::itemOcurrenceAsync(QOrganizerItemOccurrenceFetchReques
         qWarning() << "Fail to find collection:" << req->parentItem().collectionId();
         data->finish(QOrganizerManager::DoesNotExistError);
         delete data;
-        return;
     }
 }
 
@@ -299,19 +328,25 @@ void QOrganizerEDSEngine::itemOcurrenceAsyncGetObjectDone(GObject *source,
     if (error) {
         qWarning() << "Fail to get object for id:" << data->request<QOrganizerItemOccurrenceFetchRequest>()->parentItem();
         g_error_free(error);
-        data->finish(QOrganizerManager::DoesNotExistError);
+        if (data->isLive()) {
+            data->finish(QOrganizerManager::DoesNotExistError);
+        }
         delete data;
         return;
     }
 
-    e_cal_client_generate_instances_for_object(data->client(),
-                                               comp,
-                                               data->startDate(),
-                                               data->endDate(),
-                                               data->cancellable(),
-                                               (ECalRecurInstanceFn) QOrganizerEDSEngine::itemOcurrenceAsyncListed,
-                                               data,
-                                               (GDestroyNotify) QOrganizerEDSEngine::itemOcurrenceAsyncDone);
+    if (data->isLive()) {
+        e_cal_client_generate_instances_for_object(data->client(),
+                                                   comp,
+                                                   data->startDate(),
+                                                   data->endDate(),
+                                                   data->cancellable(),
+                                                   (ECalRecurInstanceFn) QOrganizerEDSEngine::itemOcurrenceAsyncListed,
+                                                   data,
+                                                   (GDestroyNotify) QOrganizerEDSEngine::itemOcurrenceAsyncDone);
+    } else {
+        releaseRequestData(data);
+    }
 }
 
 void QOrganizerEDSEngine::itemOcurrenceAsyncListed(ECalComponent *comp,
@@ -322,6 +357,12 @@ void QOrganizerEDSEngine::itemOcurrenceAsyncListed(ECalComponent *comp,
     Q_UNUSED(instanceStart);
     Q_UNUSED(instanceEnd);
 
+    // check if request was destroyed by the caller
+    if (!data->isLive()) {
+        releaseRequestData(data);
+        return;
+    }
+
     icalcomponent *icalComp = icalcomponent_new_clone(e_cal_component_get_icalcomponent(comp));
     if (icalComp) {
         data->appendResult(icalComp);
@@ -330,8 +371,10 @@ void QOrganizerEDSEngine::itemOcurrenceAsyncListed(ECalComponent *comp,
 
 void QOrganizerEDSEngine::itemOcurrenceAsyncDone(FetchOcurrenceData *data)
 {
-    data->finish();
-    delete data;
+    if (data->isLive()) {
+        data->finish();
+    }
+    releaseRequestData(data);
 }
 
 QList<QOrganizerItem> QOrganizerEDSEngine::items(const QList<QOrganizerItemId> &itemIds,
@@ -456,11 +499,17 @@ void QOrganizerEDSEngine::saveItemsAsync(QOrganizerItemSaveRequest *req)
 
 void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
 {
+    // check if request was destroyed by the caller
+    if (!data->isLive()) {
+        releaseRequestData(data);
+        return;
+    }
+
     QString collectionId = data->nextCollection();
 
     if (collectionId.isNull() && data->end()) {
         data->finish();
-        delete data;
+        releaseRequestData(data);
         return;
     } else {
         bool createItems = true;
@@ -547,14 +596,20 @@ void QOrganizerEDSEngine::saveItemsAsyncModified(GObject *source_object,
         qWarning() << "Fail to modify items" << gError->message;
         g_error_free(gError);
         gError = 0;
-        Q_FOREACH(const QOrganizerItem &i, data->workingItems()) {
-            data->appendResult(i, QOrganizerManager::UnspecifiedError);
+        if (data->isLive()) {
+            Q_FOREACH(const QOrganizerItem &i, data->workingItems()) {
+                data->appendResult(i, QOrganizerManager::UnspecifiedError);
+            }
         }
-    } else {
+    } else if (data->isLive()) {
         data->appendResults(data->workingItems());
     }
 
-    saveItemsAsyncStart(data);
+    if (data->isLive()) {
+        saveItemsAsyncStart(data);
+    } else {
+        releaseRequestData(data);
+    }
 }
 
 void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
@@ -575,10 +630,12 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
         g_error_free(gError);
         gError = 0;
 
-        Q_FOREACH(const QOrganizerItem &i, data->workingItems()) {
-            data->appendResult(i, QOrganizerManager::UnspecifiedError);
+        if (data->isLive()) {
+            Q_FOREACH(const QOrganizerItem &i, data->workingItems()) {
+                data->appendResult(i, QOrganizerManager::UnspecifiedError);
+            }
         }
-    } else {
+    } else if (data->isLive()) {
         QString currentCollectionId = data->currentCollection();
         if (currentCollectionId.isEmpty()) {
             currentCollectionId = data->parent()->defaultCollection(0).id().toString();
@@ -600,7 +657,12 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
         data->appendResults(items);
     }
 
-    saveItemsAsyncStart(data);
+    // check if request was destroyed by the caller
+    if (data->isLive()) {
+        saveItemsAsyncStart(data);
+    } else {
+        releaseRequestData(data);
+    }
 }
 
 bool QOrganizerEDSEngine::saveItems(QList<QtOrganizer::QOrganizerItem> *items,
@@ -639,6 +701,12 @@ void QOrganizerEDSEngine::removeItemsByIdAsync(QOrganizerItemRemoveByIdRequest *
 
 void QOrganizerEDSEngine::removeItemsByIdAsyncStart(RemoveByIdRequestData *data)
 {
+    // check if request was destroyed by the caller
+    if (!data->isLive()) {
+        releaseRequestData(data);
+        return;
+    }
+
     QString collectionId = data->next();
     for(; !collectionId.isNull(); collectionId = data->next()) {
         EClient *client = data->parent()->d->m_sourceRegistry->client(collectionId);
@@ -656,7 +724,7 @@ void QOrganizerEDSEngine::removeItemsByIdAsyncStart(RemoveByIdRequestData *data)
         data->commit();
     }
     data->finish();
-    delete data;
+    releaseRequestData(data);
 }
 
 void QOrganizerEDSEngine::removeItemsAsync(QOrganizerItemRemoveRequest *req)
@@ -675,6 +743,12 @@ void QOrganizerEDSEngine::removeItemsAsync(QOrganizerItemRemoveRequest *req)
 
 void QOrganizerEDSEngine::removeItemsAsyncStart(RemoveRequestData *data)
 {
+    // check if request was destroyed by the caller
+    if (!data->isLive()) {
+        releaseRequestData(data);
+        return;
+    }
+
     QOrganizerCollectionId collection = data->next();
     for(; !collection.isNull(); collection = data->next()) {
         EClient *client = data->parent()->d->m_sourceRegistry->client(collection.toString());
@@ -692,7 +766,7 @@ void QOrganizerEDSEngine::removeItemsAsyncStart(RemoveRequestData *data)
         data->commit();
     }
     data->finish();
-    delete data;
+    releaseRequestData(data);
 }
 
 bool QOrganizerEDSEngine::removeItems(const QList<QOrganizerItemId> &itemIds,
@@ -806,9 +880,12 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
     if (gError) {
         qWarning() << "Fail to create sources:" << gError->message;
         g_error_free(gError);
-        data->finish(QOrganizerManager::InvalidCollectionError);
-        delete data;
-    } else {
+        if (data->isLive()) {
+            data->finish(QOrganizerManager::InvalidCollectionError);
+            releaseRequestData(data);
+            return;
+        }
+    } else if (data->isLive()) {
         data->commitSourceCreated();
         data->prepareToUpdate();
         saveCollectionUpdateAsyncStart(data);
@@ -817,6 +894,12 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
 
 void QOrganizerEDSEngine::saveCollectionUpdateAsyncStart(SaveCollectionRequestData *data)
 {
+    // check if request was destroyed by the caller
+    if (!data->isLive()) {
+        releaseRequestData(data);
+        return;
+    }
+
     ESource *source = data->nextSourceToUpdate();
     if (source) {
         e_source_registry_commit_source(data->registry(),
@@ -826,7 +909,7 @@ void QOrganizerEDSEngine::saveCollectionUpdateAsyncStart(SaveCollectionRequestDa
                                         data);
     } else {
         data->finish();
-        delete data;
+        releaseRequestData(data);
     }
 }
 
@@ -843,12 +926,18 @@ void QOrganizerEDSEngine::saveCollectionUpdateAsynCommited(ESourceRegistry *regi
     if (gError) {
         qWarning() << "Fail to update collection" << gError->message;
         g_error_free(gError);
-        data->commitSourceUpdated(currentSource, QOrganizerManager::InvalidCollectionError);
-    } else {
+        if (data->isLive()) {
+            data->commitSourceUpdated(currentSource, QOrganizerManager::InvalidCollectionError);
+        }
+    } else if (data->isLive()) {
         data->commitSourceUpdated(currentSource);
     }
 
-    saveCollectionUpdateAsyncStart(data);
+    if (data->isLive()) {
+        saveCollectionUpdateAsyncStart(data);
+    } else {
+        releaseRequestData(data);
+    }
 }
 
 bool QOrganizerEDSEngine::removeCollection(const QOrganizerCollectionId& collectionId, QOrganizerManager::Error* error)
@@ -881,6 +970,12 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
                                                      GAsyncResult *res,
                                                      RemoveCollectionRequestData *data)
 {
+    // check if request was destroyed by the caller
+    if (!data->isLive()) {
+        releaseRequestData(data);
+        return;
+    }
+
     if (sourceObject && res) {
         GError *gError = 0;
         if (data->remoteDeletable()) {
@@ -915,6 +1010,14 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
         }
     } else {
         data->finish();
+        releaseRequestData(data);
+    }
+}
+
+void QOrganizerEDSEngine::releaseRequestData(RequestData *data)
+{
+    // if request was cancelled this will be destroyed later
+    if (!data->cancelled()) {
         delete data;
     }
 }
