@@ -1004,8 +1004,10 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
 
 void QOrganizerEDSEngine::releaseRequestData(RequestData *data)
 {
-    // if request was cancelled this will be destroyed later
-    if (!data->cancelled()) {
+    if (data->cancelled()) {
+        // if request was cancelled data will be destroyed later
+        data->continueCancel();
+    } else {
         delete data;
     }
 }
