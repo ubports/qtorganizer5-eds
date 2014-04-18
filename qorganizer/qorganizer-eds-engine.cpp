@@ -166,7 +166,11 @@ void QOrganizerEDSEngine::itemsAsyncStart(FetchRequestData *data)
 
 void QOrganizerEDSEngine::itemsAsyncDone(FetchRequestData *data)
 {
-    itemsAsyncStart(data);
+    if (data->isLive()) {
+        itemsAsyncStart(data);
+    } else {
+        releaseRequestData(data);
+    }
 }
 
 void QOrganizerEDSEngine::itemsAsyncListed(ECalComponent *comp,
@@ -177,15 +181,11 @@ void QOrganizerEDSEngine::itemsAsyncListed(ECalComponent *comp,
     Q_UNUSED(instanceStart);
     Q_UNUSED(instanceEnd);
 
-    // check if request was destroyed by the caller
-    if (!data->isLive()) {
-        releaseRequestData(data);
-        return;
-    }
-
-    icalcomponent *icalComp = icalcomponent_new_clone(e_cal_component_get_icalcomponent(comp));
-    if (icalComp) {
-        data->appendResult(icalComp);
+    if (data->isLive()) {
+        icalcomponent *icalComp = icalcomponent_new_clone(e_cal_component_get_icalcomponent(comp));
+        if (icalComp) {
+            data->appendResult(icalComp);
+        }
     }
 }
 
