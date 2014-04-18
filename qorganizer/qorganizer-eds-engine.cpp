@@ -1016,6 +1016,7 @@ void QOrganizerEDSEngine::requestDestroyed(QOrganizerAbstractRequest* req)
 {
     RequestData *data = m_runningRequests.take(req);
     if (data) {
+        data->cancel();
         delete data;
     }
 }
@@ -1068,10 +1069,9 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
 
 bool QOrganizerEDSEngine::cancelRequest(QOrganizerAbstractRequest* req)
 {
-    RequestData *data = m_runningRequests.take(req);
+    RequestData *data = m_runningRequests.value(req);
     if (data) {
         data->cancel();
-        delete data;
         return true;
     }
     return false;

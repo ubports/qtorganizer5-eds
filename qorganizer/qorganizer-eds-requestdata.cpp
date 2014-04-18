@@ -77,7 +77,6 @@ void RequestData::cancel()
     if (m_cancellable) {
         g_cancellable_cancel(m_cancellable);
         m_parent->waitForRequestFinished(m_req, 0);
-        g_object_unref(m_cancellable);
         m_cancellable = 0;
     }
     m_canceling = false;
