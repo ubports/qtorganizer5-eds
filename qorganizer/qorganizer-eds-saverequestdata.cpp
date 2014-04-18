@@ -48,6 +48,7 @@ SaveRequestData::~SaveRequestData()
 
 void SaveRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
 {
+    e_client_refresh_sync(m_client, 0, 0);
     QOrganizerManagerEngine::updateItemSaveRequest(request<QOrganizerItemSaveRequest>(),
                                                    m_result,
                                                    error,

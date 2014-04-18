@@ -48,6 +48,7 @@ RemoveByIdRequestData::~RemoveByIdRequestData()
 
 void RemoveByIdRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
 {
+    e_client_refresh_sync(m_client, 0, 0);
     QOrganizerManagerEngine::updateItemRemoveByIdRequest(request<QOrganizerItemRemoveByIdRequest>(),
                                                          error,
                                                          QMap<int, QOrganizerManager::Error>(),

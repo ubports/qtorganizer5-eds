@@ -67,6 +67,7 @@ GSList *RemoveRequestData::takeItemsIds(QOrganizerCollectionId collectionId)
 
 void RemoveRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
 {
+    e_client_refresh_sync(m_client, 0, 0);
     QOrganizerManagerEngine::updateItemRemoveRequest(request<QOrganizerItemRemoveRequest>(),
                                                      error,
                                                      QMap<int, QOrganizerManager::Error>(),

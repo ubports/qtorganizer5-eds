@@ -586,11 +586,9 @@ void QOrganizerEDSEngine::saveItemsAsyncModified(GObject *source_object,
     Q_UNUSED(source_object);
 
     GError *gError = 0;
-    gboolean result = e_cal_client_modify_objects_finish(E_CAL_CLIENT(data->client()),
+    e_cal_client_modify_objects_finish(E_CAL_CLIENT(data->client()),
                                        res,
                                        &gError);
-
-    QCoreApplication::processEvents();
 
     if (gError) {
         qWarning() << "Fail to modify items" << gError->message;
@@ -624,7 +622,6 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
                                        res,
                                        &uids,
                                        &gError);
-    QCoreApplication::processEvents();
     if (gError) {
         qWarning() << "Fail to create items:" << gError->message;
         g_error_free(gError);
@@ -715,7 +712,6 @@ void QOrganizerEDSEngine::removeItemsByIdAsyncStart(RemoveByIdRequestData *data)
         GSList *ids = data->compIds();
         GError *gError = 0;
         e_cal_client_remove_objects_sync(data->client(), ids, E_CAL_OBJ_MOD_THIS, 0, 0);
-        QCoreApplication::processEvents();
         if (gError) {
             qWarning() << "Fail to remove Items" << gError->message;
             g_error_free(gError);
@@ -757,7 +753,6 @@ void QOrganizerEDSEngine::removeItemsAsyncStart(RemoveRequestData *data)
         GSList *ids = data->compIds();
         GError *gError = 0;
         e_cal_client_remove_objects_sync(data->client(), ids, E_CAL_OBJ_MOD_THIS, 0, 0);
-        QCoreApplication::processEvents();
         if (gError) {
             qWarning() << "Fail to remove Items" << gError->message;
             g_error_free(gError);
@@ -875,8 +870,6 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
 {
     GError *gError = 0;
     e_source_registry_create_sources_finish(registry, res, &gError);
-    QCoreApplication::processEvents();
-
     if (gError) {
         qWarning() << "Fail to create sources:" << gError->message;
         g_error_free(gError);
@@ -902,35 +895,31 @@ void QOrganizerEDSEngine::saveCollectionUpdateAsyncStart(SaveCollectionRequestDa
 
     ESource *source = data->nextSourceToUpdate();
     if (source) {
-        e_source_registry_commit_source(data->registry(),
-                                        source,
-                                        data->cancellable(),
-                                        (GAsyncReadyCallback) QOrganizerEDSEngine::saveCollectionUpdateAsynCommited,
-                                        data);
+        e_source_write(source,
+                       data->cancellable(),
+                       (GAsyncReadyCallback) QOrganizerEDSEngine::saveCollectionUpdateAsynCommited,
+                       data);
     } else {
         data->finish();
         releaseRequestData(data);
     }
 }
 
-void QOrganizerEDSEngine::saveCollectionUpdateAsynCommited(ESourceRegistry *registry,
+void QOrganizerEDSEngine::saveCollectionUpdateAsynCommited(ESource *source,
                                                            GAsyncResult *res,
                                                            SaveCollectionRequestData *data)
 {
     GError *gError = 0;
-    ESource *currentSource = data->nextSourceToUpdate();
 
-    e_source_registry_commit_source_finish(registry, res, &gError);
-    QCoreApplication::processEvents();
-
+    e_source_write_finish(source, res, &gError);
     if (gError) {
         qWarning() << "Fail to update collection" << gError->message;
         g_error_free(gError);
         if (data->isLive()) {
-            data->commitSourceUpdated(currentSource, QOrganizerManager::InvalidCollectionError);
+            data->commitSourceUpdated(source, QOrganizerManager::InvalidCollectionError);
         }
     } else if (data->isLive()) {
-        data->commitSourceUpdated(currentSource);
+        data->commitSourceUpdated(source);
     }
 
     if (data->isLive()) {
@@ -983,7 +972,6 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
         } else {
             e_source_remove_finish(E_SOURCE(sourceObject), res, &gError);
         }
-        QCoreApplication::processEvents();
         if (gError) {
             qWarning() << "Fail to remove collection" << gError->message;
             g_error_free(gError);

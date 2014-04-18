@@ -55,11 +55,11 @@ public:
 protected:
     QOrganizerEDSEngine *m_parent;
     QtOrganizer::QOrganizerItemChangeSet m_changeSet;
+    EClient *m_client;
 
 private:
     QPointer<QtOrganizer::QOrganizerAbstractRequest> m_req;
     GCancellable *m_cancellable;
-    EClient *m_client;
 };
 
 #endif
