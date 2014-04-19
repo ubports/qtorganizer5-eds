@@ -95,7 +95,8 @@ QOrganizerEDSEngine::QOrganizerEDSEngine(QOrganizerEDSEngineData *data)
 
 QOrganizerEDSEngine::~QOrganizerEDSEngine()
 {
-    Q_FOREACH(QOrganizerAbstractRequest *req, m_runningRequests.keys()) {
+    QList<QOrganizerAbstractRequest*> reqs = m_runningRequests.keys();
+    Q_FOREACH(QOrganizerAbstractRequest *req, reqs) {
         req->cancel();
     }
 
@@ -160,7 +161,7 @@ void QOrganizerEDSEngine::itemsAsyncStart(FetchRequestData *data)
         }
     } else {
         data->finish();
-        delete data;
+        releaseRequestData(data);
     }
 }
 
@@ -207,7 +208,7 @@ void QOrganizerEDSEngine::itemsAsyncListedAsComps(GObject *source,
         if (data->isLive()) {
             data->finish(QOrganizerManager::InvalidCollectionError);
         }
-        delete data;
+        releaseRequestData(data);
         return;
     }
 
@@ -258,7 +259,7 @@ void QOrganizerEDSEngine::itemsByIdAsyncStart(FetchByIdRequestData *data)
         }
     } else if (data->end()) {
         data->finish();
-        delete data;
+        releaseRequestData(data);
         return;
     }
     qWarning() << "Invalid item id" << id;
@@ -313,7 +314,7 @@ void QOrganizerEDSEngine::itemOcurrenceAsync(QOrganizerItemOccurrenceFetchReques
     } else {
         qWarning() << "Fail to find collection:" << req->parentItem().collectionId();
         data->finish(QOrganizerManager::DoesNotExistError);
-        delete data;
+        releaseRequestData(data);
     }
 }
 
@@ -331,7 +332,7 @@ void QOrganizerEDSEngine::itemOcurrenceAsyncGetObjectDone(GObject *source,
         if (data->isLive()) {
             data->finish(QOrganizerManager::DoesNotExistError);
         }
-        delete data;
+        releaseRequestData(data);
         return;
     }
 
@@ -1069,9 +1070,10 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
 
 bool QOrganizerEDSEngine::cancelRequest(QOrganizerAbstractRequest* req)
 {
-    RequestData *data = m_runningRequests.value(req);
+    RequestData *data = m_runningRequests.take(req);
     if (data) {
         data->cancel();
+        delete data;
         return true;
     }
     return false;
