@@ -871,6 +871,9 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
 {
     GError *gError = 0;
     e_source_registry_create_sources_finish(registry, res, &gError);
+    // WORKAROUND:
+    // avoid return immediately after create the source, because EDS is not ready to write on the source
+    QCoreApplication::processEvents();
     if (gError) {
         qWarning() << "Fail to create sources:" << gError->message;
         g_error_free(gError);
