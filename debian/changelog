@@ -1,3 +1,11 @@
+qtorganizer5-eds (0.1.1+14.10.20140502-0ubuntu1) utopic; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * Check if request was destroyed by the caller before continue with
+    request process. (LP: #1309186)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 02 May 2014 14:24:28 +0000
+
 qtorganizer5-eds (0.1.1+14.04.20140415.1-0ubuntu1) trusty; urgency=low
 
   [ Renato Araujo Oliveira Filho ]
