@@ -23,6 +23,7 @@
 #include "qorganizer-eds-enginedata.h"
 
 #include <QtCore/QPointer>
+#include <QtCore/QMutex>
 
 #include <QtOrganizer/QOrganizerAbstractRequest>
 #include <QtOrganizer/QOrganizerManager>
@@ -40,6 +41,8 @@ public:
     virtual void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError) = 0;
     QOrganizerEDSEngine *parent() const;
     virtual void cancel();
+    bool cancelled() const;
+    void continueCancel();
 
     template<class T>
     T* request() const {
@@ -54,11 +57,12 @@ public:
 protected:
     QOrganizerEDSEngine *m_parent;
     QtOrganizer::QOrganizerItemChangeSet m_changeSet;
+    EClient *m_client;
+    bool m_canceling;
 
 private:
     QPointer<QtOrganizer::QOrganizerAbstractRequest> m_req;
     GCancellable *m_cancellable;
-    EClient *m_client;
 };
 
 #endif

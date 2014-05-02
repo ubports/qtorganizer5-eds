@@ -26,7 +26,8 @@ using namespace QtOrganizer;
 RequestData::RequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbstractRequest *req)
     : m_parent(engine),
       m_req(req),
-      m_client(0)
+      m_client(0),
+      m_canceling(false)
 {
     QOrganizerManagerEngine::updateRequestState(req, QOrganizerAbstractRequest::ActiveState);
     m_cancellable = g_cancellable_new();
@@ -50,13 +51,14 @@ RequestData::~RequestData()
 GCancellable* RequestData::cancellable() const
 {
     g_cancellable_reset(m_cancellable);
-    g_object_ref(m_cancellable);
+    //g_object_ref(m_cancellable);
     return m_cancellable;
 }
 
 bool RequestData::isLive() const
 {
-    return !m_req.isNull();
+    return (!m_req.isNull() &&
+            (m_req->state() == QOrganizerAbstractRequest::ActiveState));
 }
 
 ECalClient *RequestData::client() const
@@ -71,12 +73,25 @@ QOrganizerEDSEngine *RequestData::parent() const
 
 void RequestData::cancel()
 {
+    m_canceling = true;
     if (m_cancellable) {
         g_cancellable_cancel(m_cancellable);
         m_parent->waitForRequestFinished(m_req, 0);
-        g_object_unref(m_cancellable);
         m_cancellable = 0;
     }
+    m_canceling = false;
+}
+
+bool RequestData::cancelled() const
+{
+    if (!m_req.isNull()) {
+        return m_canceling;
+    }
+    return false;
+}
+
+void RequestData::continueCancel()
+{
     QOrganizerManagerEngine::updateRequestState(m_req, QOrganizerAbstractRequest::CanceledState);
 }
 
