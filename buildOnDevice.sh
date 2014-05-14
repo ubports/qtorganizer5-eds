@@ -72,9 +72,9 @@ build() {
     # same options as in debian/rules
     #QMAKE_OPTIONS="-recursive MALIIT_DEFAULT_PROFILE=ubuntu CONFIG+=\\\"debug nodoc enable-presage enable-hunspell enable-pinyin\\\""
     exec_with_ssh "mkdir -p $CODE_DIR/build"
-    exec_with_ssh "cd $CODE_DIR/build && cmake ../ -DCMAKE_BUILD_TYPE=Debug && make -j 4"
+    exec_with_ssh "cd $CODE_DIR/build && cmake ../ -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug && make -j 4"
     echo "Installing"
-    exec_with_ssh "cd $CODE_DIR/build && " $SUDO " make install"
+    exec_with_ssh "cd $CODE_DIR/build && " $SUDO " make install/fast"
 }
 
 run() {
