@@ -95,12 +95,11 @@ QOrganizerEDSEngine::QOrganizerEDSEngine(QOrganizerEDSEngineData *data)
 
 QOrganizerEDSEngine::~QOrganizerEDSEngine()
 {
-    QList<QOrganizerAbstractRequest*> reqs = m_runningRequests.keys();
-    Q_FOREACH(QOrganizerAbstractRequest *req, reqs) {
-        req->cancel();
+    while(m_runningRequests.count()) {
+        QOrganizerAbstractRequest *req = m_runningRequests.keys().first();
+        QOrganizerEDSEngine::requestDestroyed(req);
     }
 
-    Q_ASSERT(m_runningRequests.count() == 0);
     d->m_sharedEngines.remove(this);
     if (!d->m_refCount.deref()) {
         delete d;
@@ -1073,10 +1072,9 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
 
 bool QOrganizerEDSEngine::cancelRequest(QOrganizerAbstractRequest* req)
 {
-    RequestData *data = m_runningRequests.take(req);
+    RequestData *data = m_runningRequests.value(req);
     if (data) {
         data->cancel();
-        delete data;
         return true;
     }
     return false;
