@@ -72,6 +72,7 @@ void FetchByIdRequestData::finish(QOrganizerManager::Error error)
                                                         error,
                                                         m_errors,
                                                         QOrganizerAbstractRequest::FinishedState);
+    RequestData::finish(error);
 }
 
 int FetchByIdRequestData::appendResult(const QOrganizerItem &result)

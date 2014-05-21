@@ -24,6 +24,7 @@
 
 #include <QtCore/QPointer>
 #include <QtCore/QMutex>
+#include <QtCore/QEventLoop>
 
 #include <QtOrganizer/QOrganizerAbstractRequest>
 #include <QtOrganizer/QOrganizerManager>
@@ -33,16 +34,17 @@ class RequestData
 {
 public:
     RequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbstractRequest *req);
-    virtual ~RequestData();
     GCancellable* cancellable() const;
     bool isLive() const;
     void setClient(EClient *client);
     ECalClient *client() const;
-    virtual void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError) = 0;
     QOrganizerEDSEngine *parent() const;
     virtual void cancel();
     bool cancelled() const;
-    void continueCancel();
+    void deleteLater();
+    virtual void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError) = 0;
+    bool finished() const;
+    void wait();
 
     template<class T>
     T* request() const {
@@ -56,13 +58,21 @@ public:
 
 protected:
     QOrganizerEDSEngine *m_parent;
-    QtOrganizer::QOrganizerItemChangeSet m_changeSet;
     EClient *m_client;
+    QMutex m_waiting;
+    QtOrganizer::QOrganizerItemChangeSet m_changeSet;
     bool m_canceling;
+    bool m_finished;
+
+    virtual ~RequestData();
 
 private:
     QPointer<QtOrganizer::QOrganizerAbstractRequest> m_req;
     GCancellable *m_cancellable;
+
+    void continueCancel();
+    static void onCancelled(GCancellable *cancellable, RequestData *self);
+    static gboolean destroy(RequestData *self);
 };
 
 #endif

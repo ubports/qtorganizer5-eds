@@ -55,6 +55,8 @@ void RemoveByIdRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
                                                          QOrganizerAbstractRequest::FinishedState);
     //The signal will be fired by the view watcher. Check ViewWatcher::onObjectsRemoved
     //emitChangeset(&m_changeSet);
+
+    RequestData::finish(error);
 }
 
 GSList *RemoveByIdRequestData::compIds() const

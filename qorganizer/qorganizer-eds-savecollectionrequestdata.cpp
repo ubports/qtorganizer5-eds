@@ -58,8 +58,11 @@ void SaveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error err
                                                          m_errorMap,
                                                          QOrganizerAbstractRequest::FinishedState);
 
-    emitChangeset(&m_changeSet);
+    //will wait for source registry signal
+    //emitChangeset(&m_changeSet);
     m_changeSet.clearAll();
+
+    RequestData::finish(error);
 }
 
 void SaveCollectionRequestData::commitSourceCreated()
@@ -181,11 +184,11 @@ void SaveCollectionRequestData::parseCollections()
 
             // update name
             QString name = collection.metaData(QOrganizerCollection::KeyName).toString();
-            e_source_set_display_name(source, name.toUtf8().data());
+            e_source_set_display_name(source, name.toUtf8().constData());
 
             // update color
             QString color = collection.metaData(QOrganizerCollection::KeyColor).toString();
-            e_source_selectable_set_color(E_SOURCE_SELECTABLE(extCalendar), color.toUtf8().data());
+            e_source_selectable_set_color(E_SOURCE_SELECTABLE(extCalendar), color.toUtf8().constData());
 
             // update selected
             bool selected = collection.extendedMetaData(COLLECTION_SELECTED_METADATA).toBool();

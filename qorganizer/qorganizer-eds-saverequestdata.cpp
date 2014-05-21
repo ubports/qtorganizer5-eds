@@ -57,7 +57,8 @@ void SaveRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
     Q_FOREACH(const QOrganizerItem &item, m_result) {
         m_changeSet.insertAddedItem(item.id());
     }
-    emitChangeset(&m_changeSet);
+    //emitChangeset(&m_changeSet);
+    RequestData::finish(error);
 }
 
 void SaveRequestData::appendResults(QList<QOrganizerItem> result)

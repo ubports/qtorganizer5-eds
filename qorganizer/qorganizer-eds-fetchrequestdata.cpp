@@ -104,6 +104,7 @@ void FetchRequestData::finish(QOrganizerManager::Error error)
                                                     error,
                                                     QOrganizerAbstractRequest::FinishedState);
     // TODO: emit changeset???
+    RequestData::finish(error);
 }
 
 void FetchRequestData::appendResult(icalcomponent *comp)

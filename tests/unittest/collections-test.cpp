@@ -103,7 +103,9 @@ private Q_SLOTS:
         collection.setExtendedMetaData("collection-selected", true);
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
         QCOMPARE(error, QOrganizerManager::NoError);
-        QTRY_COMPARE(updateCollection.count(), 1);
+
+        // we will receive a signal for each property (name, color)
+        QTRY_COMPARE(updateCollection.count(), 2);
 
         // Check if the collection was stored correct
         QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), &error);

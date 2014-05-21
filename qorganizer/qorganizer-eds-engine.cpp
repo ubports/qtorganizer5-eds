@@ -90,6 +90,7 @@ QOrganizerEDSEngine::QOrganizerEDSEngine(QOrganizerEDSEngineData *data)
     }
     connect(d->m_sourceRegistry, SIGNAL(sourceAdded(QString)), SLOT(onSourceAdded(QString)));
     connect(d->m_sourceRegistry, SIGNAL(sourceRemoved(QString)), SLOT(onSourceRemoved(QString)));
+    connect(d->m_sourceRegistry, SIGNAL(sourceUpdated(QString)), SLOT(onSourceUpdated(QString)));
     d->m_sourceRegistry->load();
 }
 
@@ -1007,11 +1008,9 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
 
 void QOrganizerEDSEngine::releaseRequestData(RequestData *data)
 {
-    if (data->cancelled()) {
-        // if request was cancelled data will be destroyed later
-        data->continueCancel();
-    } else {
-        delete data;
+    QOrganizerEDSEngine *ss = data->parent();
+    if (!data->cancelled()) {
+        data->deleteLater();
     }
 }
 
@@ -1020,7 +1019,7 @@ void QOrganizerEDSEngine::requestDestroyed(QOrganizerAbstractRequest* req)
     RequestData *data = m_runningRequests.take(req);
     if (data) {
         data->cancel();
-        delete data;
+        data->deleteLater();
     }
 }
 
@@ -1085,10 +1084,11 @@ bool QOrganizerEDSEngine::waitForRequestFinished(QOrganizerAbstractRequest* req,
     Q_ASSERT(req);
     Q_UNUSED(msecs);
 
-    QPointer<QOrganizerAbstractRequest> r(req);
-
-    while(r && (r->state() == QOrganizerAbstractRequest::ActiveState)) {
-        QCoreApplication::processEvents();
+    RequestData *data = m_runningRequests.value(req);
+    if (data) {
+        data->wait();
+        // We can delete the operation already finished
+        data->deleteLater();
     }
 
     return true;
@@ -1184,11 +1184,18 @@ QList<QOrganizerItemType::ItemType> QOrganizerEDSEngine::supportedItemTypes() co
 void QOrganizerEDSEngine::onSourceAdded(const QString &collectionId)
 {
     d->watch(collectionId);
+    Q_EMIT collectionsAdded(QList<QOrganizerCollectionId>() << QOrganizerCollectionId::fromString(collectionId));
 }
 
 void QOrganizerEDSEngine::onSourceRemoved(const QString &collectionId)
 {
     d->unWatch(collectionId);
+    Q_EMIT collectionsRemoved(QList<QOrganizerCollectionId>() << QOrganizerCollectionId::fromString(collectionId));
+}
+
+void QOrganizerEDSEngine::onSourceUpdated(const QString &collectionId)
+{
+    Q_EMIT collectionsChanged(QList<QOrganizerCollectionId>() << QOrganizerCollectionId::fromString(collectionId));
 }
 
 void QOrganizerEDSEngine::onViewChanged(QOrganizerItemChangeSet *change)

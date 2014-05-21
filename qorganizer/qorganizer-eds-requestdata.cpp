@@ -18,6 +18,9 @@
 
 #include "qorganizer-eds-requestdata.h"
 
+#include <QtCore/QDebug>
+#include <QtCore/QCoreApplication>
+
 #include <QtOrganizer/QOrganizerAbstractRequest>
 #include <QtOrganizer/QOrganizerManagerEngine>
 
@@ -27,7 +30,8 @@ RequestData::RequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbs
     : m_parent(engine),
       m_req(req),
       m_client(0),
-      m_canceling(false)
+      m_canceling(false),
+      m_finished(false)
 {
     QOrganizerManagerEngine::updateRequestState(req, QOrganizerAbstractRequest::ActiveState);
     m_cancellable = g_cancellable_new();
@@ -36,7 +40,6 @@ RequestData::RequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbs
 
 RequestData::~RequestData()
 {
-    Q_ASSERT(m_req->state() != QOrganizerAbstractRequest::ActiveState);
     if (m_cancellable) {
         g_clear_object(&m_cancellable);
     }
@@ -44,14 +47,10 @@ RequestData::~RequestData()
     if (m_client) {
         g_clear_object(&m_client);
     }
-
-    m_parent->m_runningRequests.remove(m_req);
 }
 
 GCancellable* RequestData::cancellable() const
 {
-    g_cancellable_reset(m_cancellable);
-    //g_object_ref(m_cancellable);
     return m_cancellable;
 }
 
@@ -73,10 +72,23 @@ QOrganizerEDSEngine *RequestData::parent() const
 
 void RequestData::cancel()
 {
+    if (m_canceling) {
+        return;
+    }
+
     m_canceling = true;
     if (m_cancellable) {
+        gulong id = g_cancellable_connect(m_cancellable,
+                                          (GCallback) RequestData::onCancelled,
+                                          this, NULL);
+        // wait the cancel
+        wait();
+
+        // cancel
         g_cancellable_cancel(m_cancellable);
-        m_parent->waitForRequestFinished(m_req, 0);
+
+        // done
+        g_cancellable_disconnect(m_cancellable, id);
         m_cancellable = 0;
     }
     m_canceling = false;
@@ -90,9 +102,61 @@ bool RequestData::cancelled() const
     return false;
 }
 
+void RequestData::wait()
+{
+    if (!m_waiting.tryLock()) {
+        qWarning() << "Recurrence wait.";
+        Q_ASSERT(false);
+        return;
+    }
+
+    while(!m_finished) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+    }
+
+    m_waiting.unlock();
+}
+
 void RequestData::continueCancel()
 {
-    QOrganizerManagerEngine::updateRequestState(m_req, QOrganizerAbstractRequest::CanceledState);
+    if (!m_canceling) {
+        qWarning() << "Continue cancel without the orinal cancel call";
+        Q_ASSERT(false);
+    }
+}
+
+void RequestData::deleteLater()
+{
+    if (!m_waiting.tryLock()) {
+        // wait still running
+        return;
+    }
+    m_waiting.unlock();
+    m_parent->m_runningRequests.remove(m_req);
+    delete this;
+}
+
+void RequestData::finish(QOrganizerManager::Error error)
+{
+    Q_UNUSED(error);
+    m_finished = true;
+}
+
+bool RequestData::finished() const
+{
+    return m_finished;
+}
+
+gboolean RequestData::destroy(RequestData *self)
+{
+    delete self;
+    return 0;
+}
+
+void RequestData::onCancelled(GCancellable *cancellable, RequestData *self)
+{
+    Q_UNUSED(cancellable);
+    self->m_waiting.unlock();
 }
 
 void RequestData::setClient(EClient *client)

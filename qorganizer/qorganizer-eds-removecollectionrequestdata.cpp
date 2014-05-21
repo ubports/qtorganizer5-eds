@@ -51,9 +51,10 @@ void RemoveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error e
         removedIds.removeAt(index);
     }
 
-    QOrganizerCollectionChangeSet cs;
-    cs.insertRemovedCollections(removedIds);
-    emitChangeset(&cs);
+//    QOrganizerCollectionChangeSet cs;
+//    cs.insertRemovedCollections(removedIds);
+//    emitChangeset(&cs);
+    RequestData::finish(error);
 }
 
 void RemoveCollectionRequestData::commit(QtOrganizer::QOrganizerManager::Error error)

@@ -31,6 +31,7 @@ endmacro(declare_test testname)
 
 macro(update_test_properties TESTNAME)
     set(TEST_TMP_DIR "${TMP_DIR}/${TESTNAME}")
+    set(ENV_VARS_LIST "")
     list(APPEND ENV_VARS_LIST "QT_QPA_PLATFORM=minimal")
     list(APPEND ENV_VARS_LIST "HOME=${TEST_TMP_DIR}")
     list(APPEND ENV_VARS_LIST "XDG_RUNTIME_DIR=${TEST_TMP_DIR}")

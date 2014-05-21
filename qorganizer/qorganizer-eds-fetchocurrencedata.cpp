@@ -77,6 +77,8 @@ void FetchOcurrenceData::finish(QOrganizerManager::Error error)
                                                               results,
                                                               error,
                                                               QOrganizerAbstractRequest::FinishedState);
+
+    RequestData::finish(error);
 }
 
 void FetchOcurrenceData::appendResult(icalcomponent *comp)

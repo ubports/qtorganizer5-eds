@@ -75,6 +75,7 @@ void RemoveRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
 
     //The signal will be fired by the view watcher. Check ViewWatcher::onObjectsRemoved
     //emitChangeset(&m_changeSet);
+    RequestData::finish(error);
 }
 
 GSList *RemoveRequestData::compIds() const
