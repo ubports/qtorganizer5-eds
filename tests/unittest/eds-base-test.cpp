@@ -71,6 +71,7 @@ void EDSBaseTest::cleanup(QOrganizerEDSEngine *engine)
 
     for(GList  *i = sources; i != 0; i = i->next) {
         ESource *source = E_SOURCE(i->data);
+        QTest::qWait(100);
         error = 0;
         status = true;
         if (e_source_get_remote_deletable(source)) {
