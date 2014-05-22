@@ -71,15 +71,15 @@ void EDSBaseTest::cleanup(QOrganizerEDSEngine *engine)
 
     for(GList  *i = sources; i != 0; i = i->next) {
         ESource *source = E_SOURCE(i->data);
-        QTest::qWait(100);
+        QTest::qWait(1);
         error = 0;
         status = true;
         if (e_source_get_remote_deletable(source)) {
             status = e_source_remote_delete_sync(source, 0, &error);
-            QTest::qWait(100);
+            QTest::qWait(1);
         } else if (e_source_get_removable(source)) {
             status = e_source_remove_sync(source, 0, &error);
-            QTest::qWait(100);
+            QTest::qWait(1);
             // check if source was removed
             const gchar *uid = e_source_get_uid(source);
             Q_ASSERT(e_source_registry_ref_source(m_sourceRegistry, uid) == 0);
