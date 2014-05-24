@@ -32,7 +32,8 @@ public:
     time_t startDate() const;
     time_t endDate() const;
 
-    void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
+    void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError,
+                QtOrganizer::QOrganizerAbstractRequest::State state = QtOrganizer::QOrganizerAbstractRequest::FinishedState);
     void appendResult(icalcomponent *comp);
 
 private:

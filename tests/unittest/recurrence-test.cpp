@@ -64,6 +64,9 @@ private:
                                               QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
                                               &errorMap,
                                               &error);
+        if (!saveResult) {
+            qWarning() << "Fail to save items";
+        }
 
         Q_ASSERT(saveResult);
         Q_ASSERT(error == QtOrganizer::QOrganizerManager::NoError);

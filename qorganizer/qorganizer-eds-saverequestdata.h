@@ -29,7 +29,8 @@ public:
                     QtOrganizer::QOrganizerAbstractRequest *req);
     ~SaveRequestData();
 
-    void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
+    void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError,
+                QtOrganizer::QOrganizerAbstractRequest::State state = QtOrganizer::QOrganizerAbstractRequest::FinishedState);
 
 
     QString nextCollection();

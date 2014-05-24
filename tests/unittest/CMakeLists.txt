@@ -47,7 +47,6 @@ macro(update_test_properties TESTNAME)
     list(APPEND ENV_VARS_LIST "XDG_VIDEOS_DIR=${TEST_TMP_DIR}")
     list(APPEND ENV_VARS_LIST "QORGANIZER_EDS_DEBUG=On")
 
-    message(STATUS "ARGS: ${ENV_VARS_LIST}")
     set_tests_properties(${TESTNAME} PROPERTIES
                          TIMEOUT ${CTEST_TESTING_TIMEOUT}
                          ENVIRONMENT "${ENV_VARS_LIST}")
@@ -75,3 +74,4 @@ declare_test(collections-test)
 declare_test(event-test)
 declare_test(fetchitem-test)
 declare_test(recurrence-test)
+declare_test(cancel-operation-test)

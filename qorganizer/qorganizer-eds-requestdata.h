@@ -40,9 +40,8 @@ public:
     ECalClient *client() const;
     QOrganizerEDSEngine *parent() const;
     virtual void cancel();
-    bool cancelled();
     void deleteLater();
-    virtual void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError) = 0;
+    virtual void finish(QtOrganizer::QOrganizerManager::Error error, QtOrganizer::QOrganizerAbstractRequest::State state) = 0;
     bool finished() const;
     void wait();
     bool isWaiting();

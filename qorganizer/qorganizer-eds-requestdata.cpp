@@ -88,14 +88,6 @@ void RequestData::cancel()
     }
 }
 
-bool RequestData::cancelled()
-{
-    if (!m_req.isNull()) {
-        return isCanceling();
-    }
-    return false;
-}
-
 void RequestData::wait()
 {
     QMutexLocker locker(&m_waiting);
@@ -126,18 +118,18 @@ bool RequestData::isCanceling()
 
 void RequestData::deleteLater()
 {
-    if (!m_waiting.tryLock()) {
-        // wait still running
+    if (isWaiting() || isCanceling()) {
+        // still running
         return;
     }
-    m_waiting.unlock();
     m_parent->m_runningRequests.remove(m_req);
     delete this;
 }
 
-void RequestData::finish(QOrganizerManager::Error error)
+void RequestData::finish(QOrganizerManager::Error error, QtOrganizer::QOrganizerAbstractRequest::State state)
 {
     Q_UNUSED(error);
+    Q_UNUSED(state);
     m_finished = true;
 }
 
@@ -155,7 +147,9 @@ gboolean RequestData::destroy(RequestData *self)
 void RequestData::onCancelled(GCancellable *cancellable, RequestData *self)
 {
     Q_UNUSED(cancellable);
-    self->m_waiting.unlock();
+    if (self->m_req) {
+        self->finish(QOrganizerManager::UnspecifiedError, QOrganizerAbstractRequest::CanceledState);
+    }
 }
 
 void RequestData::setClient(EClient *client)

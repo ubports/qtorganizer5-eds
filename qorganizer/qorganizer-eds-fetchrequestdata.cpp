@@ -97,14 +97,15 @@ bool FetchRequestData::hasDateInterval() const
     return (endDate.isValid() && startDate.isValid());
 }
 
-void FetchRequestData::finish(QOrganizerManager::Error error)
+void FetchRequestData::finish(QOrganizerManager::Error error,
+                              QOrganizerAbstractRequest::State state)
 {
     QOrganizerManagerEngine::updateItemFetchRequest(request<QOrganizerItemFetchRequest>(),
                                                     m_results,
                                                     error,
-                                                    QOrganizerAbstractRequest::FinishedState);
+                                                    state);
     // TODO: emit changeset???
-    RequestData::finish(error);
+    RequestData::finish(error, state);
 }
 
 void FetchRequestData::appendResult(icalcomponent *comp)

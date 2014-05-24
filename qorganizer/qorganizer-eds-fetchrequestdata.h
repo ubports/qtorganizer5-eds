@@ -36,7 +36,8 @@ public:
     time_t endDate() const;
     bool hasDateInterval() const;
 
-    void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
+    void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError,
+                QtOrganizer::QOrganizerAbstractRequest::State state = QtOrganizer::QOrganizerAbstractRequest::FinishedState);
     void appendResult(icalcomponent *comp);
     int appendResults(QList<QtOrganizer::QOrganizerItem> results);
     QString dateFilter();

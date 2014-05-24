@@ -50,19 +50,20 @@ SaveCollectionRequestData::~SaveCollectionRequestData()
     }
 }
 
-void SaveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
+void SaveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error error,
+                                       QtOrganizer::QOrganizerAbstractRequest::State state)
 {
     QOrganizerManagerEngine::updateCollectionSaveRequest(request<QOrganizerCollectionSaveRequest>(),
                                                          m_results.values(),
                                                          error,
                                                          m_errorMap,
-                                                         QOrganizerAbstractRequest::FinishedState);
+                                                         state);
 
     //will wait for source registry signal
     //emitChangeset(&m_changeSet);
     m_changeSet.clearAll();
 
-    RequestData::finish(error);
+    RequestData::finish(error, state);
 }
 
 void SaveCollectionRequestData::commitSourceCreated()

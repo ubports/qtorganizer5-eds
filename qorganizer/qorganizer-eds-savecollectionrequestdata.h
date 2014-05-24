@@ -28,7 +28,8 @@ public:
                               QtOrganizer::QOrganizerAbstractRequest *req);
     ~SaveCollectionRequestData();
 
-    void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
+    void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError,
+                QtOrganizer::QOrganizerAbstractRequest::State state = QtOrganizer::QOrganizerAbstractRequest::FinishedState);
     bool isNew(int index) const;
     bool prepareToCreate();
     bool prepareToUpdate();
@@ -46,7 +47,7 @@ private:
 
     QMap<int, QtOrganizer::QOrganizerManager::Error> m_errorMap;
     QMap<int, QtOrganizer::QOrganizerCollection> m_results;
-    QMap<int, ESource*> m_sources;    
+    QMap<int, ESource*> m_sources;
     QMap<int, ESource*> m_sourcesToCreate;
     QMap<int, ESource*> m_sourcesToUpdate;
     QtOrganizer::QOrganizerCollectionChangeSet m_changeSet;

@@ -1013,9 +1013,7 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
 
 void QOrganizerEDSEngine::releaseRequestData(RequestData *data)
 {
-    if (!data->cancelled()) {
-        data->deleteLater();
-    }
+    data->deleteLater();
 }
 
 void QOrganizerEDSEngine::requestDestroyed(QOrganizerAbstractRequest* req)
@@ -1078,6 +1076,7 @@ bool QOrganizerEDSEngine::cancelRequest(QOrganizerAbstractRequest* req)
     RequestData *data = m_runningRequests.value(req);
     if (data) {
         data->cancel();
+        data->deleteLater();
         return true;
     }
     return false;
