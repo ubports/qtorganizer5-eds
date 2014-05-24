@@ -248,5 +248,9 @@ private:
     friend class FetchOcurrenceData;
 };
 
+using namespace QtOrganizer;
+Q_DECLARE_METATYPE(QList<QOrganizerCollectionId>)
+Q_DECLARE_METATYPE(QList<QOrganizerItemId>)
+
 #endif
 

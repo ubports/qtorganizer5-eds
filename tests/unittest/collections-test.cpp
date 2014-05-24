@@ -44,7 +44,7 @@ private:
 private Q_SLOTS:
     void init()
     {
-        EDSBaseTest::init(0);
+        EDSBaseTest::init();
         m_engineWrite = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
         m_engineRead = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
     }
@@ -52,9 +52,10 @@ private Q_SLOTS:
     void cleanup()
     {
         delete m_engineRead;
+        delete m_engineWrite;
         m_engineRead = 0;
-        EDSBaseTest::cleanup(m_engineWrite);
         m_engineWrite = 0;
+        EDSBaseTest::cleanup();
     }
 
     void testCreateCollection()
@@ -104,8 +105,11 @@ private Q_SLOTS:
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
         QCOMPARE(error, QOrganizerManager::NoError);
 
-        // we will receive a signal for each property (name, color)
-        QTRY_COMPARE(updateCollection.count(), 2);
+        QTRY_VERIFY(updateCollection.count() > 0);
+        QList<QVariant> args = updateCollection.takeFirst();
+        QCOMPARE(args.count(), 1);
+        QCOMPARE(args[0].value<QList<QOrganizerCollectionId> >().at(0).toString(), collection.id().toString());
+
 
         // Check if the collection was stored correct
         QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), &error);

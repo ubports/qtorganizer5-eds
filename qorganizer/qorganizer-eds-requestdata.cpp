@@ -29,6 +29,7 @@ using namespace QtOrganizer;
 RequestData::RequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbstractRequest *req)
     : m_parent(engine),
       m_client(0),
+      m_finished(false),
       m_req(req)
 {
     QOrganizerManagerEngine::updateRequestState(req, QOrganizerAbstractRequest::ActiveState);

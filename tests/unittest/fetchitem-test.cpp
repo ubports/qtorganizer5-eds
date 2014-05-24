@@ -42,7 +42,7 @@ private:
 private Q_SLOTS:
     void initTestCase()
     {
-        EDSBaseTest::init(0);
+        EDSBaseTest::init();
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
         // create test collection
@@ -87,9 +87,10 @@ private Q_SLOTS:
     {
         m_collection = QOrganizerCollection();
         m_events.clear();
-
-        EDSBaseTest::cleanup(m_engine);
+        delete m_engine;
         m_engine = 0;
+
+        EDSBaseTest::cleanup();
     }
 
     void testFetchById()

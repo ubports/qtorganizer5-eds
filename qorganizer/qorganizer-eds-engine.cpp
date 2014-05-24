@@ -811,9 +811,11 @@ QList<QOrganizerCollection> QOrganizerEDSEngine::collections(QOrganizerManager::
     startRequest(req);
     waitForRequestFinished(req, 0);
 
-    *error = req->error();
+    if (error) {
+        *error = req->error();
+    }
 
-    if (*error == QOrganizerManager::NoError) {
+    if (req->error() == QOrganizerManager::NoError) {
         return req->collections();
     } else {
         return QList<QOrganizerCollection>();
@@ -941,8 +943,11 @@ bool QOrganizerEDSEngine::removeCollection(const QOrganizerCollectionId& collect
     startRequest(req);
     waitForRequestFinished(req, 0);
 
-    *error = req->error();
-    return(*error == QOrganizerManager::NoError);
+    if (error) {
+        *error = req->error();
+    }
+
+    return(req->error() == QOrganizerManager::NoError);
 }
 
 void QOrganizerEDSEngine::removeCollectionAsync(QtOrganizer::QOrganizerCollectionRemoveRequest *req)

@@ -77,7 +77,7 @@ private:
 private Q_SLOTS:
     void init()
     {
-        EDSBaseTest::init(0);
+        EDSBaseTest::init();
 
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
@@ -92,7 +92,9 @@ private Q_SLOTS:
 
     void cleanup()
     {
-        EDSBaseTest::cleanup(m_engine);
+        delete m_engine;
+        m_engine = 0;
+        EDSBaseTest::cleanup();
     }
 
     void testCreateWeeklyEvent()

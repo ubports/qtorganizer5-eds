@@ -32,13 +32,12 @@ public:
     ~EDSBaseTest();
 
 protected:
-    void init(QOrganizerEDSEngine *engine);
-    void cleanup(QOrganizerEDSEngine *engine);
+    void init();
+    void cleanup();
 
     void appendToRemove(const QtOrganizer::QOrganizerItemId &id);
 
 private:
-    ESourceRegistry *m_sourceRegistry;
     QList<QtOrganizer::QOrganizerItemId> m_newItems;
 };
 

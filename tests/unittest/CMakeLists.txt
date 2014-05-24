@@ -21,11 +21,10 @@ macro(declare_test TESTNAME)
     )
 
     add_test(${TESTNAME}
-             ${DBUS_RUNNER} --keep-env
-             --task ${CMAKE_CURRENT_BINARY_DIR}/${TESTNAME} --task-name ${TESTNAME} --wait-until-complete --wait-for=org.gnome.evolution.dataserver.Calendar4
-             --task ${EVOLUTION_CALENDAR_FACTORY} --task-name "evolution" -r --wait-for=${EVOLUTION_SOURCE_SERVICE_NAME}
-             --task ${EVOLUTION_SOURCE_REGISTRY} --task-name "source-registry" --wait-for=org.gtk.vfs.Daemon -r
-             --task ${GVFSD} --task-name "gvfsd" -r)
+             ${CMAKE_CURRENT_SOURCE_DIR}/run-eds-test.sh ${DBUS_RUNNER} ${CMAKE_CURRENT_BINARY_DIR}/${TESTNAME} ${TESTNAME}
+             ${EVOLUTION_CALENDAR_FACTORY} ${EVOLUTION_SOURCE_SERVICE_NAME}
+             ${EVOLUTION_SOURCE_REGISTRY}
+             ${GVFSD})
     update_test_properties(${TESTNAME})
 endmacro(declare_test testname)
 
@@ -48,6 +47,7 @@ macro(update_test_properties TESTNAME)
     list(APPEND ENV_VARS_LIST "XDG_VIDEOS_DIR=${TEST_TMP_DIR}")
     list(APPEND ENV_VARS_LIST "QORGANIZER_EDS_DEBUG=On")
 
+    message(STATUS "ARGS: ${ENV_VARS_LIST}")
     set_tests_properties(${TESTNAME} PROPERTIES
                          TIMEOUT ${CTEST_TESTING_TIMEOUT}
                          ENVIRONMENT "${ENV_VARS_LIST}")
