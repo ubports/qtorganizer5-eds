@@ -28,10 +28,8 @@ using namespace QtOrganizer;
 
 RequestData::RequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbstractRequest *req)
     : m_parent(engine),
-      m_req(req),
       m_client(0),
-      m_canceling(false),
-      m_finished(false)
+      m_req(req)
 {
     QOrganizerManagerEngine::updateRequestState(req, QOrganizerAbstractRequest::ActiveState);
     m_cancellable = g_cancellable_new();
@@ -72,11 +70,7 @@ QOrganizerEDSEngine *RequestData::parent() const
 
 void RequestData::cancel()
 {
-    if (m_canceling) {
-        return;
-    }
-
-    m_canceling = true;
+    QMutexLocker locker(&m_canceling);
     if (m_cancellable) {
         gulong id = g_cancellable_connect(m_cancellable,
                                           (GCallback) RequestData::onCancelled,
@@ -91,38 +85,42 @@ void RequestData::cancel()
         g_cancellable_disconnect(m_cancellable, id);
         m_cancellable = 0;
     }
-    m_canceling = false;
 }
 
-bool RequestData::cancelled() const
+bool RequestData::cancelled()
 {
     if (!m_req.isNull()) {
-        return m_canceling;
+        return isCanceling();
     }
     return false;
 }
 
 void RequestData::wait()
 {
-    if (!m_waiting.tryLock()) {
-        qWarning() << "Recurrence wait.";
-        Q_ASSERT(false);
-        return;
-    }
-
+    QMutexLocker locker(&m_waiting);
     while(!m_finished) {
         QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
     }
-
-    m_waiting.unlock();
 }
 
-void RequestData::continueCancel()
+bool RequestData::isWaiting()
 {
-    if (!m_canceling) {
-        qWarning() << "Continue cancel without the orinal cancel call";
-        Q_ASSERT(false);
+    bool result = true;
+    if (m_waiting.tryLock()) {
+        result = false;
+        m_waiting.unlock();
     }
+    return result;
+}
+
+bool RequestData::isCanceling()
+{
+    bool result = true;
+    if (m_canceling.tryLock()) {
+        result = false;
+        m_canceling.unlock();
+    }
+    return result;
 }
 
 void RequestData::deleteLater()

@@ -1008,7 +1008,6 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
 
 void QOrganizerEDSEngine::releaseRequestData(RequestData *data)
 {
-    QOrganizerEDSEngine *ss = data->parent();
     if (!data->cancelled()) {
         data->deleteLater();
     }

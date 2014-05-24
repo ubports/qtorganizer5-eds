@@ -40,11 +40,13 @@ public:
     ECalClient *client() const;
     QOrganizerEDSEngine *parent() const;
     virtual void cancel();
-    bool cancelled() const;
+    bool cancelled();
     void deleteLater();
     virtual void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError) = 0;
     bool finished() const;
     void wait();
+    bool isWaiting();
+    bool isCanceling();
 
     template<class T>
     T* request() const {
@@ -59,9 +61,9 @@ public:
 protected:
     QOrganizerEDSEngine *m_parent;
     EClient *m_client;
-    QMutex m_waiting;
     QtOrganizer::QOrganizerItemChangeSet m_changeSet;
-    bool m_canceling;
+    QMutex m_waiting;
+    QMutex m_canceling;
     bool m_finished;
 
     virtual ~RequestData();
@@ -70,7 +72,6 @@ private:
     QPointer<QtOrganizer::QOrganizerAbstractRequest> m_req;
     GCancellable *m_cancellable;
 
-    void continueCancel();
     static void onCancelled(GCancellable *cancellable, RequestData *self);
     static gboolean destroy(RequestData *self);
 };
