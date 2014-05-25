@@ -42,7 +42,6 @@ public:
     virtual void cancel();
     void deleteLater();
     virtual void finish(QtOrganizer::QOrganizerManager::Error error, QtOrganizer::QOrganizerAbstractRequest::State state) = 0;
-    bool finished() const;
     void wait();
     bool isWaiting();
     bool isCanceling();
@@ -72,7 +71,6 @@ private:
     GCancellable *m_cancellable;
 
     static void onCancelled(GCancellable *cancellable, RequestData *self);
-    static gboolean destroy(RequestData *self);
 };
 
 #endif

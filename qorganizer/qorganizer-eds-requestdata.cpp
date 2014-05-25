@@ -133,17 +133,6 @@ void RequestData::finish(QOrganizerManager::Error error, QtOrganizer::QOrganizer
     m_finished = true;
 }
 
-bool RequestData::finished() const
-{
-    return m_finished;
-}
-
-gboolean RequestData::destroy(RequestData *self)
-{
-    delete self;
-    return 0;
-}
-
 void RequestData::onCancelled(GCancellable *cancellable, RequestData *self)
 {
     Q_UNUSED(cancellable);
