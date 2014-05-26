@@ -31,6 +31,7 @@ EDSBaseTest::EDSBaseTest()
 {
     qRegisterMetaType<QList<QOrganizerCollectionId> >();
     qRegisterMetaType<QList<QOrganizerItemId> >();
+    QCoreApplication::addLibraryPath(QORGANIZER_DEV_PATH);
 }
 
 EDSBaseTest::~EDSBaseTest()
