@@ -92,11 +92,19 @@ private Q_SLOTS:
         QOrganizerCollection collection;
         QtOrganizer::QOrganizerManager::Error error;
         collection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName);
-        collection.setMetaData(QOrganizerCollection::KeyColor, "red");
+        collection.setMetaData(QOrganizerCollection::KeyColor, QStringLiteral("red"));
+        collection.setExtendedMetaData(QStringLiteral("collection-selected"), false);
 
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(!collection.id().isNull());
+
+        // Check if the collection was stored correct
+        QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), &error);
+        QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyName).toString(), defaultCollectionName);
+        QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyColor).toString(), QStringLiteral("red"));
+        QCOMPARE(newCollection.extendedMetaData(QStringLiteral("collection-selected")).toBool(), false);
+
 
         // update the collection
         QSignalSpy updateCollection(m_engineWrite, SIGNAL(collectionsChanged(QList<QOrganizerCollectionId>)));
@@ -111,8 +119,8 @@ private Q_SLOTS:
         QCOMPARE(args[0].value<QList<QOrganizerCollectionId> >().at(0).toString(), collection.id().toString());
 
 
-        // Check if the collection was stored correct
-        QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), &error);
+        // Check if the collection was updated correct
+        newCollection = m_engineRead->collection(collection.id(), &error);
         QCOMPARE(error, QOrganizerManager::NoError);
         QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyName).toString(), defaultCollectionName);
         QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyColor).toString(), QStringLiteral("blue"));
