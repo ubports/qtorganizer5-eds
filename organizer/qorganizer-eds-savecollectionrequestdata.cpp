@@ -59,8 +59,8 @@ void SaveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error err
                                                          m_errorMap,
                                                          state);
 
-    //will wait for source registry signal
-    //emitChangeset(&m_changeSet);
+
+    // changes will be fired by source-registry
     m_changeSet.clearAll();
 
     RequestData::finish(error, state);

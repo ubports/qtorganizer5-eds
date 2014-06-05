@@ -55,10 +55,7 @@ void SaveRequestData::finish(QtOrganizer::QOrganizerManager::Error error,
                                                    error,
                                                    m_erros,
                                                    state);
-    Q_FOREACH(const QOrganizerItem &item, m_result) {
-        m_changeSet.insertAddedItem(item.id());
-    }
-    //emitChangeset(&m_changeSet);
+    // Change will be fired by the viewwatcher
     RequestData::finish(error, state);
 }
 
