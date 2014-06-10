@@ -300,10 +300,6 @@ void SourceRegistry::onSourceRemoved(ESourceRegistry *registry,
 void SourceRegistry::updateCollection(QOrganizerCollection *collection,
                                       ESource *source)
 {
-    //TODO get metadata (color, etc..)
-    collection->setMetaData(QOrganizerCollection::KeyName,
-                            QString::fromUtf8(e_source_get_display_name(source)));
-
     // name
     collection->setMetaData(QOrganizerCollection::KeyName,
                             QString::fromUtf8(e_source_get_display_name(source)));
@@ -328,4 +324,5 @@ void SourceRegistry::updateCollection(QOrganizerCollection *collection,
     // selected
     bool selected = (e_source_selectable_get_selected(E_SOURCE_SELECTABLE(extCalendar)) == TRUE);
     collection->setExtendedMetaData(COLLECTION_SELECTED_METADATA, selected);
+
 }

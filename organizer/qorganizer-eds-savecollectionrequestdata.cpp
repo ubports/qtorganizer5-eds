@@ -50,16 +50,20 @@ SaveCollectionRequestData::~SaveCollectionRequestData()
     }
 }
 
-void SaveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
+void SaveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error error,
+                                       QtOrganizer::QOrganizerAbstractRequest::State state)
 {
     QOrganizerManagerEngine::updateCollectionSaveRequest(request<QOrganizerCollectionSaveRequest>(),
                                                          m_results.values(),
                                                          error,
                                                          m_errorMap,
-                                                         QOrganizerAbstractRequest::FinishedState);
+                                                         state);
 
-    emitChangeset(&m_changeSet);
+
+    // changes will be fired by source-registry
     m_changeSet.clearAll();
+
+    RequestData::finish(error, state);
 }
 
 void SaveCollectionRequestData::commitSourceCreated()
@@ -181,11 +185,11 @@ void SaveCollectionRequestData::parseCollections()
 
             // update name
             QString name = collection.metaData(QOrganizerCollection::KeyName).toString();
-            e_source_set_display_name(source, name.toUtf8().data());
+            e_source_set_display_name(source, name.toUtf8().constData());
 
             // update color
             QString color = collection.metaData(QOrganizerCollection::KeyColor).toString();
-            e_source_selectable_set_color(E_SOURCE_SELECTABLE(extCalendar), color.toUtf8().data());
+            e_source_selectable_set_color(E_SOURCE_SELECTABLE(extCalendar), color.toUtf8().constData());
 
             // update selected
             bool selected = collection.extendedMetaData(COLLECTION_SELECTED_METADATA).toBool();

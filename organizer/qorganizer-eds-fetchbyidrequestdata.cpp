@@ -65,13 +65,15 @@ bool FetchByIdRequestData::end() const
     return (m_current >= ids.count());
 }
 
-void FetchByIdRequestData::finish(QOrganizerManager::Error error)
+void FetchByIdRequestData::finish(QOrganizerManager::Error error,
+                                  QOrganizerAbstractRequest::State state)
 {
     QOrganizerManagerEngine::updateItemFetchByIdRequest(request<QOrganizerItemFetchByIdRequest>(),
                                                         m_results,
                                                         error,
                                                         m_errors,
-                                                        QOrganizerAbstractRequest::FinishedState);
+                                                        state);
+    RequestData::finish(error, state);
 }
 
 int FetchByIdRequestData::appendResult(const QOrganizerItem &result)

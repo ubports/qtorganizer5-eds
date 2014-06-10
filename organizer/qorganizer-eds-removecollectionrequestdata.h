@@ -29,7 +29,8 @@ public:
     RemoveCollectionRequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbstractRequest *req);
     ~RemoveCollectionRequestData();
 
-    void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
+    void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError,
+                QtOrganizer::QOrganizerAbstractRequest::State state = QtOrganizer::QOrganizerAbstractRequest::FinishedState);
 
     ESource* begin();
     void commit(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);

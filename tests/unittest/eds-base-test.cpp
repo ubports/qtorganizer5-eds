@@ -29,71 +29,45 @@ using namespace QtOrganizer;
 
 EDSBaseTest::EDSBaseTest()
 {
-    GError *error = 0;
-    m_sourceRegistry = e_source_registry_new_sync(0, &error);
-    if (error) {
-        qWarning() << "Fail to create sourge registry:" << error->message;
-        g_error_free(error);
-        Q_ASSERT(false);
-    }
+    qRegisterMetaType<QList<QOrganizerCollectionId> >();
+    qRegisterMetaType<QList<QOrganizerItemId> >();
+    QCoreApplication::addLibraryPath(QORGANIZER_DEV_PATH);
 }
 
 EDSBaseTest::~EDSBaseTest()
 {
-    g_object_unref(m_sourceRegistry);
 }
 
-void EDSBaseTest::init(QOrganizerEDSEngine *engine)
+void EDSBaseTest::init()
 {
-    cleanup(engine);
-    // wait to flush DBUS calls
-    QTest::qWait(1000);
 }
 
-void EDSBaseTest::cleanup(QOrganizerEDSEngine *engine)
-{
-    // remove all new items, remove item by item because they can have diff collections
-    Q_FOREACH(const QOrganizerItemId &id, m_newItems) {
-        QtOrganizer::QOrganizerManager::Error error;
-        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
 
-        engine->removeItems(QList<QOrganizerItemId>() << id,
-                            &errorMap,
-                            &error);
+void EDSBaseTest::cleanup()
+{
+    static QStringList defaultSources;
+
+    if (defaultSources.isEmpty()) {
+        defaultSources << "qtorganizer:eds::birthdays"
+                       << "qtorganizer:eds::system-calendar"
+                       << "qtorganizer:eds::system-memo-list"
+                       << "qtorganizer:eds::system-task-list";
     }
-    m_newItems.clear();
+    QOrganizerEDSEngine *engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
+    Q_FOREACH(const QOrganizerCollection &col, engine->collections(0)) {
+        if (defaultSources.contains(col.id().toString())) {
+            continue;
+        }
+        QSignalSpy removeCollection(engine, SIGNAL(collectionsRemoved(QList<QOrganizerCollectionId>)));
+        QVERIFY(engine->removeCollection(col.id(), 0));
+        QTRY_COMPARE(removeCollection.count(), 1);
+
+        QList<QVariant> args = removeCollection.takeFirst();
+        QCOMPARE(args.count(), 1);
+        QCOMPARE(args[0].value<QList<QOrganizerCollectionId> >().at(0).toString(), col.id().toString());
+    }
+
     delete engine;
-
-    // remove all collections
-    GError *error;
-    gboolean status;
-    GList *sources = e_source_registry_list_sources(m_sourceRegistry, 0);
-
-    for(GList  *i = sources; i != 0; i = i->next) {
-        ESource *source = E_SOURCE(i->data);
-        error = 0;
-        status = true;
-        if (e_source_get_remote_deletable(source)) {
-            status = e_source_remote_delete_sync(source, 0, &error);
-            QTest::qWait(100);
-        } else if (e_source_get_removable(source)) {
-            status = e_source_remove_sync(source, 0, &error);
-            QTest::qWait(100);
-            // check if source was removed
-            const gchar *uid = e_source_get_uid(source);
-            Q_ASSERT(e_source_registry_ref_source(m_sourceRegistry, uid) == 0);
-        }
-        if (error) {
-            qWarning() << "Fail to remove source:" << error->message;
-            g_error_free(error);
-            Q_ASSERT(false);
-        }
-
-        Q_ASSERT(status);
-    }
-
-    g_list_free_full(sources, g_object_unref);
-    e_source_registry_debug_dump(m_sourceRegistry, 0);
 }
 
 void EDSBaseTest::appendToRemove(const QtOrganizer::QOrganizerItemId &id)

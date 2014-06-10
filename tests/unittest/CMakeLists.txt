@@ -21,16 +21,16 @@ macro(declare_test TESTNAME)
     )
 
     add_test(${TESTNAME}
-             ${DBUS_RUNNER} --keep-env
-             --task ${CMAKE_CURRENT_BINARY_DIR}/${TESTNAME} --task-name ${TESTNAME} --wait-until-complete --wait-for=org.gnome.evolution.dataserver.Calendar4
-             --task ${EVOLUTION_CALENDAR_FACTORY} --task-name "evolution" -r --wait-for=${EVOLUTION_SOURCE_SERVICE_NAME}
-             --task ${EVOLUTION_SOURCE_REGISTRY} --task-name "source-registry" --wait-for=org.gtk.vfs.Daemon -r
-             --task ${GVFSD} --task-name "gvfsd" -r)
+             ${CMAKE_CURRENT_SOURCE_DIR}/run-eds-test.sh ${DBUS_RUNNER} ${CMAKE_CURRENT_BINARY_DIR}/${TESTNAME} ${TESTNAME}
+             ${EVOLUTION_CALENDAR_FACTORY} ${EVOLUTION_SOURCE_SERVICE_NAME}
+             ${EVOLUTION_SOURCE_REGISTRY}
+             ${GVFSD})
     update_test_properties(${TESTNAME})
 endmacro(declare_test testname)
 
 macro(update_test_properties TESTNAME)
     set(TEST_TMP_DIR "${TMP_DIR}/${TESTNAME}")
+    set(ENV_VARS_LIST "")
     list(APPEND ENV_VARS_LIST "QT_QPA_PLATFORM=minimal")
     list(APPEND ENV_VARS_LIST "HOME=${TEST_TMP_DIR}")
     list(APPEND ENV_VARS_LIST "XDG_RUNTIME_DIR=${TEST_TMP_DIR}")
@@ -74,3 +74,4 @@ declare_test(collections-test)
 declare_test(event-test)
 declare_test(fetchitem-test)
 declare_test(recurrence-test)
+declare_test(cancel-operation-test)

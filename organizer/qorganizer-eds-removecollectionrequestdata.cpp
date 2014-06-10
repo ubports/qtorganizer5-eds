@@ -39,21 +39,16 @@ RemoveCollectionRequestData::~RemoveCollectionRequestData()
 {
 }
 
-void RemoveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
+void RemoveCollectionRequestData::finish(QOrganizerManager::Error error,
+                                         QOrganizerAbstractRequest::State state)
 {
     QOrganizerManagerEngine::updateCollectionRemoveRequest(request<QOrganizerCollectionRemoveRequest>(),
                                                            error,
                                                            m_errorMap,
-                                                           QOrganizerAbstractRequest::FinishedState);
+                                                           state);
 
-    QList<QOrganizerCollectionId> removedIds = m_pendingCollections;
-    Q_FOREACH(int index, m_errorMap.keys()) {
-        removedIds.removeAt(index);
-    }
-
-    QOrganizerCollectionChangeSet cs;
-    cs.insertRemovedCollections(removedIds);
-    emitChangeset(&cs);
+    // changes will be fired by source-registry
+    RequestData::finish(error, state);
 }
 
 void RemoveCollectionRequestData::commit(QtOrganizer::QOrganizerManager::Error error)

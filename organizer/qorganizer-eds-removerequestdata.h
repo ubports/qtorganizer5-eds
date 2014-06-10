@@ -32,7 +32,8 @@ public:
     QList<QtOrganizer::QOrganizerCollectionId> pendingCollections() const;
     QtOrganizer::QOrganizerCollectionId collectionId() const;
 
-    void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
+    void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError,
+                QtOrganizer::QOrganizerAbstractRequest::State state = QtOrganizer::QOrganizerAbstractRequest::FinishedState);
 
     GSList *compIds() const;
 

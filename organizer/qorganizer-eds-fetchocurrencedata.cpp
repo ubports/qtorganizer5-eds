@@ -62,7 +62,8 @@ time_t FetchOcurrenceData::endDate() const
     return endDate.toTime_t();
 }
 
-void FetchOcurrenceData::finish(QOrganizerManager::Error error)
+void FetchOcurrenceData::finish(QOrganizerManager::Error error,
+                                QtOrganizer::QOrganizerAbstractRequest::State state)
 {
     QList<QtOrganizer::QOrganizerItem> results;
 
@@ -76,7 +77,9 @@ void FetchOcurrenceData::finish(QOrganizerManager::Error error)
     QOrganizerManagerEngine::updateItemOccurrenceFetchRequest(request<QOrganizerItemOccurrenceFetchRequest>(),
                                                               results,
                                                               error,
-                                                              QOrganizerAbstractRequest::FinishedState);
+                                                              state);
+
+    RequestData::finish(error, state);
 }
 
 void FetchOcurrenceData::appendResult(icalcomponent *comp)

@@ -48,7 +48,7 @@ private:
 private Q_SLOTS:
     void init()
     {
-        EDSBaseTest::init(0);
+        EDSBaseTest::init();
 
         signalIndex = 0;
         m_itemRemovedTime = QDateTime();
@@ -67,7 +67,7 @@ private Q_SLOTS:
 
     void cleanup()
     {
-        EDSBaseTest::cleanup(m_engine);
+        EDSBaseTest::cleanup();
     }
 
     //helper

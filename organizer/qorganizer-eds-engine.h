@@ -128,6 +128,7 @@ public:
 protected Q_SLOTS:
     void onSourceAdded(const QString &collectionId);
     void onSourceRemoved(const QString &collectionId);
+    void onSourceUpdated(const QString &collectionId);
     void onViewChanged(QtOrganizer::QOrganizerItemChangeSet *change);
 
 protected:
@@ -246,6 +247,10 @@ private:
     friend class FetchRequestData;
     friend class FetchOcurrenceData;
 };
+
+using namespace QtOrganizer;
+Q_DECLARE_METATYPE(QList<QOrganizerCollectionId>)
+Q_DECLARE_METATYPE(QList<QOrganizerItemId>)
 
 #endif
 

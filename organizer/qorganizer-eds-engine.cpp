@@ -90,17 +90,17 @@ QOrganizerEDSEngine::QOrganizerEDSEngine(QOrganizerEDSEngineData *data)
     }
     connect(d->m_sourceRegistry, SIGNAL(sourceAdded(QString)), SLOT(onSourceAdded(QString)));
     connect(d->m_sourceRegistry, SIGNAL(sourceRemoved(QString)), SLOT(onSourceRemoved(QString)));
+    connect(d->m_sourceRegistry, SIGNAL(sourceUpdated(QString)), SLOT(onSourceUpdated(QString)));
     d->m_sourceRegistry->load();
 }
 
 QOrganizerEDSEngine::~QOrganizerEDSEngine()
 {
-    QList<QOrganizerAbstractRequest*> reqs = m_runningRequests.keys();
-    Q_FOREACH(QOrganizerAbstractRequest *req, reqs) {
-        req->cancel();
+    while(m_runningRequests.count()) {
+        QOrganizerAbstractRequest *req = m_runningRequests.keys().first();
+        QOrganizerEDSEngine::requestDestroyed(req);
     }
 
-    Q_ASSERT(m_runningRequests.count() == 0);
     d->m_sharedEngines.remove(this);
     if (!d->m_refCount.deref()) {
         delete d;
@@ -811,9 +811,11 @@ QList<QOrganizerCollection> QOrganizerEDSEngine::collections(QOrganizerManager::
     startRequest(req);
     waitForRequestFinished(req, 0);
 
-    *error = req->error();
+    if (error) {
+        *error = req->error();
+    }
 
-    if (*error == QOrganizerManager::NoError) {
+    if (req->error() == QOrganizerManager::NoError) {
         return req->collections();
     } else {
         return QList<QOrganizerCollection>();
@@ -941,8 +943,11 @@ bool QOrganizerEDSEngine::removeCollection(const QOrganizerCollectionId& collect
     startRequest(req);
     waitForRequestFinished(req, 0);
 
-    *error = req->error();
-    return(*error == QOrganizerManager::NoError);
+    if (error) {
+        *error = req->error();
+    }
+
+    return(req->error() == QOrganizerManager::NoError);
 }
 
 void QOrganizerEDSEngine::removeCollectionAsync(QtOrganizer::QOrganizerCollectionRemoveRequest *req)
@@ -1008,12 +1013,7 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
 
 void QOrganizerEDSEngine::releaseRequestData(RequestData *data)
 {
-    if (data->cancelled()) {
-        // if request was cancelled data will be destroyed later
-        data->continueCancel();
-    } else {
-        delete data;
-    }
+    data->deleteLater();
 }
 
 void QOrganizerEDSEngine::requestDestroyed(QOrganizerAbstractRequest* req)
@@ -1021,7 +1021,7 @@ void QOrganizerEDSEngine::requestDestroyed(QOrganizerAbstractRequest* req)
     RequestData *data = m_runningRequests.take(req);
     if (data) {
         data->cancel();
-        delete data;
+        data->deleteLater();
     }
 }
 
@@ -1073,10 +1073,10 @@ bool QOrganizerEDSEngine::startRequest(QOrganizerAbstractRequest* req)
 
 bool QOrganizerEDSEngine::cancelRequest(QOrganizerAbstractRequest* req)
 {
-    RequestData *data = m_runningRequests.take(req);
+    RequestData *data = m_runningRequests.value(req);
     if (data) {
         data->cancel();
-        delete data;
+        data->deleteLater();
         return true;
     }
     return false;
@@ -1087,10 +1087,11 @@ bool QOrganizerEDSEngine::waitForRequestFinished(QOrganizerAbstractRequest* req,
     Q_ASSERT(req);
     Q_UNUSED(msecs);
 
-    QPointer<QOrganizerAbstractRequest> r(req);
-
-    while(r && (r->state() == QOrganizerAbstractRequest::ActiveState)) {
-        QCoreApplication::processEvents();
+    RequestData *data = m_runningRequests.value(req);
+    if (data) {
+        data->wait();
+        // We can delete the operation already finished
+        data->deleteLater();
     }
 
     return true;
@@ -1186,11 +1187,18 @@ QList<QOrganizerItemType::ItemType> QOrganizerEDSEngine::supportedItemTypes() co
 void QOrganizerEDSEngine::onSourceAdded(const QString &collectionId)
 {
     d->watch(collectionId);
+    Q_EMIT collectionsAdded(QList<QOrganizerCollectionId>() << QOrganizerCollectionId::fromString(collectionId));
 }
 
 void QOrganizerEDSEngine::onSourceRemoved(const QString &collectionId)
 {
     d->unWatch(collectionId);
+    Q_EMIT collectionsRemoved(QList<QOrganizerCollectionId>() << QOrganizerCollectionId::fromString(collectionId));
+}
+
+void QOrganizerEDSEngine::onSourceUpdated(const QString &collectionId)
+{
+    Q_EMIT collectionsChanged(QList<QOrganizerCollectionId>() << QOrganizerCollectionId::fromString(collectionId));
 }
 
 void QOrganizerEDSEngine::onViewChanged(QOrganizerItemChangeSet *change)

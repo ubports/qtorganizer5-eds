@@ -70,7 +70,7 @@ if(NOT EVOLUTION_SOURCE_SERVICE_NAME)
     set(EVOLUTION_SOURCE_SERVICE_NAME "org.gnome.evolution.dataserver.Sources2")
 endif()
 
-add_subdirectory(qorganizer)
+add_subdirectory(organizer)
 if(DBUS_RUNNER)
     if(EVOLUTION_CALENDAR_FACTORY)
         enable_testing()

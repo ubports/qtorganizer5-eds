@@ -65,16 +65,18 @@ GSList *RemoveRequestData::takeItemsIds(QOrganizerCollectionId collectionId)
     return ids;
 }
 
-void RemoveRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
+void RemoveRequestData::finish(QOrganizerManager::Error error,
+                               QOrganizerAbstractRequest::State state)
 {
     e_client_refresh_sync(m_client, 0, 0);
     QOrganizerManagerEngine::updateItemRemoveRequest(request<QOrganizerItemRemoveRequest>(),
                                                      error,
                                                      QMap<int, QOrganizerManager::Error>(),
-                                                     QOrganizerAbstractRequest::FinishedState);
+                                                     state);
 
     //The signal will be fired by the view watcher. Check ViewWatcher::onObjectsRemoved
     //emitChangeset(&m_changeSet);
+    RequestData::finish(error, state);
 }
 
 GSList *RemoveRequestData::compIds() const

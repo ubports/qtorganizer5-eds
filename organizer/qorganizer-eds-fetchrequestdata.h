@@ -16,27 +16,38 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __QORGANIZER_EDS_FETCHOCURRENCEDATA_H__
-#define __QORGANIZER_EDS_FETCHOCURRENCEDATA_H__
+#ifndef __QORGANIZER_EDS_FETCHREQUESTDATA_H__
+#define __QORGANIZER_EDS_FETCHREQUESTDATA_H__
 
 #include "qorganizer-eds-requestdata.h"
 #include <glib.h>
 
-class FetchOcurrenceData : public RequestData
+class FetchRequestData : public RequestData
 {
 public:
-    FetchOcurrenceData(QOrganizerEDSEngine *engine,
-                       QtOrganizer::QOrganizerAbstractRequest *req);
-    ~FetchOcurrenceData();
+    FetchRequestData(QOrganizerEDSEngine *engine,
+                     QStringList collections,
+                     QtOrganizer::QOrganizerAbstractRequest *req);
+    ~FetchRequestData();
 
+    QString nextCollection();
+    QString collection() const;
     time_t startDate() const;
     time_t endDate() const;
+    bool hasDateInterval() const;
 
-    void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
+    void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError,
+                QtOrganizer::QOrganizerAbstractRequest::State state = QtOrganizer::QOrganizerAbstractRequest::FinishedState);
     void appendResult(icalcomponent *comp);
+    int appendResults(QList<QtOrganizer::QOrganizerItem> results);
+    QString dateFilter();
+
 
 private:
     GSList *m_components;
+    QStringList m_collections;
+    QString m_current;
+    QList<QtOrganizer::QOrganizerItem> m_results;
 };
 
 #endif

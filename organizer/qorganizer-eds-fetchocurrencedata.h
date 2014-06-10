@@ -16,31 +16,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __QORGANIZER_EDS_FETCHBYIDREQUESTDATA_H__
-#define __QORGANIZER_EDS_FETCHBYIDREQUESTDATA_H__
+#ifndef __QORGANIZER_EDS_FETCHOCURRENCEDATA_H__
+#define __QORGANIZER_EDS_FETCHOCURRENCEDATA_H__
 
 #include "qorganizer-eds-requestdata.h"
+#include <glib.h>
 
-
-class FetchByIdRequestData : public RequestData
+class FetchOcurrenceData : public RequestData
 {
 public:
-    FetchByIdRequestData(QOrganizerEDSEngine *engine,
-                         QtOrganizer::QOrganizerAbstractRequest *req);
-    ~FetchByIdRequestData();
+    FetchOcurrenceData(QOrganizerEDSEngine *engine,
+                       QtOrganizer::QOrganizerAbstractRequest *req);
+    ~FetchOcurrenceData();
 
-    QString nextId();
-    QString currentId() const;
-    QString currentCollectionId() const;
-    bool end() const;
+    time_t startDate() const;
+    time_t endDate() const;
 
-    void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
-    int appendResult(const QtOrganizer::QOrganizerItem &result);
+    void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError,
+                QtOrganizer::QOrganizerAbstractRequest::State state = QtOrganizer::QOrganizerAbstractRequest::FinishedState);
+    void appendResult(icalcomponent *comp);
 
 private:
-    int m_current;
-    QList<QtOrganizer::QOrganizerItem> m_results;
-    QMap<int, QtOrganizer::QOrganizerManager::Error> m_errors;
+    GSList *m_components;
 };
 
 #endif

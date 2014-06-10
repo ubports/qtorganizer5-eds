@@ -46,18 +46,17 @@ SaveRequestData::~SaveRequestData()
 {
 }
 
-void SaveRequestData::finish(QtOrganizer::QOrganizerManager::Error error)
+void SaveRequestData::finish(QtOrganizer::QOrganizerManager::Error error,
+                             QtOrganizer::QOrganizerAbstractRequest::State state)
 {
     e_client_refresh_sync(m_client, 0, 0);
     QOrganizerManagerEngine::updateItemSaveRequest(request<QOrganizerItemSaveRequest>(),
                                                    m_result,
                                                    error,
                                                    m_erros,
-                                                   QOrganizerAbstractRequest::FinishedState);
-    Q_FOREACH(const QOrganizerItem &item, m_result) {
-        m_changeSet.insertAddedItem(item.id());
-    }
-    emitChangeset(&m_changeSet);
+                                                   state);
+    // Change will be fired by the viewwatcher
+    RequestData::finish(error, state);
 }
 
 void SaveRequestData::appendResults(QList<QOrganizerItem> result)
