@@ -119,7 +119,7 @@ int FetchRequestData::appendResults(QList<QOrganizerItem> results)
     QOrganizerItemFetchRequest *req = request<QOrganizerItemFetchRequest>();
     Q_FOREACH(const QOrganizerItem &item, results) {
         if (QOrganizerManagerEngine::testFilter(req->filter(), item)) {
-            m_results << item;
+            QOrganizerManagerEngine::addSorted(&m_results, item, req->sorting());
             count++;
         }
     }
