@@ -100,6 +100,38 @@ private Q_SLOTS:
         EDSBaseTest::cleanup();
     }
 
+    void testCreateDailyEvent()
+    {
+        static QString displayLabelValue = QStringLiteral("Daily test");
+        static QString descriptionValue = QStringLiteral("Daily description");
+
+        QOrganizerEvent ev;
+        ev.setCollectionId(m_collection.id());
+        ev.setStartDateTime(QDateTime(QDate(2013, 12, 2), QTime(0,0,0)));
+        ev.setEndDateTime(QDateTime(QDate(2013, 12, 2), QTime(0,30,0)));
+        ev.setDisplayLabel(displayLabelValue);
+        ev.setDescription(descriptionValue);
+
+        QOrganizerRecurrenceRule rule;
+        rule.setFrequency(QOrganizerRecurrenceRule::Daily);
+        rule.setLimit(QDate(2013, 12, 31));
+        ev.setRecurrenceRule(rule);
+
+        QSignalSpy itemsAdded(m_engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        items << ev;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+
+        QVERIFY(saveResult);
+        QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
+        QTRY_COMPARE(itemsAdded.count(), 1);
+    }
+
     void testCreateWeeklyEvent()
     {
         static QString displayLabelValue = QStringLiteral("Weekly test");
