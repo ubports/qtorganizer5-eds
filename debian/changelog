@@ -1,3 +1,10 @@
+qtorganizer5-eds (0.1.1+14.10.20140923-0ubuntu1) utopic; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * Fixed recurrence events.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 23 Sep 2014 17:01:28 +0000
+
 qtorganizer5-eds (0.1.1+14.10.20140610.1-0ubuntu1) utopic; urgency=low
 
   [ Ubuntu daily release ]
