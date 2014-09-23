@@ -1421,7 +1421,7 @@ void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *i
                 if (dt.isValid()) {
                     qRule.setLimit(dt);
                 }
-            } else {
+            } else if (rule->count > 0) {
                 qRule.setLimit(rule->count);
             }
 
@@ -1979,7 +1979,7 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
             if (qRule.limitDate().isValid()) {
                 rule->until = icaltime_from_timet(QDateTime(qRule.limitDate()).toTime_t(), TRUE);
                 rule->count = ICAL_RECURRENCE_ARRAY_MAX;
-            } else {
+            } else if (qRule.limitCount() > 0) {
                 rule->count = qRule.limitCount();
             }
 

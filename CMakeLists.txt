@@ -67,7 +67,7 @@ configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 OPTION(EVOLUTION_SOURCE_SERVICE_NAME "DBus name for source registry")
 if(NOT EVOLUTION_SOURCE_SERVICE_NAME)
-    set(EVOLUTION_SOURCE_SERVICE_NAME "org.gnome.evolution.dataserver.Sources2")
+    set(EVOLUTION_SOURCE_SERVICE_NAME "org.gnome.evolution.dataserver.Sources3")
 endif()
 
 add_subdirectory(organizer)

@@ -12,6 +12,7 @@ Build-Depends: cmake (>= 2.8.9),
                qtpim5-dev,
                evolution-data-server,
                dbus-test-runner,
+               gvfs-daemons
 Standards-Version: 3.9.4
 Homepage: https://launchpad.net/qtorganizer5-eds
 # If you aren't a member of ~phablet-team but need to upload packaging changes,
