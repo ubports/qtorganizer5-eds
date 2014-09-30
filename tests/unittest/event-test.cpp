@@ -640,13 +640,12 @@ private Q_SLOTS:
         todo.setStartDateTime(QDateTime::currentDateTime());
         todo.setDisplayLabel(displayLabelValue);
         todo.setDescription(descriptionValue);
-        todo.addTag("Tag0");
-        todo.addTag("Tag1");
-        todo.addTag("Tag2");
+        todo.setTags(QStringList() << "Tag0" << "Tag1" << "Tag2");
 
         QtOrganizer::QOrganizerManager::Error error;
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
+        QSignalSpy createdItem(m_engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
         items << todo;
         bool saveResult = m_engine->saveItems(&items,
                                               QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
@@ -661,7 +660,22 @@ private Q_SLOTS:
         QOrganizerTodo newTodo = static_cast<QOrganizerTodo>(items[0]);
         QStringList expectedTags;
         expectedTags << "Tag0" << "Tag1" << "Tag2";
+        Q_FOREACH(QString tag, newTodo.tags()) {
+            expectedTags.removeAll(tag);
+        }
+        QCOMPARE(expectedTags.size(), 0);
 
+        // check saved item
+        QTRY_COMPARE(createdItem.count(), 1);
+
+        QOrganizerItemFetchHint hint;
+        QList<QOrganizerItemId> ids;
+        ids << items[0].id();
+        items = m_engine->items(ids, hint, &errorMap, &error);
+        QCOMPARE(items.count(), 1);
+
+        newTodo = static_cast<QOrganizerTodo>(items[0]);
+        expectedTags << "Tag0" << "Tag1" << "Tag2";
         Q_FOREACH(QString tag, newTodo.tags()) {
             expectedTags.removeAll(tag);
         }

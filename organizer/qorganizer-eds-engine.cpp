@@ -2269,16 +2269,14 @@ void QOrganizerEDSEngine::parseTags(const QOrganizerItem &item, ECalComponent *c
 
     Q_FOREACH(const QString &tag, item.tags()) {
         QByteArray str = tag.toUtf8();
-        ECalComponentText *txt = g_new0(ECalComponentText, 1);
-        txt->value = str.constData();
-        categories = g_slist_append(categories, txt);
+        categories = g_slist_append(categories, str.data());
         // keep str alive until the property gets updated
         tagList << str;
     }
 
     if (categories) {
         e_cal_component_set_categories_list(comp, categories);
-        e_cal_component_free_text_list(categories);
+        g_slist_free(categories);
     }
 }
 
