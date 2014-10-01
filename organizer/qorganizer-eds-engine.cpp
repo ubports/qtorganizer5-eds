@@ -1021,7 +1021,6 @@ void QOrganizerEDSEngine::requestDestroyed(QOrganizerAbstractRequest* req)
     RequestData *data = m_runningRequests.take(req);
     if (data) {
         data->cancel();
-        data->deleteLater();
     }
 }
 
