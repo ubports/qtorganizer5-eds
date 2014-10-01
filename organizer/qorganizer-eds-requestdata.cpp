@@ -73,18 +73,22 @@ void RequestData::cancel()
 {
     QMutexLocker locker(&m_canceling);
     if (m_cancellable) {
-        gulong id = g_cancellable_connect(m_cancellable,
+        GCancellable *cancellable = m_cancellable;
+        gulong id = g_cancellable_connect(cancellable,
                                           (GCallback) RequestData::onCancelled,
                                           this, NULL);
-        // wait the cancel
-        wait();
+
 
         // cancel
-        g_cancellable_cancel(m_cancellable);
+        g_cancellable_cancel(cancellable);
+
+        // wait the cancel
+        if (cancellable) {
+            wait();
+        }
 
         // done
-        g_cancellable_disconnect(m_cancellable, id);
-        m_cancellable = 0;
+        g_cancellable_disconnect(cancellable, id);
     }
 }
 
@@ -139,6 +143,7 @@ void RequestData::onCancelled(GCancellable *cancellable, RequestData *self)
     if (self->m_req) {
         self->finish(QOrganizerManager::UnspecifiedError, QOrganizerAbstractRequest::CanceledState);
     }
+    self->m_cancellable = 0;
 }
 
 void RequestData::setClient(EClient *client)
