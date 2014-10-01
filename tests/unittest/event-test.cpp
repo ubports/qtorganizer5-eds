@@ -629,6 +629,58 @@ private Q_SLOTS:
         QCOMPARE(newStartDateTime.timeZone(), QTimeZone("Asia/Bangkok"));
         QCOMPARE(newTodo.startDateTime(), startDateTime);
     }
+
+    void testEventWithTags()
+    {
+        static QString displayLabelValue = QStringLiteral("event with tag");
+        static QString descriptionValue = QStringLiteral("event with tag descs");
+
+        QOrganizerTodo todo;
+        todo.setCollectionId(m_collection.id());
+        todo.setStartDateTime(QDateTime::currentDateTime());
+        todo.setDisplayLabel(displayLabelValue);
+        todo.setDescription(descriptionValue);
+        todo.setTags(QStringList() << "Tag0" << "Tag1" << "Tag2");
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        QSignalSpy createdItem(m_engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+        items << todo;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QCOMPARE(items.size(), 1);
+        QVERIFY(errorMap.isEmpty());
+        QVERIFY(!items[0].id().isNull());
+
+        QOrganizerTodo newTodo = static_cast<QOrganizerTodo>(items[0]);
+        QStringList expectedTags;
+        expectedTags << "Tag0" << "Tag1" << "Tag2";
+        Q_FOREACH(QString tag, newTodo.tags()) {
+            expectedTags.removeAll(tag);
+        }
+        QCOMPARE(expectedTags.size(), 0);
+
+        // check saved item
+        QTRY_COMPARE(createdItem.count(), 1);
+
+        QOrganizerItemFetchHint hint;
+        QList<QOrganizerItemId> ids;
+        ids << items[0].id();
+        items = m_engine->items(ids, hint, &errorMap, &error);
+        QCOMPARE(items.count(), 1);
+
+        newTodo = static_cast<QOrganizerTodo>(items[0]);
+        expectedTags << "Tag0" << "Tag1" << "Tag2";
+        Q_FOREACH(QString tag, newTodo.tags()) {
+            expectedTags.removeAll(tag);
+        }
+        QCOMPARE(expectedTags.size(), 0);
+    }
 };
 
 const QString EventTest::defaultCollectionName = QStringLiteral("TEST_EVENT_COLLECTION");
