@@ -1075,7 +1075,6 @@ bool QOrganizerEDSEngine::cancelRequest(QOrganizerAbstractRequest* req)
     RequestData *data = m_runningRequests.value(req);
     if (data) {
         data->cancel();
-        data->deleteLater();
         return true;
     }
     return false;
