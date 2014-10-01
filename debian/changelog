@@ -1,3 +1,14 @@
+qtorganizer5-eds (0.1.1+14.10.20141001.4-0ubuntu1) 14.09; urgency=low
+
+  [ Ubuntu daily release ]
+  * New rebuild forced
+
+  [ Renato Araujo Oliveira Filho ]
+  * Create unit test to event tags.
+  * Fixed cancel function for request data.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 01 Oct 2014 21:38:05 +0000
+
 qtorganizer5-eds (0.1.1+14.10.20140923-0ubuntu1) utopic; urgency=low
 
   [ Renato Araujo Oliveira Filho ]
