@@ -1209,12 +1209,15 @@ QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const cha
     uint tmTime;
 
     if (tzId) {
-        QByteArray tzName(tzId);
-        // keep only the timezone name.
-        tzName = tzName.replace("/freeassociation.sourceforge.net/Tzfile/", "");
-        const icaltimezone *timezone = const_cast<const icaltimezone *>(icaltimezone_get_builtin_timezone(tzName.constData()));
+        icaltimezone *timezone = icaltimezone_get_builtin_timezone_from_tzid(tzId);
+        // fallback: sometimes the tzId contains the location name
+        if (!timezone) {
+            timezone = icaltimezone_get_builtin_timezone(tzId);
+        }
         tmTime = icaltime_as_timet_with_zone(value, timezone);
-        return QDateTime::fromTime_t(tmTime, QTimeZone(tzId));
+        QByteArray tzLocationName(icaltimezone_get_location(timezone));
+        QTimeZone qTz(tzLocationName);
+        return QDateTime::fromTime_t(tmTime, qTz);
     } else {
         tmTime = icaltime_as_timet(value);
         return QDateTime::fromTime_t(tmTime);
@@ -1225,16 +1228,26 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
                                                 bool allDay,
                                                 QByteArray *tzId)
 {
-
-    if (dateTime.timeSpec() == Qt::TimeZone) {
-        const icaltimezone *timezone = 0;
-        *tzId = dateTime.timeZone().id();
-        timezone = const_cast<const icaltimezone *>(icaltimezone_get_builtin_timezone(tzId->constData()));
-        return icaltime_from_timet_with_zone(dateTime.toTime_t(), allDay, timezone);
-    } else {
-        return icaltime_from_timet(dateTime.toTime_t(), allDay);
+    QDateTime finalDate = dateTime;
+    switch (dateTime.timeSpec()) {
+    case Qt::UTC:
+        finalDate = finalDate.toTimeSpec(Qt::TimeZone);
+    case Qt::TimeZone:
+    {
+        icaltimezone *timezone = 0;
+        timezone = icaltimezone_get_builtin_timezone(finalDate.timeZone().id().constData());
+        *tzId = QByteArray(icaltimezone_get_tzid(timezone));
+        return icaltime_from_timet_with_zone(finalDate.toTime_t(), allDay, timezone);
+        break;
     }
-
+    case Qt::OffsetFromUTC:
+        qWarning() << "TimeSpec OffsetFromUTC not supported";
+        break;
+    case Qt::LocalTime: // Local time will be considered as floating time
+    default:
+        return icaltime_from_timet(finalDate.toTime_t(), allDay);
+        break;
+    }
 }
 
 void QOrganizerEDSEngine::parseStartTime(ECalComponent *comp, QOrganizerItem *item)

@@ -197,8 +197,8 @@ private Q_SLOTS:
     {
         static QString displayLabelValue = QStringLiteral("Monthly test");
         static QString descriptionValue = QStringLiteral("Monthly description");
-        static QDateTime eventStartDate = QDateTime(QDate(2013, 1, 1), QTime(0, 0, 0), Qt::UTC);
-        static QDateTime eventEndDate = QDateTime(QDate(2013, 1, 1), QTime(0, 30, 0), Qt::UTC);
+        static QDateTime eventStartDate = QDateTime(QDate(2013, 1, 1), QTime(0, 0, 0));
+        static QDateTime eventEndDate = QDateTime(QDate(2013, 1, 1), QTime(0, 30, 0));
 
         QOrganizerEvent ev;
         ev.setCollectionId(m_collection.id());
@@ -243,7 +243,7 @@ private Q_SLOTS:
             QCOMPARE(time.startDateTime(), eventStartDate.addMonths(i));
 
             time = items[(i*2)+1].detail(QOrganizerItemDetail::TypeEventTime);
-            QCOMPARE(time.startDateTime(), QDateTime(QDate(2013, i+1, 5), QTime(0,0,0), Qt::UTC));
+            QCOMPARE(time.startDateTime(), QDateTime(QDate(2013, i+1, 5), QTime(0,0,0), Qt::LocalTime));
         }
     }
 
