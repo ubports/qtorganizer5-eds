@@ -786,7 +786,6 @@ bool QOrganizerEDSEngine::removeItems(const QList<QOrganizerItemId> &itemIds,
 
 QOrganizerCollection QOrganizerEDSEngine::defaultCollection(QOrganizerManager::Error* error)
 {
-    qWarning() << Q_FUNC_INFO << "Not implemented";
     if (error) {
         *error = QOrganizerManager::NoError;
     }
@@ -1228,10 +1227,11 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
                                                 bool allDay,
                                                 QByteArray *tzId)
 {
-    QDateTime finalDate = dateTime;
+    QDateTime finalDate(dateTime);
     switch (dateTime.timeSpec()) {
     case Qt::UTC:
-        finalDate = finalDate.toTimeSpec(Qt::TimeZone);
+        // convert date to UTC timezone
+        finalDate = finalDate.toTimeZone(QTimeZone("UTC"));
     case Qt::TimeZone:
     {
         icaltimezone *timezone = 0;
