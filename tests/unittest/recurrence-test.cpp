@@ -132,7 +132,7 @@ private Q_SLOTS:
 
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
-        QTRY_COMPARE(itemsAdded.count(), 1);
+        QTRY_COMPARE_WITH_TIMEOUT(itemsAdded.count(), 1, 10000);
     }
 
     void testCreateWeeklyEvent()

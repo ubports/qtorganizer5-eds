@@ -183,7 +183,7 @@ private Q_SLOTS:
 
     void testCreateTask()
     {
-        static const QString collectionName = uniqueCollectionName() + QStringLiteral("_TASKS") ;
+        static const QString collectionName = uniqueCollectionName();
         static QString displayLabelValue = QStringLiteral("Todo test");
         static QString descriptionValue = QStringLiteral("Todo description");
 
@@ -192,8 +192,10 @@ private Q_SLOTS:
         collection.setMetaData(QOrganizerCollection::KeyName, collectionName);
         collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
 
+        QSignalSpy createCollection(m_engineWrite, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
         QVERIFY(!collection.id().isNull());
+        QTRY_COMPARE(createCollection.count(), 1);
 
         QOrganizerTodo todo;
         todo.setCollectionId(collection.id());
