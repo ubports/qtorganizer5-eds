@@ -32,8 +32,9 @@ public:
     ~EDSBaseTest();
 
 protected:
-    void init();
-    void cleanup();
+    virtual void initTestCase();
+    virtual void init();
+    virtual void cleanup();
 
     QString uniqueCollectionName() const;
 };

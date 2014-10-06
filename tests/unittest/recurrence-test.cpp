@@ -75,6 +75,11 @@ private:
     }
 
 private Q_SLOTS:
+    void initTestCase()
+    {
+        EDSBaseTest::initTestCase();
+    }
+
     void init()
     {
         EDSBaseTest::init();
@@ -100,7 +105,6 @@ private Q_SLOTS:
 
     void testCreateDailyEvent()
     {
-        qDebug() << "NEW TEST" << m_collection.id();
         static QString displayLabelValue = QStringLiteral("Daily test");
         static QString descriptionValue = QStringLiteral("Daily description");
 
@@ -133,7 +137,6 @@ private Q_SLOTS:
 
     void testCreateWeeklyEvent()
     {
-        qDebug() << "NEW TEST" << m_collection.id();
         static QString displayLabelValue = QStringLiteral("Weekly test");
         static QString descriptionValue = QStringLiteral("Weekly description");
 

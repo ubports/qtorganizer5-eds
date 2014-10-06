@@ -38,6 +38,12 @@ EDSBaseTest::~EDSBaseTest()
 {
 }
 
+void EDSBaseTest::initTestCase()
+{
+    QTest::qWait(1000);
+}
+
+
 void EDSBaseTest::init()
 {
 }

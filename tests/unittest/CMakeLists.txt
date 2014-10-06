@@ -25,16 +25,7 @@ macro(declare_test TESTNAME)
              ${EVOLUTION_CALENDAR_FACTORY} ${EVOLUTION_SOURCE_SERVICE_NAME}
              ${EVOLUTION_SOURCE_REGISTRY}
              ${GVFSD})
-    update_test_properties(${TESTNAME})
 endmacro(declare_test testname)
-
-macro(update_test_properties TESTNAME)
-
-
-    set_tests_properties(${TESTNAME} PROPERTIES
-                         TIMEOUT ${CTEST_TESTING_TIMEOUT}
-                         ENVIRONMENT "${ENV_VARS_LIST}")
-endmacro(update_test_properties)
 
 include_directories(
     ${CMAKE_SOURCE_DIR}
@@ -48,9 +39,6 @@ include_directories(
 
 add_definitions(-DTEST_SUITE)
 add_definitions(-std=c++11)
-if(NOT CTEST_TESTING_TIMEOUT)
-    set(CTEST_TESTING_TIMEOUT 60)
-endif()
 
 declare_test(itemid-test)
 declare_test(parseecal-test)

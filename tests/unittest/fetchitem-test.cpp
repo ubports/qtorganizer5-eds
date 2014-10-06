@@ -40,6 +40,7 @@ private:
 private Q_SLOTS:
     void initTestCase()
     {
+        EDSBaseTest::initTestCase();
         const QString collectionName = uniqueCollectionName();
         EDSBaseTest::init();
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
