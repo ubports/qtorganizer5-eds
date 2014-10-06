@@ -132,33 +132,7 @@ private Q_SLOTS:
         QCOMPARE(newCollection.extendedMetaData("collection-selected").toBool(), true);
     }
 
-    void testRemoveCollection()
-    {
-        static QString removableCollectionName = uniqueCollectionName() + QStringLiteral("_REMOVABLE");
-
-        // Create a collection
-        QOrganizerCollection collection;
-        QtOrganizer::QOrganizerManager::Error error;
-        collection.setMetaData(QOrganizerCollection::KeyName, removableCollectionName);
-
-        QList<QOrganizerCollection> collections = m_engineRead->collections(&error);
-        int initalCollectionCount = collections.count();
-
-        QVERIFY(m_engineWrite->saveCollection(&collection, &error));
-
-        // remove recent created collection
-        QVERIFY(m_engineWrite->removeCollection(collection.id(), &error));
-
-        collections = m_engineWrite->collections(&error);
-        QCOMPARE(collections.count(), initalCollectionCount);
-        QVERIFY(!collections.contains(collection));
-
-        collections = m_engineRead->collections(&error);
-        QCOMPARE(collections.count(), initalCollectionCount);
-        QVERIFY(!collections.contains(collection));
-    }
-
-   void testCreateTaskList()
+    void testCreateTaskList()
     {
         static const QString collectionName = uniqueCollectionName() + QStringLiteral("_TASKS") ;
 
@@ -217,7 +191,7 @@ private Q_SLOTS:
         QVERIFY(!items[0].id().isNull());
 
         //verify signal
-        QTRY_COMPARE(createdItem.count(), 1);
+        QTRY_COMPARE_WITH_TIMEOUT(createdItem.count(), 1, 10000);
         QList<QVariant> args = createdItem.takeFirst();
         QCOMPARE(args.count(), 1);
 
@@ -256,6 +230,32 @@ private Q_SLOTS:
         QCOMPARE(result.startDateTime(), todo.startDateTime());
         QCOMPARE(result.displayLabel(), todo.displayLabel());
         QCOMPARE(result.description(), todo.description());
+    }
+
+    void testRemoveCollection()
+    {
+        static QString removableCollectionName = uniqueCollectionName() + QStringLiteral("_REMOVABLE");
+
+        // Create a collection
+        QOrganizerCollection collection;
+        QtOrganizer::QOrganizerManager::Error error;
+        collection.setMetaData(QOrganizerCollection::KeyName, removableCollectionName);
+
+        QList<QOrganizerCollection> collections = m_engineRead->collections(&error);
+        int initalCollectionCount = collections.count();
+
+        QVERIFY(m_engineWrite->saveCollection(&collection, &error));
+
+        // remove recent created collection
+        QVERIFY(m_engineWrite->removeCollection(collection.id(), &error));
+
+        collections = m_engineWrite->collections(&error);
+        QCOMPARE(collections.count(), initalCollectionCount);
+        QVERIFY(!collections.contains(collection));
+
+        collections = m_engineRead->collections(&error);
+        QCOMPARE(collections.count(), initalCollectionCount);
+        QVERIFY(!collections.contains(collection));
     }
 };
 
