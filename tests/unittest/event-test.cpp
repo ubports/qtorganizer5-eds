@@ -76,7 +76,7 @@ private Q_SLOTS:
     {
         m_itemRemovedTime = QDateTime::currentDateTime();
         // avoid both signals to be fired at the same time
-        QTest::qWait(100);
+        QTest::qSleep(100);
     }
 
     void requestFinished(QOrganizerAbstractRequest::State state)
@@ -84,7 +84,7 @@ private Q_SLOTS:
         if (state == QOrganizerAbstractRequest::FinishedState) {
             m_requestFinishedTime = QDateTime::currentDateTime();
             // avoid both signals to be fired at the same time
-            QTest::qWait(100);
+            QTest::qSleep(100);
         }
     }
 
