@@ -33,8 +33,6 @@ class FetchItemTest : public QObject, public EDSBaseTest
 {
     Q_OBJECT
 private:
-    static const QString defaultCollectionName;
-
     QOrganizerEDSEngine *m_engine;
     QOrganizerCollection m_collection;
     QList<QOrganizerItem> m_events;
@@ -42,13 +40,14 @@ private:
 private Q_SLOTS:
     void initTestCase()
     {
+        const QString collectionName = uniqueCollectionName();
         EDSBaseTest::init();
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
         // create test collection
         m_collection = QOrganizerCollection();
         QtOrganizer::QOrganizerManager::Error error;
-        m_collection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName);
+        m_collection.setMetaData(QOrganizerCollection::KeyName, collectionName);
         QVERIFY(m_engine->saveCollection(&m_collection, &error));
 
         // create test events
@@ -78,7 +77,6 @@ private Q_SLOTS:
             QCOMPARE(error, QOrganizerManager::NoError);
             QVERIFY(errorMap.isEmpty());
             m_events << evs[0];
-            appendToRemove(evs[0].id());
             date = date.addDays(1);
         }
     }
@@ -169,8 +167,6 @@ private Q_SLOTS:
         QCOMPARE(result.size(), 10);
     }
 };
-
-const QString FetchItemTest::defaultCollectionName = QStringLiteral("TEST_FETCH_COLLECTION");
 
 QTEST_MAIN(FetchItemTest)
 

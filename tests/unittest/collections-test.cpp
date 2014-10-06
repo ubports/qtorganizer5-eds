@@ -21,6 +21,7 @@
 #include <QtTest>
 #include <QDebug>
 
+
 #include <QtOrganizer>
 
 #include "qorganizer-eds-engine.h"
@@ -33,8 +34,6 @@ class CollectionTest : public QObject, public EDSBaseTest
 {
     Q_OBJECT
 private:
-    static const QString defaultCollectionName;
-    static const QString defaultTaskCollectionName;
     static const QString collectionTypePropertyName;
     static const QString taskListTypeName;
 
@@ -60,9 +59,12 @@ private Q_SLOTS:
 
     void testCreateCollection()
     {
+        static const QString collectionName = uniqueCollectionName();
+
         QOrganizerCollection collection;
         QtOrganizer::QOrganizerManager::Error error;
-        collection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName);
+
+        collection.setMetaData(QOrganizerCollection::KeyName, collectionName);
         collection.setMetaData(QOrganizerCollection::KeyColor, QStringLiteral("red"));
 
         QList<QOrganizerCollection> collections = m_engineRead->collections(&error);
@@ -81,7 +83,7 @@ private Q_SLOTS:
         // Check if data was correct saved
         QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), &error);
         QCOMPARE(error, QOrganizerManager::NoError);
-        QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyName).toString(), defaultCollectionName);
+        QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyName).toString(), collectionName);
         QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyColor).toString(), QStringLiteral("red"));
         QCOMPARE(newCollection.extendedMetaData("collection-type").toString(), QStringLiteral("Calendar"));
         QCOMPARE(newCollection.extendedMetaData("collection-selected").toBool(), false);
@@ -89,9 +91,12 @@ private Q_SLOTS:
 
     void testUpdateCollection()
     {
+        static const QString collectionName = uniqueCollectionName();
+
         QOrganizerCollection collection;
         QtOrganizer::QOrganizerManager::Error error;
-        collection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName);
+
+        collection.setMetaData(QOrganizerCollection::KeyName, collectionName);
         collection.setMetaData(QOrganizerCollection::KeyColor, QStringLiteral("red"));
         collection.setExtendedMetaData(QStringLiteral("collection-selected"), false);
 
@@ -101,7 +106,7 @@ private Q_SLOTS:
 
         // Check if the collection was stored correct
         QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), &error);
-        QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyName).toString(), defaultCollectionName);
+        QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyName).toString(), collectionName);
         QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyColor).toString(), QStringLiteral("red"));
         QCOMPARE(newCollection.extendedMetaData(QStringLiteral("collection-selected")).toBool(), false);
 
@@ -122,14 +127,14 @@ private Q_SLOTS:
         // Check if the collection was updated correct
         newCollection = m_engineRead->collection(collection.id(), &error);
         QCOMPARE(error, QOrganizerManager::NoError);
-        QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyName).toString(), defaultCollectionName);
+        QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyName).toString(), collectionName);
         QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyColor).toString(), QStringLiteral("blue"));
         QCOMPARE(newCollection.extendedMetaData("collection-selected").toBool(), true);
     }
 
     void testRemoveCollection()
     {
-        static QString removableCollectionName = defaultTaskCollectionName + QStringLiteral("_REMOVABLE");
+        static QString removableCollectionName = uniqueCollectionName() + QStringLiteral("_REMOVABLE");
 
         // Create a collection
         QOrganizerCollection collection;
@@ -155,9 +160,11 @@ private Q_SLOTS:
 
    void testCreateTaskList()
     {
+        static const QString collectionName = uniqueCollectionName() + QStringLiteral("_TASKS") ;
+
         QOrganizerCollection collection;
         QtOrganizer::QOrganizerManager::Error error;
-        collection.setMetaData(QOrganizerCollection::KeyName, defaultTaskCollectionName);
+        collection.setMetaData(QOrganizerCollection::KeyName, collectionName);
         collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
 
         QSignalSpy createdCollection(m_engineWrite, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
@@ -176,12 +183,13 @@ private Q_SLOTS:
 
     void testCreateTask()
     {
+        static const QString collectionName = uniqueCollectionName() + QStringLiteral("_TASKS") ;
         static QString displayLabelValue = QStringLiteral("Todo test");
         static QString descriptionValue = QStringLiteral("Todo description");
 
         QOrganizerCollection collection;
         QtOrganizer::QOrganizerManager::Error error;
-        collection.setMetaData(QOrganizerCollection::KeyName, defaultTaskCollectionName + "2");
+        collection.setMetaData(QOrganizerCollection::KeyName, collectionName);
         collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
 
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
@@ -205,7 +213,6 @@ private Q_SLOTS:
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(errorMap.isEmpty());
         QVERIFY(!items[0].id().isNull());
-        appendToRemove(items[0].id());
 
         //verify signal
         QTRY_COMPARE(createdItem.count(), 1);
@@ -250,8 +257,6 @@ private Q_SLOTS:
     }
 };
 
-const QString CollectionTest::defaultCollectionName = QStringLiteral("TEST COLLECTION");
-const QString CollectionTest::defaultTaskCollectionName = QStringLiteral("TEST COLLECTION TASK LIST");
 const QString CollectionTest::collectionTypePropertyName = QStringLiteral("collection-type");
 const QString CollectionTest::taskListTypeName = QStringLiteral("Task List");
 

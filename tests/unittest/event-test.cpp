@@ -33,8 +33,6 @@ class EventTest : public QObject, public EDSBaseTest
 {
     Q_OBJECT
 private:
-    static const QString defaultCollectionName;
-    static const QString defaultTaskCollectionName;
     static const QString collectionTypePropertyName;
     static const QString taskListTypeName;
     static int signalIndex;
@@ -57,7 +55,7 @@ private Q_SLOTS:
 
         QtOrganizer::QOrganizerManager::Error error;
         m_collection = QOrganizerCollection();
-        m_collection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName);
+        m_collection.setMetaData(QOrganizerCollection::KeyName, uniqueCollectionName());
         m_collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
 
         bool saveResult = m_engine->saveCollection(&m_collection, &error);
@@ -67,6 +65,7 @@ private Q_SLOTS:
 
     void cleanup()
     {
+        delete m_engine;
         EDSBaseTest::cleanup();
     }
 
@@ -121,9 +120,6 @@ private Q_SLOTS:
                                               &error);
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
-
-        // append new item to be removed after the test
-        appendToRemove(items[0].id());
 
         QOrganizerItemSortOrder sort;
         QOrganizerItemFetchHint hint;
@@ -198,9 +194,6 @@ private Q_SLOTS:
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
 
-        // append new item to be removed after the test
-        appendToRemove(items[0].id());
-
         QOrganizerItemSortOrder sort;
         QOrganizerItemFetchHint hint;
         QOrganizerItemIdFilter filter;
@@ -267,9 +260,6 @@ private Q_SLOTS:
         QVERIFY(errorMap.isEmpty());
         QVERIFY(!items[0].id().isNull());
 
-        // append new item to be removed after the test
-        appendToRemove(items[0].id());
-
         QOrganizerItemRemoveRequest req;
         connect(&req, SIGNAL(stateChanged(QOrganizerAbstractRequest::State)),
                 this, SLOT(requestFinished(QOrganizerAbstractRequest::State)));
@@ -316,11 +306,7 @@ private Q_SLOTS:
         QOrganizerItemId id = items[0].id();
         QVERIFY(!id.isNull());
 
-        // append new item to be removed after the test
-        appendToRemove(id);
-
         QOrganizerItemRemoveByIdRequest req;
-
         connect(&req, SIGNAL(stateChanged(QOrganizerAbstractRequest::State)),
                 this, SLOT(requestFinished(QOrganizerAbstractRequest::State)));
         connect(m_engine, SIGNAL(itemsRemoved(QList<QOrganizerItemId>)),
@@ -377,9 +363,6 @@ private Q_SLOTS:
         QVERIFY(errorMap.isEmpty());
         QVERIFY(!items[0].id().isNull());
 
-        // append new item to be removed after the test
-        appendToRemove(items[0].id());
-
         // check if item was created on the default collection
         QOrganizerItemFetchHint hint;
 
@@ -419,7 +402,6 @@ private Q_SLOTS:
         QCOMPARE(evs.count(), 10);
         Q_FOREACH(const QOrganizerItem &i, evs) {
             QVERIFY(!i.id().isNull());
-            appendToRemove(i.id());
         }
     }
 
@@ -440,7 +422,7 @@ private Q_SLOTS:
 
         QtOrganizer::QOrganizerManager::Error error;
         QOrganizerCollection eventCollection = QOrganizerCollection();
-        eventCollection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName + "_TEMP");
+        eventCollection.setMetaData(QOrganizerCollection::KeyName, uniqueCollectionName());
         bool saveResult = m_engine->saveCollection(&eventCollection, &error);
         QVERIFY(saveResult);
 
@@ -464,7 +446,6 @@ private Q_SLOTS:
         QCOMPARE(evs.count(), 20);
         Q_FOREACH(const QOrganizerItem &i, evs) {
             QVERIFY(!i.id().isNull());
-            appendToRemove(i.id());
         }
     }
 
@@ -508,8 +489,6 @@ private Q_SLOTS:
         QVERIFY(saveResult);
         QCOMPARE(error, QOrganizerManager::NoError);
         QCOMPARE(evs.count(), 2);
-        appendToRemove(evs[0].id());
-        appendToRemove(evs[1].id());
         QCOMPARE(errorMap.size(), 1);
         QCOMPARE(errorMap[1], QOrganizerManager::InvalidCollectionError);
     }
@@ -539,9 +518,6 @@ private Q_SLOTS:
         QVERIFY(errorMap.isEmpty());
         QOrganizerItemId id = items[0].id();
         QVERIFY(!id.isNull());
-
-        // append new item to be removed after the test
-        appendToRemove(id);
 
         QOrganizerItemFetchHint hint;
         QList<QOrganizerItemId> ids;
@@ -683,8 +659,6 @@ private Q_SLOTS:
     }
 };
 
-const QString EventTest::defaultCollectionName = QStringLiteral("TEST_EVENT_COLLECTION");
-const QString EventTest::defaultTaskCollectionName = QStringLiteral("TEST_EVENT_COLLECTION TASK LIST");
 const QString EventTest::collectionTypePropertyName = QStringLiteral("collection-type");
 const QString EventTest::taskListTypeName = QStringLiteral("Task List");
 int EventTest::signalIndex = 0;

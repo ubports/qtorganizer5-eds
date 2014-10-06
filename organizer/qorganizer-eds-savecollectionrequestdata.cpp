@@ -204,7 +204,5 @@ void SaveCollectionRequestData::parseCollections()
             index++;
         }
     }
-
-    qDebug() << "Request with" << m_sources.size() << "sources";
 }
 

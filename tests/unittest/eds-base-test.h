@@ -35,10 +35,7 @@ protected:
     void init();
     void cleanup();
 
-    void appendToRemove(const QtOrganizer::QOrganizerItemId &id);
-
-private:
-    QList<QtOrganizer::QOrganizerItemId> m_newItems;
+    QString uniqueCollectionName() const;
 };
 
 #endif

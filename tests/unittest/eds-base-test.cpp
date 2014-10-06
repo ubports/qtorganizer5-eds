@@ -42,35 +42,11 @@ void EDSBaseTest::init()
 {
 }
 
-
 void EDSBaseTest::cleanup()
 {
-    static QStringList defaultSources;
-
-    if (defaultSources.isEmpty()) {
-        defaultSources << "qtorganizer:eds::birthdays"
-                       << "qtorganizer:eds::system-calendar"
-                       << "qtorganizer:eds::system-memo-list"
-                       << "qtorganizer:eds::system-task-list";
-    }
-    QOrganizerEDSEngine *engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
-    Q_FOREACH(const QOrganizerCollection &col, engine->collections(0)) {
-        if (defaultSources.contains(col.id().toString())) {
-            continue;
-        }
-        QSignalSpy removeCollection(engine, SIGNAL(collectionsRemoved(QList<QOrganizerCollectionId>)));
-        QVERIFY(engine->removeCollection(col.id(), 0));
-        QTRY_COMPARE(removeCollection.count(), 1);
-
-        QList<QVariant> args = removeCollection.takeFirst();
-        QCOMPARE(args.count(), 1);
-        QCOMPARE(args[0].value<QList<QOrganizerCollectionId> >().at(0).toString(), col.id().toString());
-    }
-
-    delete engine;
 }
 
-void EDSBaseTest::appendToRemove(const QtOrganizer::QOrganizerItemId &id)
+QString EDSBaseTest::uniqueCollectionName() const
 {
-    m_newItems << id;
+    return QUuid::createUuid().toString();
 }
