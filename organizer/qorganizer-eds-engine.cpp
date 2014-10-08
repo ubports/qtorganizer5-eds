@@ -1219,7 +1219,7 @@ QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const cha
         return QDateTime::fromTime_t(tmTime, qTz);
     } else {
         tmTime = icaltime_as_timet(value);
-        return QDateTime::fromTime_t(tmTime);
+        return QDateTime::fromTime_t(tmTime, Qt::LocalTime);
     }
 }
 
@@ -1243,7 +1243,9 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
     case Qt::OffsetFromUTC:
         qWarning() << "TimeSpec OffsetFromUTC not supported";
         break;
-    case Qt::LocalTime: // Local time will be considered as floating time
+    case Qt::LocalTime:
+        // Local time will be considered as floating time, floating time must to be stored in UTC time
+        finalDate = finalDate.toUTC();
     default:
         return icaltime_from_timet(finalDate.toTime_t(), allDay);
         break;

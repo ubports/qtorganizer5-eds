@@ -659,6 +659,47 @@ private Q_SLOTS:
         }
         QCOMPARE(expectedTags.size(), 0);
     }
+
+    void testFloatingTime()
+    {
+        static QString displayLabelValue = QStringLiteral("event with floating time");
+        static QString descriptionValue = QStringLiteral("event with floating time descs");
+
+        QOrganizerTodo todo;
+        todo.setCollectionId(m_collection.id());
+        todo.setStartDateTime(QDateTime::currentDateTime());
+        todo.setDisplayLabel(displayLabelValue);
+        todo.setDescription(descriptionValue);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        QSignalSpy createdItem(m_engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+        items << todo;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QCOMPARE(items.size(), 1);
+        QVERIFY(errorMap.isEmpty());
+        QVERIFY(!items[0].id().isNull());
+        // check saved item
+        QTRY_COMPARE(createdItem.count(), 1);
+
+        QOrganizerItemFetchHint hint;
+        QList<QOrganizerItemId> ids;
+        ids << items[0].id();
+        items = m_engine->items(ids, hint, &errorMap, &error);
+        QCOMPARE(items.count(), 1);
+
+        QOrganizerTodo newTodo = static_cast<QOrganizerTodo>(items[0]);
+        QCOMPARE(newTodo.startDateTime().date(), todo.startDateTime().date());
+        QCOMPARE(newTodo.startDateTime().time().hour(), todo.startDateTime().time().hour());
+        QCOMPARE(newTodo.startDateTime().time().minute(), todo.startDateTime().time().minute());
+        QCOMPARE(newTodo.startDateTime().time().second(), todo.startDateTime().time().second());
+    }
 };
 
 const QString EventTest::collectionTypePropertyName = QStringLiteral("collection-type");
@@ -668,3 +709,4 @@ int EventTest::signalIndex = 0;
 QTEST_MAIN(EventTest)
 
 #include "event-test.moc"
+
