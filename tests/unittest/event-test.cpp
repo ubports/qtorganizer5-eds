@@ -699,10 +699,67 @@ private Q_SLOTS:
         QOrganizerTodo newTodo = static_cast<QOrganizerTodo>(items[0]);
         QCOMPARE(newTodo.startDateTime().timeSpec(), todo.startDateTime().timeSpec());
         QVERIFY(!newTodo.startDateTime().timeZone().isValid());
-        QCOMPARE(newTodo.startDateTime().date(), todo.startDateTime().date());
-        QCOMPARE(newTodo.startDateTime().time().hour(), todo.startDateTime().time().hour());
-        QCOMPARE(newTodo.startDateTime().time().minute(), todo.startDateTime().time().minute());
-        QCOMPARE(newTodo.startDateTime().time().second(), todo.startDateTime().time().second());
+        QCOMPARE(newTodo.startDateTime().date(), startDate.date());
+        QCOMPARE(newTodo.startDateTime().time().hour(), startDate.time().hour());
+        QCOMPARE(newTodo.startDateTime().time().minute(), startDate.time().minute());
+        QCOMPARE(newTodo.startDateTime().time().second(), startDate.time().second());
+
+        // Update floating event
+
+        QSignalSpy updateItem(m_engine, SIGNAL(itemsChanged(QList<QOrganizerItemId>)));
+        startDate = QDateTime::currentDateTime();
+        startDate.addSecs(360);
+        startDate = QDateTime(startDate.date(), startDate.time(), QTimeZone());
+        items << newTodo;
+        saveResult = m_engine->saveItems(&items,
+                                         QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                         &errorMap,
+                                         &error);
+        QTRY_COMPARE(updateItem.count(), 1);
+
+        ids.clear();
+        ids << items[0].id();
+        items = m_engine->items(ids, hint, &errorMap, &error);
+        QCOMPARE(items.count(), 1);
+
+        newTodo = static_cast<QOrganizerTodo>(items[0]);
+        QCOMPARE(newTodo.startDateTime().timeSpec(), todo.startDateTime().timeSpec());
+        QVERIFY(!newTodo.startDateTime().timeZone().isValid());
+        QCOMPARE(newTodo.startDateTime().date(), startDate.date());
+        QCOMPARE(newTodo.startDateTime().time().hour(), startDate.time().hour());
+        QCOMPARE(newTodo.startDateTime().time().minute(), startDate.time().minute());
+        QCOMPARE(newTodo.startDateTime().time().second(), startDate.time().second());
+
+        // Remove floating event
+        QOrganizerItemRemoveByIdRequest req;
+        connect(&req, SIGNAL(stateChanged(QOrganizerAbstractRequest::State)),
+                this, SLOT(requestFinished(QOrganizerAbstractRequest::State)));
+        connect(m_engine, SIGNAL(itemsRemoved(QList<QOrganizerItemId>)),
+                this, SLOT(itemRemoved()));
+        req.setItemId(newTodo.id());
+
+        m_engine->startRequest(&req);
+        m_engine->waitForRequestFinished(&req, -1);
+
+        // check if the signal item removed was fired after the request finish
+        QTRY_VERIFY(m_requestFinishedTime.isValid());
+        QTRY_VERIFY(m_itemRemovedTime.isValid());
+        QVERIFY(m_itemRemovedTime > m_requestFinishedTime);
+
+        // check if item was removed
+        QOrganizerItemSortOrder sort;
+        QOrganizerItemIdFilter filter;
+        ids.clear();
+        ids << newTodo.id();
+        filter.setIds(ids);
+        items = m_engine->items(filter,
+                      QDateTime(),
+                      QDateTime(),
+                      10,
+                      sort,
+                      hint,
+                      &error);
+        QCOMPARE(items.count(), 0);
     }
 };
 
@@ -713,4 +770,3 @@ int EventTest::signalIndex = 0;
 QTEST_MAIN(EventTest)
 
 #include "event-test.moc"
-

@@ -1522,7 +1522,7 @@ void QOrganizerEDSEngine::parseDueDate(ECalComponent *comp, QOrganizerItem *item
 void QOrganizerEDSEngine::parseProgress(ECalComponent *comp, QOrganizerItem *item)
 {
     gint percentage = e_cal_component_get_percent_as_int(comp);
-    if (percentage >= 0 && percentage <= 100) {
+    if (percentage > 0 && percentage <= 100) {
         QOrganizerTodoProgress tp = item->detail(QOrganizerItemDetail::TypeTodoProgress);
         tp.setPercentageComplete(percentage);
         item->saveDetail(&tp);
@@ -2046,7 +2046,7 @@ void QOrganizerEDSEngine::parseLocation(const QOrganizerItem &item, ECalComponen
 void QOrganizerEDSEngine::parseDueDate(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp)
 {
     QOrganizerTodoTime ttr = item.detail(QOrganizerItemDetail::TypeTodoTime);
-    if (!ttr.isEmpty()) {
+    if (!ttr.isEmpty() && !ttr.dueDateTime().isNull()) {
         QByteArray tzId;
         struct icaltimetype ict = fromQDateTime(ttr.dueDateTime(), ttr.isAllDay(), &tzId);
         ECalComponentDateTime dt;
@@ -2059,7 +2059,7 @@ void QOrganizerEDSEngine::parseDueDate(const QtOrganizer::QOrganizerItem &item, 
 void QOrganizerEDSEngine::parseProgress(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp)
 {
     QOrganizerTodoProgress tp = item.detail(QOrganizerItemDetail::TypeTodoProgress);
-    if (!tp.isEmpty()) {
+    if (!tp.isEmpty() && (tp.percentageComplete() > 0)) {
         e_cal_component_set_percent_as_int(comp, tp.percentageComplete());
     }
 }
