@@ -667,7 +667,9 @@ private Q_SLOTS:
 
         QOrganizerTodo todo;
         todo.setCollectionId(m_collection.id());
-        todo.setStartDateTime(QDateTime::currentDateTime());
+        QDateTime startDate = QDateTime::currentDateTime();
+        startDate = QDateTime(startDate.date(), startDate.time(), QTimeZone());
+        todo.setStartDateTime(startDate);
         todo.setDisplayLabel(displayLabelValue);
         todo.setDescription(descriptionValue);
 
@@ -695,6 +697,8 @@ private Q_SLOTS:
         QCOMPARE(items.count(), 1);
 
         QOrganizerTodo newTodo = static_cast<QOrganizerTodo>(items[0]);
+        QCOMPARE(newTodo.startDateTime().timeSpec(), todo.startDateTime().timeSpec());
+        QVERIFY(!newTodo.startDateTime().timeZone().isValid());
         QCOMPARE(newTodo.startDateTime().date(), todo.startDateTime().date());
         QCOMPARE(newTodo.startDateTime().time().hour(), todo.startDateTime().time().hour());
         QCOMPARE(newTodo.startDateTime().time().minute(), todo.startDateTime().time().minute());

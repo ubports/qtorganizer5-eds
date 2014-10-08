@@ -1219,7 +1219,9 @@ QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const cha
         return QDateTime::fromTime_t(tmTime, qTz);
     } else {
         tmTime = icaltime_as_timet(value);
-        return QDateTime::fromTime_t(tmTime, Qt::LocalTime);
+        QDateTime t = QDateTime::fromTime_t(tmTime).toUTC();
+        // floating time contains invalid timezone
+        return QDateTime(t.date(), t.time(), QTimeZone());
     }
 }
 
@@ -1228,27 +1230,38 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
                                                 QByteArray *tzId)
 {
     QDateTime finalDate(dateTime);
+    QTimeZone tz;
+
     switch (dateTime.timeSpec()) {
     case Qt::UTC:
-        // convert date to UTC timezone
-        finalDate = finalDate.toTimeZone(QTimeZone("UTC"));
-    case Qt::TimeZone:
-    {
-        icaltimezone *timezone = 0;
-        timezone = icaltimezone_get_builtin_timezone(finalDate.timeZone().id().constData());
-        *tzId = QByteArray(icaltimezone_get_tzid(timezone));
-        return icaltime_from_timet_with_zone(finalDate.toTime_t(), allDay, timezone);
-        break;
-    }
     case Qt::OffsetFromUTC:
-        qWarning() << "TimeSpec OffsetFromUTC not supported";
+        // convert date to UTC timezone
+        tz = QTimeZone("UTC");
+        finalDate = finalDate.toTimeZone(tz);
+        break;
+    case Qt::TimeZone:
+        tz = finalDate.timeZone();
+        if (!tz.isValid()) {
+            // floating time
+            finalDate = QDateTime(QDate::currentDate(), finalDate.time(), Qt::UTC);
+        }
         break;
     case Qt::LocalTime:
-        // Local time will be considered as floating time, floating time must to be stored in UTC time
-        finalDate = finalDate.toUTC();
-    default:
-        return icaltime_from_timet(finalDate.toTime_t(), allDay);
+        tz = QTimeZone(QTimeZone::systemTimeZoneId());
+        finalDate = finalDate.toTimeZone(tz);
         break;
+    default:
+        break;
+    }
+
+    if (tz.isValid()) {
+        icaltimezone *timezone = 0;
+        timezone = icaltimezone_get_builtin_timezone(tz.id().constData());
+        *tzId = QByteArray(icaltimezone_get_tzid(timezone));
+        return icaltime_from_timet_with_zone(finalDate.toTime_t(), allDay, timezone);
+    } else {
+        *tzId = "";
+        return icaltime_from_timet(finalDate.toTime_t(), allDay);
     }
 }
 
