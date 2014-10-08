@@ -191,7 +191,7 @@ private Q_SLOTS:
         QVERIFY(!items[0].id().isNull());
 
         //verify signal
-        QTRY_COMPARE_WITH_TIMEOUT(createdItem.count(), 1, 10000);
+        QTRY_COMPARE(createdItem.count(), 1);
         QList<QVariant> args = createdItem.takeFirst();
         QCOMPARE(args.count(), 1);
 
@@ -234,7 +234,7 @@ private Q_SLOTS:
 
     void testRemoveCollection()
     {
-        static QString removableCollectionName = uniqueCollectionName() + QStringLiteral("_REMOVABLE");
+        static QString removableCollectionName = uniqueCollectionName();
 
         // Create a collection
         QOrganizerCollection collection;
@@ -244,10 +244,14 @@ private Q_SLOTS:
         QList<QOrganizerCollection> collections = m_engineRead->collections(&error);
         int initalCollectionCount = collections.count();
 
+        QSignalSpy createCollection(m_engineWrite, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
+        QTRY_COMPARE(createCollection.count(), 1);
 
         // remove recent created collection
+        QSignalSpy removeCollection(m_engineWrite, SIGNAL(collectionsRemoved(QList<QOrganizerCollectionId>)));
         QVERIFY(m_engineWrite->removeCollection(collection.id(), &error));
+        QTRY_COMPARE(removeCollection.count(), 1);
 
         collections = m_engineWrite->collections(&error);
         QCOMPARE(collections.count(), initalCollectionCount);
