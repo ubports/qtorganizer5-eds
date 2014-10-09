@@ -1229,7 +1229,7 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
     QDateTime finalDate(dateTime);
     QTimeZone tz;
 
-    switch (dateTime.timeSpec()) {
+    switch (finalDate.timeSpec()) {
     case Qt::UTC:
     case Qt::OffsetFromUTC:
         // convert date to UTC timezone
@@ -1240,7 +1240,7 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
         tz = finalDate.timeZone();
         if (!tz.isValid()) {
             // floating time
-            finalDate = QDateTime(QDate::currentDate(), finalDate.time(), Qt::UTC);
+            finalDate = QDateTime(finalDate.date(), finalDate.time(), Qt::UTC);
         }
         break;
     case Qt::LocalTime:
@@ -1870,13 +1870,13 @@ void QOrganizerEDSEngine::parseEndTime(const QOrganizerItem &item, ECalComponent
 void QOrganizerEDSEngine::parseTodoStartTime(const QOrganizerItem &item, ECalComponent *comp)
 {
     QOrganizerTodoTime etr = item.detail(QOrganizerItemDetail::TypeTodoTime);
-    if (!etr.isEmpty()) {
+    if (!etr.isEmpty() && !etr.startDateTime().isNull()) {
         QByteArray tzId;
         struct icaltimetype ict = fromQDateTime(etr.startDateTime(), etr.isAllDay(), &tzId);
         ECalComponentDateTime dt;
         dt.tzid = tzId.isEmpty() ? NULL : tzId.constData();
         dt.value = &ict;
-        e_cal_component_set_dtstart(comp, &dt);;
+        e_cal_component_set_dtstart(comp, &dt);
     }
 }
 
