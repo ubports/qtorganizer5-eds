@@ -57,6 +57,83 @@ private Q_SLOTS:
         EDSBaseTest::cleanup();
     }
 
+    void testCreateTask()
+    {
+        static const QString collectionName = uniqueCollectionName();
+        static QString displayLabelValue = QStringLiteral("Todo test");
+        static QString descriptionValue = QStringLiteral("Todo description");
+
+        QOrganizerCollection collection;
+        QtOrganizer::QOrganizerManager::Error error;
+        collection.setMetaData(QOrganizerCollection::KeyName, collectionName);
+        collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
+
+        QSignalSpy createCollection(m_engineWrite, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
+        QVERIFY(m_engineWrite->saveCollection(&collection, &error));
+        QVERIFY(!collection.id().isNull());
+        QTRY_COMPARE(createCollection.count(), 1);
+
+        QOrganizerTodo todo;
+        todo.setCollectionId(collection.id());
+        todo.setStartDateTime(QDateTime::currentDateTime());
+        todo.setDisplayLabel(displayLabelValue);
+        todo.setDescription(descriptionValue);
+
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        QSignalSpy createdItem(m_engineWrite, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+        items << todo;
+        bool saveResult = m_engineWrite->saveItems(&items,
+                                            QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                            &errorMap,
+                                            &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QVERIFY(errorMap.isEmpty());
+        QVERIFY(!items[0].id().isNull());
+
+        //verify signal
+        QTRY_COMPARE(createdItem.count(), 1);
+        QList<QVariant> args = createdItem.takeFirst();
+        QCOMPARE(args.count(), 1);
+
+        // check if the item is listead inside the correct collection
+        QOrganizerItemSortOrder sort;
+        QOrganizerItemFetchHint hint;
+        QOrganizerItemCollectionFilter filter;
+
+        filter.setCollectionId(collection.id());
+
+        items = m_engineRead->items(filter,
+                      QDateTime(),
+                      QDateTime(),
+                      10,
+                      sort,
+                      hint,
+                      &error);
+
+        QCOMPARE(items.count(), 1);
+        QOrganizerTodo result = static_cast<QOrganizerTodo>(items[0]);
+        todo = items[0];
+        QCOMPARE(result.id(), todo.id());
+        QCOMPARE(result.startDateTime(), todo.startDateTime());
+        QCOMPARE(result.displayLabel(), todo.displayLabel());
+        QCOMPARE(result.description(), todo.description());
+
+        // check if the item is listead by id
+        QList<QOrganizerItemId> ids;
+        ids << todo.id();
+
+        items = m_engineRead->items(ids, hint, &errorMap, &error);
+        QCOMPARE(items.count(), 1);
+        result = static_cast<QOrganizerTodo>(items[0]);
+        todo = items[0];
+        QCOMPARE(result.id(), todo.id());
+        QCOMPARE(result.startDateTime(), todo.startDateTime());
+        QCOMPARE(result.displayLabel(), todo.displayLabel());
+        QCOMPARE(result.description(), todo.description());
+    }
+
     void testCreateCollection()
     {
         static const QString collectionName = uniqueCollectionName();
@@ -153,83 +230,6 @@ private Q_SLOTS:
 
         QVERIFY(m_engineWrite->collections(&error).contains(collection));
         QVERIFY(m_engineRead->collections(&error).contains(collection));
-    }
-
-    void testCreateTask()
-    {
-        static const QString collectionName = uniqueCollectionName();
-        static QString displayLabelValue = QStringLiteral("Todo test");
-        static QString descriptionValue = QStringLiteral("Todo description");
-
-        QOrganizerCollection collection;
-        QtOrganizer::QOrganizerManager::Error error;
-        collection.setMetaData(QOrganizerCollection::KeyName, collectionName);
-        collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
-
-        QSignalSpy createCollection(m_engineWrite, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
-        QVERIFY(m_engineWrite->saveCollection(&collection, &error));
-        QVERIFY(!collection.id().isNull());
-        QTRY_COMPARE(createCollection.count(), 1);
-
-        QOrganizerTodo todo;
-        todo.setCollectionId(collection.id());
-        todo.setStartDateTime(QDateTime::currentDateTime());
-        todo.setDisplayLabel(displayLabelValue);
-        todo.setDescription(descriptionValue);
-
-        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
-        QList<QOrganizerItem> items;
-        QSignalSpy createdItem(m_engineWrite, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
-        items << todo;
-        bool saveResult = m_engineWrite->saveItems(&items,
-                                            QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
-                                            &errorMap,
-                                            &error);
-        QVERIFY(saveResult);
-        QCOMPARE(error, QOrganizerManager::NoError);
-        QVERIFY(errorMap.isEmpty());
-        QVERIFY(!items[0].id().isNull());
-
-        //verify signal
-        QTRY_COMPARE(createdItem.count(), 1);
-        QList<QVariant> args = createdItem.takeFirst();
-        QCOMPARE(args.count(), 1);
-
-        // check if the item is listead inside the correct collection
-        QOrganizerItemSortOrder sort;
-        QOrganizerItemFetchHint hint;
-        QOrganizerItemCollectionFilter filter;
-
-        filter.setCollectionId(collection.id());
-
-        items = m_engineRead->items(filter,
-                      QDateTime(),
-                      QDateTime(),
-                      10,
-                      sort,
-                      hint,
-                      &error);
-
-        QCOMPARE(items.count(), 1);
-        QOrganizerTodo result = static_cast<QOrganizerTodo>(items[0]);
-        todo = items[0];
-        QCOMPARE(result.id(), todo.id());
-        QCOMPARE(result.startDateTime(), todo.startDateTime());
-        QCOMPARE(result.displayLabel(), todo.displayLabel());
-        QCOMPARE(result.description(), todo.description());
-
-        // check if the item is listead by id
-        QList<QOrganizerItemId> ids;
-        ids << todo.id();
-
-        items = m_engineRead->items(ids, hint, &errorMap, &error);
-        QCOMPARE(items.count(), 1);
-        result = static_cast<QOrganizerTodo>(items[0]);
-        todo = items[0];
-        QCOMPARE(result.id(), todo.id());
-        QCOMPARE(result.startDateTime(), todo.startDateTime());
-        QCOMPARE(result.displayLabel(), todo.displayLabel());
-        QCOMPARE(result.description(), todo.description());
     }
 
     void testRemoveCollection()
