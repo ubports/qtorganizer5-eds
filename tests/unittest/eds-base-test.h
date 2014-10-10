@@ -32,13 +32,11 @@ public:
     ~EDSBaseTest();
 
 protected:
-    void init();
-    void cleanup();
+    virtual void initTestCase();
+    virtual void init();
+    virtual void cleanup();
 
-    void appendToRemove(const QtOrganizer::QOrganizerItemId &id);
-
-private:
-    QList<QtOrganizer::QOrganizerItemId> m_newItems;
+    QString uniqueCollectionName() const;
 };
 
 #endif

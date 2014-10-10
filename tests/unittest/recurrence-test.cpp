@@ -71,13 +71,15 @@ private:
         Q_ASSERT(saveResult);
         Q_ASSERT(error == QtOrganizer::QOrganizerManager::NoError);
 
-        // append new item to be removed after the test
-        appendToRemove(items[0].id());
-
         return items[0];
     }
 
 private Q_SLOTS:
+    void initTestCase()
+    {
+        EDSBaseTest::initTestCase();
+    }
+
     void init()
     {
         EDSBaseTest::init();
@@ -86,7 +88,7 @@ private Q_SLOTS:
 
         QtOrganizer::QOrganizerManager::Error error;
         m_collection = QOrganizerCollection();
-        m_collection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName);
+        m_collection.setMetaData(QOrganizerCollection::KeyName, uniqueCollectionName());
 
         bool saveResult = m_engine->saveCollection(&m_collection, &error);
         QVERIFY(saveResult);
@@ -95,6 +97,7 @@ private Q_SLOTS:
 
     void cleanup()
     {
+        m_collection = QOrganizerCollection();
         delete m_engine;
         m_engine = 0;
         EDSBaseTest::cleanup();
@@ -129,7 +132,7 @@ private Q_SLOTS:
 
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
-        QTRY_COMPARE(itemsAdded.count(), 1);
+        QTRY_COMPARE_WITH_TIMEOUT(itemsAdded.count(), 1, 10000);
     }
 
     void testCreateWeeklyEvent()
@@ -161,13 +164,11 @@ private Q_SLOTS:
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
 
-        // append new item to be removed after the test
         QOrganizerItemId parentId = items[0].id();
-        appendToRemove(parentId);
-
         QOrganizerItemSortOrder sort;
         QOrganizerItemFetchHint hint;
-        QOrganizerItemFilter filter;
+        QOrganizerItemCollectionFilter filter;
+        filter.setCollectionId(m_collection.id());
         items = m_engine->items(filter,
                                 QDateTime(QDate(2013, 11, 30), QTime(0,0,0)),
                                 QDateTime(QDate(2014, 1, 1), QTime(0,0,0)),
@@ -197,8 +198,8 @@ private Q_SLOTS:
     {
         static QString displayLabelValue = QStringLiteral("Monthly test");
         static QString descriptionValue = QStringLiteral("Monthly description");
-        static QDateTime eventStartDate = QDateTime(QDate(2013, 1, 1), QTime(0, 0, 0), Qt::UTC);
-        static QDateTime eventEndDate = QDateTime(QDate(2013, 1, 1), QTime(0, 30, 0), Qt::UTC);
+        static QDateTime eventStartDate = QDateTime(QDate(2013, 1, 1), QTime(0, 0, 0));
+        static QDateTime eventEndDate = QDateTime(QDate(2013, 1, 1), QTime(0, 30, 0));
 
         QOrganizerEvent ev;
         ev.setCollectionId(m_collection.id());
@@ -224,12 +225,10 @@ private Q_SLOTS:
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
 
-        // append new item to be removed after the test
-        appendToRemove(items[0].id());
-
         QOrganizerItemSortOrder sort;
         QOrganizerItemFetchHint hint;
-        QOrganizerItemFilter filter;
+        QOrganizerItemCollectionFilter filter;
+        filter.setCollectionId(m_collection.id());
         items = m_engine->items(filter,
                                 eventStartDate,
                                 eventStartDate.addYears(1),
@@ -243,7 +242,7 @@ private Q_SLOTS:
             QCOMPARE(time.startDateTime(), eventStartDate.addMonths(i));
 
             time = items[(i*2)+1].detail(QOrganizerItemDetail::TypeEventTime);
-            QCOMPARE(time.startDateTime(), QDateTime(QDate(2013, i+1, 5), QTime(0,0,0), Qt::UTC));
+            QCOMPARE(time.startDateTime(), QDateTime(QDate(2013, i+1, 5), QTime(0,0,0), Qt::LocalTime));
         }
     }
 
@@ -254,7 +253,9 @@ private Q_SLOTS:
         QtOrganizer::QOrganizerManager::Error error;
         QOrganizerItemSortOrder sort;
         QOrganizerItemFetchHint hint;
-        QOrganizerItemFilter filter;
+        QOrganizerItemCollectionFilter filter;
+        filter.setCollectionId(m_collection.id());
+
         QList<QOrganizerItem> items;
 
         items = m_engine->items(filter,
@@ -310,7 +311,9 @@ private Q_SLOTS:
          QtOrganizer::QOrganizerManager::Error error;
          QOrganizerItemSortOrder sort;
          QOrganizerItemFetchHint hint;
-         QOrganizerItemFilter filter;
+         QOrganizerItemCollectionFilter filter;
+         filter.setCollectionId(m_collection.id());
+
          QList<QOrganizerItem> items = m_engine->items(filter,
                                                        QDateTime(),
                                                        QDateTime(),
@@ -391,13 +394,11 @@ private Q_SLOTS:
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
 
-        // append new item to be removed after the test
         QOrganizerItemId parentId = items[0].id();
-        appendToRemove(parentId);
-
         QOrganizerItemSortOrder sort;
         QOrganizerItemFetchHint hint;
-        QOrganizerItemFilter filter;
+        QOrganizerItemCollectionFilter filter;
+        filter.setCollectionId(m_collection.id());
 
         // check if the parent was saved correct
         items = m_engine->items(QList<QOrganizerItemId>() << parentId, hint, &errorMap, &error);
@@ -459,7 +460,8 @@ private Q_SLOTS:
 
         QOrganizerItemSortOrder sort;
         QOrganizerItemFetchHint hint;
-        QOrganizerItemFilter filter;
+        QOrganizerItemCollectionFilter filter;
+        filter.setCollectionId(m_collection.id());
         QList<QOrganizerItem> items = m_engine->items(filter,
                                                       QDateTime(QDate(2013, 11, 30), QTime(0,0,0)),
                                                       QDateTime(QDate(2014, 1, 1), QTime(0,0,0)),
@@ -512,7 +514,8 @@ private Q_SLOTS:
         QCOMPARE(req.error(), QtOrganizer::QOrganizerManager::NoError);
 
         QOrganizerItemSortOrder sort;
-        QOrganizerItemFilter filter;
+        QOrganizerItemCollectionFilter filter;
+        filter.setCollectionId(m_collection.id());
 
         items = m_engine->items(filter,
                                 startInteval,
@@ -537,8 +540,6 @@ private Q_SLOTS:
 #endif
     }
 };
-
-const QString RecurrenceTest::defaultCollectionName = QStringLiteral("TEST_RECURRENCE_EVENT_COLLECTION");
 
 QTEST_MAIN(RecurrenceTest)
 

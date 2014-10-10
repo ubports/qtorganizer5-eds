@@ -33,8 +33,6 @@ class CancelOperationTest : public QObject, public EDSBaseTest
 {
     Q_OBJECT
 private:
-    static const QString defaultCollectionName;
-
     QOrganizerEDSEngine *m_engine;
     QOrganizerCollection m_collection;
 
@@ -42,17 +40,16 @@ private Q_SLOTS:
     void init()
     {
         EDSBaseTest::init();
-        m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
+        m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
         QtOrganizer::QOrganizerManager::Error error;
         m_collection = QOrganizerCollection();
-        m_collection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName);
+        m_collection.setMetaData(QOrganizerCollection::KeyName, uniqueCollectionName());
 
         bool saveResult = m_engine->saveCollection(&m_collection, &error);
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
-
     }
 
     void cleanup()
@@ -90,9 +87,6 @@ private Q_SLOTS:
     }
 
 };
-
-const QString CancelOperationTest::defaultCollectionName = QStringLiteral("CancelOperationTest COLLECTION");
-
 
 QTEST_MAIN(CancelOperationTest)
 

@@ -786,7 +786,6 @@ bool QOrganizerEDSEngine::removeItems(const QList<QOrganizerItemId> &itemIds,
 
 QOrganizerCollection QOrganizerEDSEngine::defaultCollection(QOrganizerManager::Error* error)
 {
-    qWarning() << Q_FUNC_INFO << "Not implemented";
     if (error) {
         *error = QOrganizerManager::NoError;
     }
@@ -873,9 +872,6 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
 {
     GError *gError = 0;
     e_source_registry_create_sources_finish(registry, res, &gError);
-    // WORKAROUND:
-    // avoid return immediately after create the source, because EDS is not ready to write on the source
-    QCoreApplication::processEvents();
     if (gError) {
         qWarning() << "Fail to create sources:" << gError->message;
         g_error_free(gError);
@@ -1209,15 +1205,20 @@ QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const cha
     uint tmTime;
 
     if (tzId) {
-        QByteArray tzName(tzId);
-        // keep only the timezone name.
-        tzName = tzName.replace("/freeassociation.sourceforge.net/Tzfile/", "");
-        const icaltimezone *timezone = const_cast<const icaltimezone *>(icaltimezone_get_builtin_timezone(tzName.constData()));
+        icaltimezone *timezone = icaltimezone_get_builtin_timezone_from_tzid(tzId);
+        // fallback: sometimes the tzId contains the location name
+        if (!timezone) {
+            timezone = icaltimezone_get_builtin_timezone(tzId);
+        }
         tmTime = icaltime_as_timet_with_zone(value, timezone);
-        return QDateTime::fromTime_t(tmTime, QTimeZone(tzId));
+        QByteArray tzLocationName(icaltimezone_get_location(timezone));
+        QTimeZone qTz(tzLocationName);
+        return QDateTime::fromTime_t(tmTime, qTz);
     } else {
         tmTime = icaltime_as_timet(value);
-        return QDateTime::fromTime_t(tmTime);
+        QDateTime t = QDateTime::fromTime_t(tmTime).toUTC();
+        // floating time contains invalid timezone
+        return QDateTime(t.date(), t.time(), QTimeZone());
     }
 }
 
@@ -1225,16 +1226,40 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
                                                 bool allDay,
                                                 QByteArray *tzId)
 {
+    QDateTime finalDate(dateTime);
+    QTimeZone tz;
 
-    if (dateTime.timeSpec() == Qt::TimeZone) {
-        const icaltimezone *timezone = 0;
-        *tzId = dateTime.timeZone().id();
-        timezone = const_cast<const icaltimezone *>(icaltimezone_get_builtin_timezone(tzId->constData()));
-        return icaltime_from_timet_with_zone(dateTime.toTime_t(), allDay, timezone);
-    } else {
-        return icaltime_from_timet(dateTime.toTime_t(), allDay);
+    switch (finalDate.timeSpec()) {
+    case Qt::UTC:
+    case Qt::OffsetFromUTC:
+        // convert date to UTC timezone
+        tz = QTimeZone("UTC");
+        finalDate = finalDate.toTimeZone(tz);
+        break;
+    case Qt::TimeZone:
+        tz = finalDate.timeZone();
+        if (!tz.isValid()) {
+            // floating time
+            finalDate = QDateTime(finalDate.date(), finalDate.time(), Qt::UTC);
+        }
+        break;
+    case Qt::LocalTime:
+        tz = QTimeZone(QTimeZone::systemTimeZoneId());
+        finalDate = finalDate.toTimeZone(tz);
+        break;
+    default:
+        break;
     }
 
+    if (tz.isValid()) {
+        icaltimezone *timezone = 0;
+        timezone = icaltimezone_get_builtin_timezone(tz.id().constData());
+        *tzId = QByteArray(icaltimezone_get_tzid(timezone));
+        return icaltime_from_timet_with_zone(finalDate.toTime_t(), allDay, timezone);
+    } else {
+        *tzId = "";
+        return icaltime_from_timet(finalDate.toTime_t(), allDay);
+    }
 }
 
 void QOrganizerEDSEngine::parseStartTime(ECalComponent *comp, QOrganizerItem *item)
@@ -1494,7 +1519,7 @@ void QOrganizerEDSEngine::parseDueDate(ECalComponent *comp, QOrganizerItem *item
 void QOrganizerEDSEngine::parseProgress(ECalComponent *comp, QOrganizerItem *item)
 {
     gint percentage = e_cal_component_get_percent_as_int(comp);
-    if (percentage >= 0 && percentage <= 100) {
+    if (percentage > 0 && percentage <= 100) {
         QOrganizerTodoProgress tp = item->detail(QOrganizerItemDetail::TypeTodoProgress);
         tp.setPercentageComplete(percentage);
         item->saveDetail(&tp);
@@ -1845,13 +1870,13 @@ void QOrganizerEDSEngine::parseEndTime(const QOrganizerItem &item, ECalComponent
 void QOrganizerEDSEngine::parseTodoStartTime(const QOrganizerItem &item, ECalComponent *comp)
 {
     QOrganizerTodoTime etr = item.detail(QOrganizerItemDetail::TypeTodoTime);
-    if (!etr.isEmpty()) {
+    if (!etr.isEmpty() && !etr.startDateTime().isNull()) {
         QByteArray tzId;
         struct icaltimetype ict = fromQDateTime(etr.startDateTime(), etr.isAllDay(), &tzId);
         ECalComponentDateTime dt;
         dt.tzid = tzId.isEmpty() ? NULL : tzId.constData();
         dt.value = &ict;
-        e_cal_component_set_dtstart(comp, &dt);;
+        e_cal_component_set_dtstart(comp, &dt);
     }
 }
 
@@ -2018,7 +2043,7 @@ void QOrganizerEDSEngine::parseLocation(const QOrganizerItem &item, ECalComponen
 void QOrganizerEDSEngine::parseDueDate(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp)
 {
     QOrganizerTodoTime ttr = item.detail(QOrganizerItemDetail::TypeTodoTime);
-    if (!ttr.isEmpty()) {
+    if (!ttr.isEmpty() && !ttr.dueDateTime().isNull()) {
         QByteArray tzId;
         struct icaltimetype ict = fromQDateTime(ttr.dueDateTime(), ttr.isAllDay(), &tzId);
         ECalComponentDateTime dt;
@@ -2031,7 +2056,7 @@ void QOrganizerEDSEngine::parseDueDate(const QtOrganizer::QOrganizerItem &item, 
 void QOrganizerEDSEngine::parseProgress(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp)
 {
     QOrganizerTodoProgress tp = item.detail(QOrganizerItemDetail::TypeTodoProgress);
-    if (!tp.isEmpty()) {
+    if (!tp.isEmpty() && (tp.percentageComplete() > 0)) {
         e_cal_component_set_percent_as_int(comp, tp.percentageComplete());
     }
 }
