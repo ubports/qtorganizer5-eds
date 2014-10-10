@@ -1,3 +1,10 @@
+qtorganizer5-eds (0.1.1+14.10.20141010-0ubuntu1) 14.09; urgency=low
+
+  [ Renato Araujo Oliveira Filho ]
+  * Save events in the correct timezone.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 10 Oct 2014 15:12:57 +0000
+
 qtorganizer5-eds (0.1.1+14.10.20141001.4-0ubuntu1) 14.09; urgency=low
 
   [ Ubuntu daily release ]
