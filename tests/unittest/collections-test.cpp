@@ -99,7 +99,7 @@ private Q_SLOTS:
         } while (0);
 
         if (createdItem.count() != 1) {
-            QWARN("ItemsAdded signal not receive will continue");
+            QWARN("ItemsAdded signal not received will continue");
         } else {
             QList<QVariant> args = createdItem.takeFirst();
             QCOMPARE(args.count(), 1);
