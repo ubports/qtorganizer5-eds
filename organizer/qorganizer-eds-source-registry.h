@@ -30,6 +30,7 @@
 
 #define COLLECTION_CALLENDAR_TYPE_METADATA  "collection-type"
 #define COLLECTION_SELECTED_METADATA        "collection-selected"
+#define COLLECTION_READONLY_METADATA        "collection-readonly"
 
 class SourceRegistry : public QObject
 {
