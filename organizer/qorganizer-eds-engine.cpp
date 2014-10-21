@@ -1974,11 +1974,20 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
                     break;
             }
 
-            if (qRule.limitDate().isValid()) {
-                rule->until = icaltime_from_timet(QDateTime(qRule.limitDate()).toTime_t(), TRUE);
+            switch (qRule.limitType()) {
+            case QOrganizerRecurrenceRule::DateLimit:
+                if (qRule.limitDate().isValid()) {
+                    rule->until = icaltime_from_timet(QDateTime(qRule.limitDate()).toTime_t(), TRUE);
+                }
+                break;
+            case QOrganizerRecurrenceRule::CountLimit:
+                if (qRule.limitCount() > 0) {
+                    rule->count = qRule.limitCount();
+                }
+                break;
+            case QOrganizerRecurrenceRule::NoLimit:
+            default:
                 rule->count = ICAL_RECURRENCE_ARRAY_MAX;
-            } else if (qRule.limitCount() > 0) {
-                rule->count = qRule.limitCount();
             }
 
             QSet<int> positions = qRule.positions();
