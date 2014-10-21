@@ -327,5 +327,5 @@ void SourceRegistry::updateCollection(QOrganizerCollection *collection,
 
     // writable
     bool writable = e_source_get_writable(source);
-    collection->extendedMetaData(COLLECTION_READONLY_METADATA, !writable);
+    collection->setExtendedMetaData(COLLECTION_READONLY_METADATA, !writable);
 }
