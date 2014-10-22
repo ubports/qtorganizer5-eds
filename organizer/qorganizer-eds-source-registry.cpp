@@ -182,6 +182,11 @@ EClient* SourceRegistry::client(const QString &collectionId)
                 qWarning() << "Fail to connect with client" << gError->message;
                 g_error_free(gError);
             } else {
+                // If the client is read only update the collection
+                if (e_client_is_readonly(client)) {
+                    QOrganizerCollection &c = m_collections[collectionId];
+                    c.setExtendedMetaData(COLLECTION_READONLY_METADATA, true);
+                }
                 m_clients.insert(collectionId, client);
             }
         }
