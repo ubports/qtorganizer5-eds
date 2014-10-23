@@ -705,7 +705,6 @@ private Q_SLOTS:
         QCOMPARE(newTodo.startDateTime().time().second(), startDate.time().second());
 
         // Update floating event
-
         QSignalSpy updateItem(m_engine, SIGNAL(itemsChanged(QList<QOrganizerItemId>)));
         startDate = QDateTime::currentDateTime();
         startDate.addSecs(360);
@@ -760,6 +759,58 @@ private Q_SLOTS:
                       hint,
                       &error);
         QCOMPARE(items.count(), 0);
+    }
+
+    void testCreateEventWithAttendees()
+    {
+        static QString displayLabelValue = QStringLiteral("event with collection attendee");
+        static QString descriptionValue = QStringLiteral("event without collection");
+
+        QOrganizerEvent event;
+        event.setStartDateTime(QDateTime::currentDateTime());
+        event.setDisplayLabel(displayLabelValue);
+        event.setDescription(descriptionValue);
+
+
+        QOrganizerEventAttendee attendee;
+        attendee.setAttendeeId("Attendee ID");
+        attendee.setEmailAddress("test@email.com");
+        attendee.setName("Attendee Name");
+        attendee.setParticipationRole(QOrganizerEventAttendee::RoleHost);
+        attendee.setParticipationStatus(QOrganizerEventAttendee::StatusAccepted);
+        event.saveDetail(&attendee);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        QSignalSpy createdItem(m_engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+        items << event;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+        QTRY_COMPARE(createdItem.count(), 1);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QCOMPARE(items.size(), 1);
+        QVERIFY(errorMap.isEmpty());
+        QVERIFY(!items[0].id().isNull());
+
+        QList<QOrganizerItemId> ids;
+        QOrganizerItemFetchHint hint;
+        ids << items[0].id();
+        qDebug() << "Find for id" << ids;
+        QList<QOrganizerItem> newItems = m_engine->items(ids, hint, &errorMap, &error);
+        QCOMPARE(newItems.size(), 1);
+
+        QList<QOrganizerItemDetail> atts = newItems[0].details(QOrganizerItemDetail::TypeEventAttendee);
+        QCOMPARE(atts.size(), 1);
+        QOrganizerEventAttendee newAttendee = static_cast<QOrganizerEventAttendee>(atts[0]);
+        QCOMPARE(newAttendee.attendeeId(), attendee.attendeeId());
+        QCOMPARE(newAttendee.emailAddress(), attendee.emailAddress());
+        QCOMPARE(newAttendee.name(), attendee.name());
+        QCOMPARE(newAttendee.participationRole(), attendee.participationRole());
+        QCOMPARE(newAttendee.participationStatus(), attendee.participationStatus());
     }
 };
 
