@@ -185,16 +185,17 @@ private Q_SLOTS:
         collection.setMetaData(QOrganizerCollection::KeyColor, QStringLiteral("red"));
         collection.setExtendedMetaData(QStringLiteral("collection-selected"), false);
 
+        QSignalSpy collectionCreated(m_engineRead, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(!collection.id().isNull());
+        QTRY_COMPARE(collectionCreated.count(), 1);
 
         // Check if the collection was stored correct
         QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), &error);
         QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyName).toString(), collectionName);
         QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyColor).toString(), QStringLiteral("red"));
         QCOMPARE(newCollection.extendedMetaData(QStringLiteral("collection-selected")).toBool(), false);
-
 
         // update the collection
         QSignalSpy updateCollection(m_engineWrite, SIGNAL(collectionsChanged(QList<QOrganizerCollectionId>)));
