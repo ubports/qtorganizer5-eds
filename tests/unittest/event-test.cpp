@@ -44,13 +44,11 @@ private:
 
 
 private Q_SLOTS:
-    void init()
+    void initTestCase()
     {
         EDSBaseTest::init();
+        qDebug() << "INIT TEST CASE";
 
-        signalIndex = 0;
-        m_itemRemovedTime = QDateTime();
-        m_requestFinishedTime = QDateTime();
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
         QtOrganizer::QOrganizerManager::Error error;
@@ -63,12 +61,21 @@ private Q_SLOTS:
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
         QTRY_COMPARE(createdCollection.count(), 1);
+
+        qDebug() << "END TEST CASE";
     }
 
-    void cleanup()
+    void cleanupTestCase()
     {
         delete m_engine;
         EDSBaseTest::cleanup();
+    }
+
+    void init()
+    {
+        signalIndex = 0;
+        m_itemRemovedTime = QDateTime();
+        m_requestFinishedTime = QDateTime();
     }
 
     //helper
