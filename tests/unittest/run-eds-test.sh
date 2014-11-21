@@ -27,9 +27,9 @@ export QORGANIZER_EDS_DEBUG=On
 
 echo HOMEDIR=$HOME
 rm -rf $XDG_DATA_HOME
-$1 --keep-env \
+$1 --keep-env --max-wait=90 \
 --task $2 --task-name $3 --wait-until-complete --wait-for=org.gnome.evolution.dataserver.Calendar4 \
---task $4 --task-name "evolution" -r
+--task $4 --task-name "evolution" --wait-until-complete -r
 #--task $6 --task-name "source-registry" --wait-for=org.gtk.vfs.Daemon -r \
 #--task $7 --task-name "gvfsd" -r
 return $?

@@ -1558,8 +1558,9 @@ void QOrganizerEDSEngine::parseAttendeeList(ECalComponent *comp, QOrganizerItem 
         ECalComponentAttendee *attendee = static_cast<ECalComponentAttendee *>(attendeeIter->data);
         QOrganizerEventAttendee qAttendee;
 
+        qAttendee.setAttendeeId(QString::fromUtf8(attendee->member));
         qAttendee.setName(QString::fromUtf8(attendee->cn));
-        qAttendee.setEmailAddress(QString::fromUtf8(attendee->member));
+        qAttendee.setEmailAddress(QString::fromUtf8(attendee->value));
 
         switch(attendee->role) {
         case ICAL_ROLE_REQPARTICIPANT:
@@ -1570,6 +1571,9 @@ void QOrganizerEDSEngine::parseAttendeeList(ECalComponent *comp, QOrganizerItem 
             break;
         case ICAL_ROLE_CHAIR:
             qAttendee.setParticipationRole(QOrganizerEventAttendee::RoleChairperson);
+            break;
+        case ICAL_ROLE_X:
+            qAttendee.setParticipationRole(QOrganizerEventAttendee::RoleHost);
             break;
         case ICAL_ROLE_NONE:
         default:
@@ -2085,11 +2089,14 @@ void QOrganizerEDSEngine::parseStatus(const QtOrganizer::QOrganizerItem &item, E
 void QOrganizerEDSEngine::parseAttendeeList(const QOrganizerItem &item, ECalComponent *comp)
 {
     GSList *attendeeList = 0;
+
     Q_FOREACH(const QOrganizerEventAttendee &attendee, item.details(QOrganizerItemDetail::TypeEventAttendee)) {
         ECalComponentAttendee *calAttendee = g_new0(ECalComponentAttendee, 1);
 
+        calAttendee->member = g_strdup(attendee.attendeeId().toUtf8().constData());
         calAttendee->cn = g_strdup(attendee.name().toUtf8().constData());
-        calAttendee->value = g_strconcat("MAILTO:", attendee.emailAddress().toUtf8().constData(), NULL);
+        calAttendee->value = g_strdup(attendee.emailAddress().toUtf8().constData());
+
         switch(attendee.participationRole()) {
         case QOrganizerEventAttendee::RoleRequiredParticipant:
             calAttendee->role = ICAL_ROLE_REQPARTICIPANT;
@@ -2099,6 +2106,9 @@ void QOrganizerEDSEngine::parseAttendeeList(const QOrganizerItem &item, ECalComp
             break;
         case QOrganizerEventAttendee::RoleChairperson:
             calAttendee->role = ICAL_ROLE_CHAIR;
+            break;
+        case QOrganizerEventAttendee::RoleHost:
+            calAttendee->role = ICAL_ROLE_X;
             break;
         default:
             calAttendee->role = ICAL_ROLE_NONE;
@@ -2131,6 +2141,7 @@ void QOrganizerEDSEngine::parseAttendeeList(const QOrganizerItem &item, ECalComp
         attendeeList = g_slist_append(attendeeList, calAttendee);
     }
     e_cal_component_set_attendee_list(comp, attendeeList);
+    e_cal_component_free_attendee_list(attendeeList);
 }
 
 bool QOrganizerEDSEngine::hasRecurrence(ECalComponent *comp)

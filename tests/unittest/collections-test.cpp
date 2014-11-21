@@ -41,14 +41,14 @@ private:
     QOrganizerEDSEngine *m_engineRead;
 
 private Q_SLOTS:
-    void init()
+    void initTestCase()
     {
         EDSBaseTest::init();
         m_engineWrite = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
         m_engineRead = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
     }
 
-    void cleanup()
+    void cleanupTestCase()
     {
         delete m_engineRead;
         delete m_engineWrite;
@@ -68,7 +68,7 @@ private Q_SLOTS:
         collection.setMetaData(QOrganizerCollection::KeyName, collectionName);
         collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
 
-        QSignalSpy createCollection(m_engineWrite, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
+        QSignalSpy createCollection(m_engineRead, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
         QVERIFY(!collection.id().isNull());
         QTRY_COMPARE(createCollection.count(), 1);
@@ -81,7 +81,7 @@ private Q_SLOTS:
 
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
-        QSignalSpy createdItem(m_engineWrite, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+        QSignalSpy createdItem(m_engineRead, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
         items << todo;
         bool saveResult = m_engineWrite->saveItems(&items,
                                             QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
@@ -93,17 +93,8 @@ private Q_SLOTS:
         QVERIFY(!items[0].id().isNull());
 
         //verify signal
-        //FIXME: for some reason the signal is not get fired in jenkins build system
-        do { \
-            QTRY_IMPL((createdItem.count() == 1), 5000);\
-        } while (0);
-
-        if (createdItem.count() != 1) {
-            QWARN("ItemsAdded signal not received will continue");
-        } else {
-            QList<QVariant> args = createdItem.takeFirst();
-            QCOMPARE(args.count(), 1);
-        }
+        QTRY_COMPARE(createdItem.count(), 1);
+        QCOMPARE(createdItem.takeFirst().count(), 1);
 
         // check if the item is listead inside the correct collection
         QOrganizerItemSortOrder sort;
@@ -155,9 +146,11 @@ private Q_SLOTS:
         QList<QOrganizerCollection> collections = m_engineRead->collections(&error);
         int initalCollectionCount = collections.count();
 
+        QSignalSpy createCollection(m_engineRead, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(!collection.id().isNull());
+        QTRY_COMPARE(createCollection.count(), 1);
 
         collections = m_engineWrite->collections(&error);
         QCOMPARE(collections.count(), initalCollectionCount + 1);
@@ -185,9 +178,11 @@ private Q_SLOTS:
         collection.setMetaData(QOrganizerCollection::KeyColor, QStringLiteral("red"));
         collection.setExtendedMetaData(QStringLiteral("collection-selected"), false);
 
+        QSignalSpy collectionCreated(m_engineRead, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(!collection.id().isNull());
+        QTRY_COMPARE(collectionCreated.count(), 1);
 
         // Check if the collection was stored correct
         QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), &error);
@@ -195,9 +190,8 @@ private Q_SLOTS:
         QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyColor).toString(), QStringLiteral("red"));
         QCOMPARE(newCollection.extendedMetaData(QStringLiteral("collection-selected")).toBool(), false);
 
-
         // update the collection
-        QSignalSpy updateCollection(m_engineWrite, SIGNAL(collectionsChanged(QList<QOrganizerCollectionId>)));
+        QSignalSpy updateCollection(m_engineRead, SIGNAL(collectionsChanged(QList<QOrganizerCollectionId>)));
         collection.setMetaData(QOrganizerCollection::KeyColor, "blue");
         collection.setExtendedMetaData("collection-selected", true);
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
@@ -226,7 +220,7 @@ private Q_SLOTS:
         collection.setMetaData(QOrganizerCollection::KeyName, collectionName);
         collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
 
-        QSignalSpy createdCollection(m_engineWrite, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
+        QSignalSpy createdCollection(m_engineRead, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(!collection.id().isNull());
@@ -252,12 +246,12 @@ private Q_SLOTS:
         QList<QOrganizerCollection> collections = m_engineRead->collections(&error);
         int initalCollectionCount = collections.count();
 
-        QSignalSpy createCollection(m_engineWrite, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
+        QSignalSpy createCollection(m_engineRead, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
         QTRY_COMPARE(createCollection.count(), 1);
 
         // remove recent created collection
-        QSignalSpy removeCollection(m_engineWrite, SIGNAL(collectionsRemoved(QList<QOrganizerCollectionId>)));
+        QSignalSpy removeCollection(m_engineRead, SIGNAL(collectionsRemoved(QList<QOrganizerCollectionId>)));
         QVERIFY(m_engineWrite->removeCollection(collection.id(), &error));
         QTRY_COMPARE(removeCollection.count(), 1);
 
