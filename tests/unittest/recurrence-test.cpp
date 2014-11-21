@@ -171,7 +171,7 @@ private Q_SLOTS:
         filter.setCollectionId(m_collection.id());
         items = m_engine->items(filter,
                                 QDateTime(QDate(2013, 11, 30), QTime(0,0,0)),
-                                QDateTime(QDate(2014, 1, 1), QTime(0,0,0)),
+                                QDateTime(QDate(2015, 1, 1), QTime(0,0,0)),
                                 100,
                                 sort,
                                 hint,
