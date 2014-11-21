@@ -1,3 +1,14 @@
+qtorganizer5-eds (0.1.1+15.04.20141121.1-0ubuntu1) vivid; urgency=low
+
+  [ Ubuntu daily release ]
+  * New rebuild forced
+
+  [ Renato Araujo Oliveira Filho ]
+  * Fixed attendee property parse. (LP: #1384830)
+  * Fixed recurrence rule limit date. (LP: #1362781)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 21 Nov 2014 13:32:56 +0000
+
 qtorganizer5-eds (0.1.1+14.10.20141010-0ubuntu1) 14.09; urgency=low
 
   [ Renato Araujo Oliveira Filho ]
