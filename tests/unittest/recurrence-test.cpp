@@ -539,6 +539,99 @@ private Q_SLOTS:
         }
 #endif
     }
+
+    void testCreateWeeklyEventWithoutEndDate()
+    {
+        static QString displayLabelValue = QStringLiteral("testCreateWeeklyEventWithoutEndDate test");
+        static QString descriptionValue = QStringLiteral("testCreateWeeklyEventWithoutEndDate description");
+
+        QOrganizerEvent ev;
+        ev.setCollectionId(m_collection.id());
+        ev.setStartDateTime(QDateTime(QDate(2014, 03, 1), QTime(0,0,0), QTimeZone("America/Recife")));
+        ev.setEndDateTime(QDateTime(QDate(2014, 03, 1), QTime(0,30,0), QTimeZone("America/Recife")));
+        ev.setDisplayLabel(displayLabelValue);
+        ev.setDescription(descriptionValue);
+
+        QOrganizerRecurrenceRule rule;
+        rule.setFrequency(QOrganizerRecurrenceRule::Weekly);
+        QSet<Qt::DayOfWeek> dasyOfWeek;
+        dasyOfWeek << Qt::Monday
+                   << Qt::Tuesday
+                   << Qt::Wednesday
+                   << Qt::Thursday
+                   << Qt::Friday;
+
+        rule.setDaysOfWeek(dasyOfWeek);
+        ev.setRecurrenceRule(rule);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        items << ev;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
+
+        QOrganizerItemId parentId = items[0].id();
+        // check if the parent was saved correct
+        items = m_engine->items(QList<QOrganizerItemId>() << parentId,
+                                QOrganizerItemFetchHint(),
+                                &errorMap, &error);
+        QCOMPARE(items.size(), 1);
+        QOrganizerEvent result = items[0];
+        QCOMPARE(result.collectionId(), ev.collectionId());
+        QCOMPARE(result.startDateTime(), ev.startDateTime());
+        QCOMPARE(result.endDateTime(), ev.endDateTime());
+
+        QCOMPARE(result.displayLabel(), ev.displayLabel());
+        QCOMPARE(result.description(), ev.description());
+
+        QOrganizerRecurrenceRule savedRule = result.recurrenceRule();
+        QCOMPARE(savedRule.frequency(), rule.frequency());
+        QCOMPARE(savedRule.daysOfWeek(), rule.daysOfWeek());
+        QCOMPARE(savedRule.limitType(), QOrganizerRecurrenceRule::NoLimit);
+        QCOMPARE(savedRule.limitDate().isValid(), false);
+        QCOMPARE(savedRule.limitCount(), -1);
+
+        // edit event
+        dasyOfWeek.remove(Qt::Monday);
+        rule.setDaysOfWeek(dasyOfWeek);
+        result.setRecurrenceRule(rule);
+
+        items.clear();
+        items << result;
+        saveResult = m_engine->saveItems(&items,
+                                         QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                         &errorMap,
+                                         &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
+
+        // check if the item was updated
+        items = m_engine->items(QList<QOrganizerItemId>() << parentId,
+                                QOrganizerItemFetchHint(),
+                                &errorMap, &error);
+        QCOMPARE(items.size(), 1);
+        result = items[0];
+
+        QCOMPARE(result.collectionId(), ev.collectionId());
+        QCOMPARE(result.startDateTime(), ev.startDateTime());
+        QCOMPARE(result.endDateTime(), ev.endDateTime());
+
+        QCOMPARE(result.displayLabel(), ev.displayLabel());
+        QCOMPARE(result.description(), ev.description());
+
+        savedRule = result.recurrenceRule();
+        QCOMPARE(savedRule.frequency(), rule.frequency());
+        QCOMPARE(savedRule.daysOfWeek(), rule.daysOfWeek());
+        QVERIFY(!savedRule.daysOfWeek().contains(Qt::Monday));
+        QCOMPARE(savedRule.limitType(), QOrganizerRecurrenceRule::NoLimit);
+        QCOMPARE(savedRule.limitDate().isValid(), false);
+        QCOMPARE(savedRule.limitCount(), -1);
+    }
 };
 
 QTEST_MAIN(RecurrenceTest)

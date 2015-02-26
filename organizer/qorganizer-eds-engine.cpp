@@ -2016,7 +2016,7 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
                 break;
             case QOrganizerRecurrenceRule::NoLimit:
             default:
-                rule->count = ICAL_RECURRENCE_ARRAY_MAX;
+                rule->count = 0;
             }
 
             QSet<int> positions = qRule.positions();
