@@ -1,3 +1,9 @@
+qtorganizer5-eds (0.1.1+15.04.20141121.1-0ubuntu2) vivid; urgency=medium
+
+  * No-change rebuild for new libical
+
+ -- Iain Lane <iain@orangesquash.org.uk>  Wed, 07 Jan 2015 12:15:52 +0000
+
 qtorganizer5-eds (0.1.1+15.04.20141121.1-0ubuntu1) vivid; urgency=low
 
   [ Ubuntu daily release ]
