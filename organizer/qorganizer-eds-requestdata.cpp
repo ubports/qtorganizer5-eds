@@ -71,24 +71,13 @@ QOrganizerEDSEngine *RequestData::parent() const
 
 void RequestData::cancel()
 {
-    QMutexLocker locker(&m_canceling);
     if (m_cancellable) {
-        GCancellable *cancellable = m_cancellable;
-        gulong id = g_cancellable_connect(cancellable,
-                                          (GCallback) RequestData::onCancelled,
-                                          this, NULL);
+        g_cancellable_cancel(m_cancellable);
+    }
 
-
-        // cancel
-        g_cancellable_cancel(cancellable);
-
-        // wait the cancel
-        if (cancellable) {
-            wait();
-        }
-
-        // done
-        g_cancellable_disconnect(cancellable, id);
+    if (isLive()) {
+        finish(QOrganizerManager::UnspecifiedError,
+               QOrganizerAbstractRequest::CanceledState);
     }
 }
 
@@ -110,40 +99,24 @@ bool RequestData::isWaiting()
     return result;
 }
 
-bool RequestData::isCanceling()
-{
-    bool result = true;
-    if (m_canceling.tryLock()) {
-        result = false;
-        m_canceling.unlock();
-    }
-    return result;
-}
-
 void RequestData::deleteLater()
 {
-    if (isWaiting() || isCanceling()) {
+    if (isWaiting()) {
         // still running
         return;
     }
-    m_parent->m_runningRequests.remove(m_req);
+    if (!m_parent.isNull()) {
+        m_parent->m_runningRequests.remove(m_req);
+    }
     delete this;
 }
 
-void RequestData::finish(QOrganizerManager::Error error, QtOrganizer::QOrganizerAbstractRequest::State state)
+void RequestData::finish(QOrganizerManager::Error error,
+                         QtOrganizer::QOrganizerAbstractRequest::State state)
 {
     Q_UNUSED(error);
     Q_UNUSED(state);
     m_finished = true;
-}
-
-void RequestData::onCancelled(GCancellable *cancellable, RequestData *self)
-{
-    Q_UNUSED(cancellable);
-    if (self->m_req) {
-        self->finish(QOrganizerManager::UnspecifiedError, QOrganizerAbstractRequest::CanceledState);
-    }
-    self->m_cancellable = 0;
 }
 
 void RequestData::setClient(EClient *client)
