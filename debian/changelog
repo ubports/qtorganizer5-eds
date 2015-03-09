@@ -1,3 +1,11 @@
+qtorganizer5-eds (0.1.1+15.04.20150309-0ubuntu1) vivid; urgency=medium
+
+  [ Renato Araujo Oliveira Filho ]
+  * Fixed engine crash while destroying and requests still running. (LP:
+    #1423185)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Mon, 09 Mar 2015 13:48:42 +0000
+
 qtorganizer5-eds (0.1.1+15.04.20150227-0ubuntu1) vivid; urgency=medium
 
   [ Renato Araujo Oliveira Filho ]
