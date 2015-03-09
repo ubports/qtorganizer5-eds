@@ -98,6 +98,7 @@ QOrganizerEDSEngine::~QOrganizerEDSEngine()
 {
     while(m_runningRequests.count()) {
         QOrganizerAbstractRequest *req = m_runningRequests.keys().first();
+        req->cancel();
         QOrganizerEDSEngine::requestDestroyed(req);
     }
 
@@ -624,7 +625,7 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
                                        &uids,
                                        &gError);
     if (gError) {
-        qWarning() << "Fail to create items:" << gError->message;
+        qWarning() << "Fail to create items:" << (void*) data << gError->message;
         g_error_free(gError);
         gError = 0;
 
@@ -1073,6 +1074,7 @@ bool QOrganizerEDSEngine::cancelRequest(QOrganizerAbstractRequest* req)
         data->cancel();
         return true;
     }
+    qWarning() << "Request is not running" << (void*) req;
     return false;
 }
 
@@ -1176,6 +1178,11 @@ QList<QOrganizerItemType::ItemType> QOrganizerEDSEngine::supportedItemTypes() co
                          << QOrganizerItemType::TypeNote
                          << QOrganizerItemType::TypeTodo
                          << QOrganizerItemType::TypeTodoOccurrence;
+}
+
+int QOrganizerEDSEngine::runningRequestCount() const
+{
+    return m_runningRequests.count();
 }
 
 void QOrganizerEDSEngine::onSourceAdded(const QString &collectionId)

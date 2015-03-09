@@ -40,8 +40,9 @@ private Q_SLOTS:
     void init()
     {
         EDSBaseTest::init();
-
-        m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
+        QMap<QString, QString> parameters;
+        parameters.insert("sleepMode", "true");
+        m_engine = QOrganizerEDSEngine::createEDSEngine(parameters);
 
         QtOrganizer::QOrganizerManager::Error error;
         m_collection = QOrganizerCollection();
@@ -59,20 +60,17 @@ private Q_SLOTS:
         EDSBaseTest::cleanup();
     }
 
-    void cancelOperationBeforeStart()
+    void cancelOperationAfterStart()
     {
-        // initial collections
-        QList<QOrganizerCollection> collections = m_engine->collections(0);
-        int initialCollectionsCount = collections.count();
-
         QOrganizerEvent event;
         event.setStartDateTime(QDateTime::currentDateTime());
         event.setDisplayLabel("displayLabelValue");
         event.setDescription("descriptionValue");
         event.setCollectionId(m_collection.id());
 
-        // Try cancel a create item operation
         QSignalSpy createdItem(m_engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+
+        // Try cancel a create item operation
         QOrganizerItemSaveRequest req;
         req.setItem(event);
         m_engine->startRequest(&req);
@@ -81,11 +79,89 @@ private Q_SLOTS:
         QCOMPARE(req.state(), QOrganizerAbstractRequest::CanceledState);
         QTRY_COMPARE(createdItem.count(), 0);
 
-        // check if collection was not create
-        collections = m_engine->collections(0);
-        QCOMPARE(collections.count(), initialCollectionsCount);
+        QTRY_COMPARE(m_engine->runningRequestCount(), 0);
     }
 
+    void deleteManagerBeforeRequestFinish()
+    {
+        QOrganizerEvent event;
+        event.setStartDateTime(QDateTime::currentDateTime());
+        event.setDisplayLabel("displayLabelValue");
+        event.setDescription("descriptionValue");
+        event.setCollectionId(m_collection.id());
+
+        QOrganizerEDSEngine *engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
+
+        // Start a request
+        QOrganizerItemSaveRequest req;
+        req.setItem(event);
+        engine->startRequest(&req);
+        QCOMPARE(req.state(), QOrganizerAbstractRequest::ActiveState);
+
+        // delete engine
+        delete engine;
+    }
+
+    void cancelBeforeStart()
+    {
+        QOrganizerEvent event;
+        event.setStartDateTime(QDateTime::currentDateTime());
+        event.setDisplayLabel("displayLabelValue");
+        event.setDescription("descriptionValue");
+        event.setCollectionId(m_collection.id());
+
+        // Cancel before start
+        QOrganizerItemSaveRequest req;
+        req.setItem(event);
+        m_engine->cancelRequest(&req);
+
+        QTRY_COMPARE(m_engine->runningRequestCount(), 0);
+    }
+
+    void destroyRequestAfterStart()
+    {
+        QOrganizerEvent event;
+        event.setStartDateTime(QDateTime::currentDateTime());
+        event.setDisplayLabel("displayLabelValue");
+        event.setDescription("descriptionValue");
+        event.setCollectionId(m_collection.id());
+
+        QOrganizerManager *mgr = new QOrganizerManager("eds");
+        QOrganizerItemSaveRequest *req = new QOrganizerItemSaveRequest;
+        req->setManager(mgr);
+        req->setItem(event);
+        req->start();
+        req->deleteLater();
+
+        delete mgr;
+    }
+
+    void startMultipleRequests()
+    {
+        QList<QOrganizerCollection> collections = m_engine->collections(0);
+
+        QList<QOrganizerItemSaveRequest*> requests;
+        for(int i=0; i < 100; i++) {
+            QOrganizerEvent event;
+            event.setStartDateTime(QDateTime::currentDateTime());
+            event.setDisplayLabel(QString("displayLabelValue_%1").arg(i));
+            event.setDescription(QString("descriptionValue_%2").arg(i));
+            event.setCollectionId(m_collection.id());
+
+            QOrganizerItemSaveRequest *req = new QOrganizerItemSaveRequest;
+            req->setItem(event);
+            m_engine->startRequest(req);
+            QCOMPARE(req->state(), QOrganizerAbstractRequest::ActiveState);
+            requests << req;
+        }
+
+        Q_FOREACH(QOrganizerItemSaveRequest *r, requests) {
+            m_engine->cancelRequest(r);
+            QCOMPARE(r->state(), QOrganizerAbstractRequest::CanceledState);
+        }
+
+        QTRY_COMPARE(m_engine->runningRequestCount(), 0);
+    }
 };
 
 QTEST_MAIN(CancelOperationTest)
