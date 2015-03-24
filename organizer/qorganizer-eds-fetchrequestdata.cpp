@@ -128,9 +128,20 @@ int FetchRequestData::appendResults(QList<QOrganizerItem> results)
 {
     int count = 0;
     QOrganizerItemFetchRequest *req = request<QOrganizerItemFetchRequest>();
-    Q_FOREACH(const QOrganizerItem &item, results) {
-        if (QOrganizerManagerEngine::testFilter(req->filter(), item)) {
-            QOrganizerManagerEngine::addSorted(&m_results, item, req->sorting());
+    if ((req->filter().type() == QOrganizerItemFilter::DefaultFilter) &&
+        req->sorting().isEmpty()) {
+        m_results += results;
+        count = results.size();
+    } else {
+        Q_FOREACH(const QOrganizerItem &item, results) {
+            if ((req->filter().type() == QOrganizerItemFilter::DefaultFilter) ||
+                QOrganizerManagerEngine::testFilter(req->filter(), item)) {
+                if (!req->sorting().isEmpty()) {
+                    QOrganizerManagerEngine::addSorted(&m_results, item, req->sorting());
+                } else {
+                    m_results << item;
+                }
+            }
             count++;
         }
     }
