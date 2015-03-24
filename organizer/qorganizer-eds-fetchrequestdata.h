@@ -35,7 +35,6 @@ public:
     time_t startDate() const;
     time_t endDate() const;
     bool hasDateInterval() const;
-    bool filterIsValid() const;
 
     void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError,
                 QtOrganizer::QOrganizerAbstractRequest::State state = QtOrganizer::QOrganizerAbstractRequest::FinishedState);
@@ -49,9 +48,6 @@ private:
     QStringList m_collections;
     QString m_current;
     QList<QtOrganizer::QOrganizerItem> m_results;
-
-    QStringList filterCollections(const QStringList &collections) const;
-    QStringList collectionsFromFilter(const QtOrganizer::QOrganizerItemFilter &f) const;
 };
 
 #endif

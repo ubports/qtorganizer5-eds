@@ -22,8 +22,6 @@
 
 #include <QtOrganizer/QOrganizerItemFetchRequest>
 #include <QtOrganizer/QOrganizerItemCollectionFilter>
-#include <QtOrganizer/QOrganizerItemUnionFilter>
-#include <QtOrganizer/QOrganizerItemIntersectionFilter>
 
 using namespace QtOrganizer;
 
@@ -31,9 +29,9 @@ FetchRequestData::FetchRequestData(QOrganizerEDSEngine *engine,
                                    QStringList collections,
                                    QOrganizerAbstractRequest *req)
     : RequestData(engine, req),
-      m_components(0)
+      m_components(0),
+      m_collections(collections)
 {
-    m_collections = filterCollections(collections);
 }
 
 FetchRequestData::~FetchRequestData()
@@ -93,19 +91,10 @@ time_t FetchRequestData::endDate() const
 
 bool FetchRequestData::hasDateInterval() const
 {
-    if (!filterIsValid()) {
-        return false;
-    }
-
     QDateTime endDate = request<QOrganizerItemFetchRequest>()->endDate();
     QDateTime startDate = request<QOrganizerItemFetchRequest>()->startDate();
 
     return (endDate.isValid() && startDate.isValid());
-}
-
-bool FetchRequestData::filterIsValid() const
-{
-    return (request<QOrganizerItemFetchRequest>()->filter().type() != QOrganizerItemFilter::InvalidFilter);
 }
 
 void FetchRequestData::finish(QOrganizerManager::Error error,
@@ -128,20 +117,9 @@ int FetchRequestData::appendResults(QList<QOrganizerItem> results)
 {
     int count = 0;
     QOrganizerItemFetchRequest *req = request<QOrganizerItemFetchRequest>();
-    if ((req->filter().type() == QOrganizerItemFilter::DefaultFilter) &&
-        req->sorting().isEmpty()) {
-        m_results += results;
-        count = results.size();
-    } else {
-        Q_FOREACH(const QOrganizerItem &item, results) {
-            if ((req->filter().type() == QOrganizerItemFilter::DefaultFilter) ||
-                QOrganizerManagerEngine::testFilter(req->filter(), item)) {
-                if (!req->sorting().isEmpty()) {
-                    QOrganizerManagerEngine::addSorted(&m_results, item, req->sorting());
-                } else {
-                    m_results << item;
-                }
-            }
+    Q_FOREACH(const QOrganizerItem &item, results) {
+        if (QOrganizerManagerEngine::testFilter(req->filter(), item)) {
+            QOrganizerManagerEngine::addSorted(&m_results, item, req->sorting());
             count++;
         }
     }
@@ -150,14 +128,8 @@ int FetchRequestData::appendResults(QList<QOrganizerItem> results)
 
 QString FetchRequestData::dateFilter()
 {
-    QOrganizerItemFetchRequest *r = request<QOrganizerItemFetchRequest>();
-    if (r->filter().type() == QOrganizerItemFilter::InvalidFilter) {
-        qWarning("Query for events with invalid filter type");
-        return QStringLiteral("");
-    }
-
-    QDateTime startDate = r->startDate();
-    QDateTime endDate = r->endDate();
+    QDateTime startDate = request<QOrganizerItemFetchRequest>()->startDate();
+    QDateTime endDate = request<QOrganizerItemFetchRequest>()->endDate();
 
     if (!startDate.isValid() ||
         !endDate.isValid()) {
@@ -177,45 +149,5 @@ QString FetchRequestData::dateFilter()
     g_free(endDateStr);
 
     return query;
-}
-
-QStringList FetchRequestData::filterCollections(const QStringList &collections) const
-{
-    QStringList result;
-    if (filterIsValid()) {
-        QOrganizerItemFilter f = request<QOrganizerItemFetchRequest>()->filter();
-        QStringList cFilters = collectionsFromFilter(f);
-        if (cFilters.isEmpty()) {
-            result = collections;
-        } else {
-            Q_FOREACH(const QString &f, collections) {
-                if (cFilters.contains(f)) {
-                    result << f;
-                }
-            }
-        }
-    }
-    return result;
-}
-
-QStringList FetchRequestData::collectionsFromFilter(const QOrganizerItemFilter &f) const
-{
-    QStringList result;
-
-    switch(f.type()) {
-    case QOrganizerItemFilter::CollectionFilter:
-    {
-        QOrganizerItemCollectionFilter cf = static_cast<QOrganizerItemCollectionFilter>(f);
-        Q_FOREACH(const QOrganizerCollectionId &id, cf.collectionIds()) {
-            result << id.toString();
-        }
-        break;
-    }
-    //TODO: Try to filter collections for Union and Intersection filters
-    default:
-        break;
-    }
-
-    return result;
 }
 

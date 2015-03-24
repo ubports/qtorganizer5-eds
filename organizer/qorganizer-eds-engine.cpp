@@ -127,12 +127,7 @@ void QOrganizerEDSEngine::itemsAsync(QOrganizerItemFetchRequest *req)
     FetchRequestData *data = new FetchRequestData(this,
                                                   d->m_sourceRegistry->collectionsIds(),
                                                   req);
-    if (data->filterIsValid()) {
-        itemsAsyncStart(data);
-    } else {
-        data->finish();
-        releaseRequestData(data);
-    }
+    itemsAsyncStart(data);
 }
 
 void QOrganizerEDSEngine::itemsAsyncStart(FetchRequestData *data)
@@ -868,7 +863,7 @@ void QOrganizerEDSEngine::saveCollectionAsync(QOrganizerCollectionSaveRequest *r
                                          requestData);
     } else {
         requestData->prepareToUpdate();
-        g_idle_add((GSourceFunc) saveCollectionUpdateAsyncStart, requestData);
+        saveCollectionUpdateAsyncStart(requestData);
     }
 }
 
@@ -889,16 +884,16 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
     } else if (data->isLive()) {
         data->commitSourceCreated();
         data->prepareToUpdate();
-        g_idle_add((GSourceFunc) saveCollectionUpdateAsyncStart, data);
+        saveCollectionUpdateAsyncStart(data);
     }
 }
 
-bool QOrganizerEDSEngine::saveCollectionUpdateAsyncStart(SaveCollectionRequestData *data)
+void QOrganizerEDSEngine::saveCollectionUpdateAsyncStart(SaveCollectionRequestData *data)
 {
     // check if request was destroyed by the caller
     if (!data->isLive()) {
         releaseRequestData(data);
-        return false;
+        return;
     }
 
     ESource *source = data->nextSourceToUpdate();
@@ -911,7 +906,6 @@ bool QOrganizerEDSEngine::saveCollectionUpdateAsyncStart(SaveCollectionRequestDa
         data->finish();
         releaseRequestData(data);
     }
-    return false;
 }
 
 void QOrganizerEDSEngine::saveCollectionUpdateAsynCommited(ESource *source,
@@ -932,7 +926,7 @@ void QOrganizerEDSEngine::saveCollectionUpdateAsynCommited(ESource *source,
     }
 
     if (data->isLive()) {
-        g_idle_add((GSourceFunc) saveCollectionUpdateAsyncStart, data);
+        saveCollectionUpdateAsyncStart(data);
     } else {
         releaseRequestData(data);
     }
