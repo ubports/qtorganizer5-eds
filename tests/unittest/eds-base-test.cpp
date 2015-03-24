@@ -50,6 +50,7 @@ void EDSBaseTest::init()
 
 void EDSBaseTest::cleanup()
 {
+    QTest::qWait(1000);
 }
 
 QString EDSBaseTest::uniqueCollectionName() const
