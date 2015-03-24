@@ -22,6 +22,8 @@
 
 #include <QtOrganizer/QOrganizerItemFetchRequest>
 #include <QtOrganizer/QOrganizerItemCollectionFilter>
+#include <QtOrganizer/QOrganizerItemUnionFilter>
+#include <QtOrganizer/QOrganizerItemIntersectionFilter>
 
 using namespace QtOrganizer;
 
@@ -29,9 +31,9 @@ FetchRequestData::FetchRequestData(QOrganizerEDSEngine *engine,
                                    QStringList collections,
                                    QOrganizerAbstractRequest *req)
     : RequestData(engine, req),
-      m_components(0),
-      m_collections(collections)
+      m_components(0)
 {
+    m_collections = filterCollections(collections);
 }
 
 FetchRequestData::~FetchRequestData()
@@ -91,10 +93,19 @@ time_t FetchRequestData::endDate() const
 
 bool FetchRequestData::hasDateInterval() const
 {
+    if (!filterIsValid()) {
+        return false;
+    }
+
     QDateTime endDate = request<QOrganizerItemFetchRequest>()->endDate();
     QDateTime startDate = request<QOrganizerItemFetchRequest>()->startDate();
 
     return (endDate.isValid() && startDate.isValid());
+}
+
+bool FetchRequestData::filterIsValid() const
+{
+    return (request<QOrganizerItemFetchRequest>()->filter().type() != QOrganizerItemFilter::InvalidFilter);
 }
 
 void FetchRequestData::finish(QOrganizerManager::Error error,
@@ -128,8 +139,14 @@ int FetchRequestData::appendResults(QList<QOrganizerItem> results)
 
 QString FetchRequestData::dateFilter()
 {
-    QDateTime startDate = request<QOrganizerItemFetchRequest>()->startDate();
-    QDateTime endDate = request<QOrganizerItemFetchRequest>()->endDate();
+    QOrganizerItemFetchRequest *r = request<QOrganizerItemFetchRequest>();
+    if (r->filter().type() == QOrganizerItemFilter::InvalidFilter) {
+        qWarning("Query for events with invalid filter type");
+        return QStringLiteral("");
+    }
+
+    QDateTime startDate = r->startDate();
+    QDateTime endDate = r->endDate();
 
     if (!startDate.isValid() ||
         !endDate.isValid()) {
@@ -149,5 +166,44 @@ QString FetchRequestData::dateFilter()
     g_free(endDateStr);
 
     return query;
+}
+
+QStringList FetchRequestData::filterCollections(const QStringList &collections) const
+{
+    QStringList result;
+    if (filterIsValid()) {
+        QOrganizerItemFilter f = request<QOrganizerItemFetchRequest>()->filter();
+        QStringList cFilters = collectionsFromFilter(f);
+        if (cFilters.isEmpty()) {
+            result = collections;
+        } else {
+            Q_FOREACH(const QString &f, collections) {
+                if (cFilters.contains(f)) {
+                    result << f;
+                }
+            }
+        }
+    }
+    return result;
+}
+
+QStringList FetchRequestData::collectionsFromFilter(const QOrganizerItemFilter &f) const
+{
+    QStringList result;
+
+    switch(f.type()) {
+    case QOrganizerItemFilter::CollectionFilter:
+    {
+        QOrganizerItemCollectionFilter cf = static_cast<QOrganizerItemCollectionFilter>(f);
+        Q_FOREACH(const QOrganizerCollectionId &id, cf.collectionIds()) {
+            result << id.toString();
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
+    return result;
 }
 

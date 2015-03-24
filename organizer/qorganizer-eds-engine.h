@@ -234,7 +234,7 @@ private:
     static void removeItemsAsyncStart(RemoveRequestData *data);
 
     void saveCollectionAsync(QtOrganizer::QOrganizerCollectionSaveRequest *req);
-    static void saveCollectionUpdateAsyncStart(SaveCollectionRequestData *data);
+    static bool saveCollectionUpdateAsyncStart(SaveCollectionRequestData *data);
     static void saveCollectionAsyncCommited(ESourceRegistry *registry, GAsyncResult *res, SaveCollectionRequestData *data);
     static void saveCollectionUpdateAsynCommited(ESource *source, GAsyncResult *res, SaveCollectionRequestData *data);
 
