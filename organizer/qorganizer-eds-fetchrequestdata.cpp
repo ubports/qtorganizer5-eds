@@ -211,6 +211,7 @@ QStringList FetchRequestData::collectionsFromFilter(const QOrganizerItemFilter &
         }
         break;
     }
+    //TODO: Try to filter collections for Union and Intersection filters
     default:
         break;
     }

@@ -887,7 +887,6 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
             return;
         }
     } else if (data->isLive()) {
-        e_source_registry_debug_dump (registry, E_SOURCE_EXTENSION_CALENDAR);
         data->commitSourceCreated();
         data->prepareToUpdate();
         g_idle_add((GSourceFunc) saveCollectionUpdateAsyncStart, data);
