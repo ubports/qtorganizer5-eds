@@ -61,6 +61,7 @@
 #include <QtOrganizer/QOrganizerEventOccurrence>
 #include <QtOrganizer/QOrganizerTodoOccurrence>
 #include <QtOrganizer/QOrganizerItemParent>
+#include <QtOrganizer/QOrganizerItemExtendedDetail>
 
 #include <glib.h>
 #include <libecal/libecal.h>
@@ -1619,6 +1620,20 @@ void QOrganizerEDSEngine::parseAttendeeList(ECalComponent *comp, QOrganizerItem 
     e_cal_component_free_attendee_list(attendeeList);
 }
 
+void QOrganizerEDSEngine::parseExtendedDetails(ECalComponent *comp, QOrganizerItem *item)
+{
+    icalcomponent *icalcomp = e_cal_component_get_icalcomponent(comp);
+    for (icalproperty *prop = icalcomponent_get_first_property(icalcomp, ICAL_X_PROPERTY);
+         prop != NULL;
+         prop = icalcomponent_get_next_property (icalcomp, ICAL_X_PROPERTY)) {
+
+        QOrganizerItemExtendedDetail ex;
+        ex.setName(QString::fromUtf8(icalproperty_get_x_name(prop)));
+        ex.setData(QByteArray(icalproperty_get_x(prop)));
+        item->saveDetail(&ex);
+    }
+}
+
 QOrganizerItem *QOrganizerEDSEngine::parseEvent(ECalComponent *comp)
 {
     QOrganizerItem *event;
@@ -1841,6 +1856,7 @@ QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(const QString &collection
         parseTags(comp, item);
         parseReminders(comp, item);
         parseAttendeeList(comp, item);
+        parseExtendedDetails(comp, item);
 
         items << *item;
         delete item;
@@ -2160,6 +2176,25 @@ void QOrganizerEDSEngine::parseAttendeeList(const QOrganizerItem &item, ECalComp
     e_cal_component_free_attendee_list(attendeeList);
 }
 
+void QOrganizerEDSEngine::parseExtendedDetails(const QOrganizerItem &item, ECalComponent *comp)
+{
+    icalcomponent *icalcomp = e_cal_component_get_icalcomponent(comp);
+    Q_FOREACH(const QOrganizerItemExtendedDetail &ex, item.details(QOrganizerItemDetail::TypeExtendedDetail)) {
+        // We only support QByteArray.
+        // We could use QStream serialization but it will make it impossible to read it from glib side, for example indicators.
+        QByteArray data = ex.data().toByteArray();
+        if (data.isEmpty()) {
+            qWarning() << "Invalid value for property" << ex.name()
+                       <<". EDS only supports QByteArray values for extended properties";
+            continue;
+        }
+
+        icalproperty *xProp = icalproperty_new_x(data.constData());
+        icalproperty_set_x_name(xProp, ex.name().toUtf8().constData());
+        icalcomponent_add_property(icalcomp, xProp);
+    }
+}
+
 bool QOrganizerEDSEngine::hasRecurrence(ECalComponent *comp)
 {
     char *rid = e_cal_component_get_recurid_as_string(comp);
@@ -2433,6 +2468,7 @@ GSList *QOrganizerEDSEngine::parseItems(ECalClient *client,
         parseTags(item, comp);
         parseReminders(item, comp);
         parseAttendeeList(item, comp);
+        parseExtendedDetails(item, comp);
 
         if (!item.id().isNull()) {
             e_cal_component_commit_sequence(comp);
