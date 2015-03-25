@@ -42,7 +42,7 @@ public:
     virtual void cancel();
     void deleteLater();
     virtual void finish(QtOrganizer::QOrganizerManager::Error error, QtOrganizer::QOrganizerAbstractRequest::State state) = 0;
-    void wait();
+    void wait(int msec=0);
     bool isWaiting();
 
     template<class T>

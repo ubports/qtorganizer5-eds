@@ -34,7 +34,6 @@
 
 #include <QtCore/qdebug.h>
 #include <QtCore/QPointer>
-#include <QtCore/QCoreApplication>
 #include <QtCore/QTimeZone>
 
 #include <QtOrganizer/QOrganizerEventAttendee>
@@ -1007,6 +1006,7 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
         } else {
             qWarning() << "Source not removable";
             data->commit(QOrganizerManager::InvalidCollectionError);
+            removeCollectionAsyncStart(0, 0, data);
         }
     } else {
         data->finish();
@@ -1091,7 +1091,7 @@ bool QOrganizerEDSEngine::waitForRequestFinished(QOrganizerAbstractRequest* req,
 
     RequestData *data = m_runningRequests.value(req);
     if (data) {
-        data->wait();
+        data->wait(msecs);
         // We can delete the operation already finished
         data->deleteLater();
     }

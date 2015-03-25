@@ -17,6 +17,7 @@ pkg_check_modules(ECAL REQUIRED REQUIRED libecal-1.2>=3.8)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 
 # Coverage tools
 OPTION(ENABLE_COVERAGE "Build with coverage analysis support" OFF)

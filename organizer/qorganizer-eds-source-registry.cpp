@@ -325,4 +325,7 @@ void SourceRegistry::updateCollection(QOrganizerCollection *collection,
     bool selected = (e_source_selectable_get_selected(E_SOURCE_SELECTABLE(extCalendar)) == TRUE);
     collection->setExtendedMetaData(COLLECTION_SELECTED_METADATA, selected);
 
+    // writable
+    bool writable = e_source_get_writable(source);
+    collection->setExtendedMetaData(COLLECTION_WRITABLE_METADATA, writable);
 }

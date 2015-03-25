@@ -184,6 +184,9 @@ private Q_SLOTS:
         QVERIFY(!collection.id().isNull());
         QTRY_COMPARE(collectionCreated.count(), 1);
 
+        // wait for the collection to became writable
+        QTRY_COMPARE_WITH_TIMEOUT(collection.extendedMetaData(QStringLiteral("collection-writable")).toBool(), true, 10000);
+
         // Check if the collection was stored correct
         QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), &error);
         QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyName).toString(), collectionName);
@@ -249,6 +252,9 @@ private Q_SLOTS:
         QSignalSpy createCollection(m_engineRead, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
         QTRY_COMPARE(createCollection.count(), 1);
+
+        // wait for the collection to became writable
+        QTRY_COMPARE_WITH_TIMEOUT(collection.extendedMetaData(QStringLiteral("collection-writable")).toBool(), true, 10000);
 
         // remove recent created collection
         QSignalSpy removeCollection(m_engineRead, SIGNAL(collectionsRemoved(QList<QOrganizerCollectionId>)));
