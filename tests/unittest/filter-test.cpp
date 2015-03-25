@@ -167,7 +167,6 @@ private Q_SLOTS:
         uFilter.append(filter);
         uFilter.append(dFilter);
 
-        qDebug() << "Fetch union>>>>>>>>>>>>>>>";
         items = m_engine->items(uFilter,
                       QDateTime(),
                       QDateTime(),

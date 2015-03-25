@@ -185,7 +185,7 @@ QStringList FetchRequestData::filterCollections(const QStringList &collections) 
     if (filterIsValid()) {
         QOrganizerItemFilter f = request<QOrganizerItemFetchRequest>()->filter();
         QStringList cFilters = collectionsFromFilter(f);
-        if (cFilters.isEmpty()) {
+        if (cFilters.contains("*") || cFilters.isEmpty()) {
             result = collections;
         } else {
             Q_FOREACH(const QString &f, collections) {
@@ -211,7 +211,18 @@ QStringList FetchRequestData::collectionsFromFilter(const QOrganizerItemFilter &
         }
         break;
     }
-    //TODO: Try to filter collections for Union and Intersection filters
+    case QOrganizerItemFilter::IntersectionFilter:
+    {
+        QOrganizerItemIntersectionFilter intersec = static_cast<QOrganizerItemIntersectionFilter>(f);
+        Q_FOREACH(const QOrganizerItemFilter &f, intersec.filters()) {
+            result << collectionsFromFilter(f);
+        }
+        break;
+    }
+    case QOrganizerItemFilter::UnionFilter:
+        // TODO: better handle union filters, for now they will consider all collections
+        result << "*";
+        break;
     default:
         break;
     }
