@@ -864,7 +864,7 @@ void QOrganizerEDSEngine::saveCollectionAsync(QOrganizerCollectionSaveRequest *r
                                          requestData);
     } else {
         requestData->prepareToUpdate();
-        saveCollectionUpdateAsyncStart(requestData);
+        g_idle_add((GSourceFunc) saveCollectionUpdateAsyncStart, requestData);
     }
 }
 
@@ -885,16 +885,16 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
     } else if (data->isLive()) {
         data->commitSourceCreated();
         data->prepareToUpdate();
-        saveCollectionUpdateAsyncStart(data);
+        g_idle_add((GSourceFunc) saveCollectionUpdateAsyncStart, data);
     }
 }
 
-void QOrganizerEDSEngine::saveCollectionUpdateAsyncStart(SaveCollectionRequestData *data)
+gboolean QOrganizerEDSEngine::saveCollectionUpdateAsyncStart(SaveCollectionRequestData *data)
 {
     // check if request was destroyed by the caller
     if (!data->isLive()) {
         releaseRequestData(data);
-        return;
+        return FALSE;
     }
 
     ESource *source = data->nextSourceToUpdate();
@@ -907,6 +907,7 @@ void QOrganizerEDSEngine::saveCollectionUpdateAsyncStart(SaveCollectionRequestDa
         data->finish();
         releaseRequestData(data);
     }
+    return FALSE;
 }
 
 void QOrganizerEDSEngine::saveCollectionUpdateAsynCommited(ESource *source,
@@ -927,7 +928,7 @@ void QOrganizerEDSEngine::saveCollectionUpdateAsynCommited(ESource *source,
     }
 
     if (data->isLive()) {
-        saveCollectionUpdateAsyncStart(data);
+        g_idle_add((GSourceFunc) saveCollectionUpdateAsyncStart, data);
     } else {
         releaseRequestData(data);
     }
@@ -1082,11 +1083,10 @@ bool QOrganizerEDSEngine::cancelRequest(QOrganizerAbstractRequest* req)
 bool QOrganizerEDSEngine::waitForRequestFinished(QOrganizerAbstractRequest* req, int msecs)
 {
     Q_ASSERT(req);
-    Q_UNUSED(msecs);
 
     RequestData *data = m_runningRequests.value(req);
     if (data) {
-        data->wait();
+        data->wait(msecs);
         // We can delete the operation already finished
         data->deleteLater();
     }
