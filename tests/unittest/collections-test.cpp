@@ -250,6 +250,10 @@ private Q_SLOTS:
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
         QTRY_COMPARE(createCollection.count(), 1);
 
+        //WORKAROUND: avoid problems with EDS during the tests
+        // For some reason EDS takes a while to make the new source removable or editable
+        QTest::qWait(1000);
+
         // remove recent created collection
         QSignalSpy removeCollection(m_engineRead, SIGNAL(collectionsRemoved(QList<QOrganizerCollectionId>)));
         QVERIFY(m_engineWrite->removeCollection(collection.id(), &error));
