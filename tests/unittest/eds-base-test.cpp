@@ -33,7 +33,7 @@ public:
     static inline void cleanup(void *pointer)
     {
         if (pointer) {
-            g_object_unref(reinterpret_cast<GObject*>(pointer));
+            g_clear_object(&pointer);
         }
     }
 };
