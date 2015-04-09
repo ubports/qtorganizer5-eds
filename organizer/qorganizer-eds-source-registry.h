@@ -80,7 +80,9 @@ private:
 
     QString findCollection(ESource *source) const;
     QtOrganizer::QOrganizerCollection registerSource(ESource *source);
-    static void updateCollection(QtOrganizer::QOrganizerCollection *collection, ESource *source);
+    static void updateCollection(QtOrganizer::QOrganizerCollection *collection,
+                                 ESource *source,
+                                 EClient *client = 0);
 
 
     // glib callback

@@ -230,8 +230,8 @@ private Q_SLOTS:
         QList<QVariant> args = createdCollection.takeFirst();
         QCOMPARE(args.count(), 1);
 
-        QVERIFY(m_engineWrite->collections(&error).contains(collection));
-        QVERIFY(m_engineRead->collections(&error).contains(collection));
+        QTRY_VERIFY(m_engineWrite->collections(&error).contains(collection));
+        QTRY_VERIFY(m_engineRead->collections(&error).contains(collection));
     }
 
     void testRemoveCollection()
@@ -262,6 +262,19 @@ private Q_SLOTS:
         collections = m_engineRead->collections(&error);
         QCOMPARE(collections.count(), initalCollectionCount);
         QVERIFY(!collections.contains(collection));
+    }
+
+    void testReadOnlyCollection()
+    {
+        // check if the anniversaries collection is read-only
+        static const QString anniversariesCollectionName = QStringLiteral("Birthdays & Anniversaries");
+        QtOrganizer::QOrganizerManager::Error error;
+        QList<QOrganizerCollection> collections = m_engineRead->collections(&error);
+        Q_FOREACH(const QOrganizerCollection &col, collections) {
+            if (col.metaData(QOrganizerCollection::KeyName) == anniversariesCollectionName) {
+                QVERIFY(col.extendedMetaData("collection-readonly").toBool());
+            }
+        }
     }
 };
 
