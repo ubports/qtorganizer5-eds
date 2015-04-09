@@ -40,6 +40,17 @@ private:
     QOrganizerEDSEngine *m_engineWrite;
     QOrganizerEDSEngine *m_engineRead;
 
+    bool containsCollection(const QList<QOrganizerCollection> &lst, const QOrganizerCollection &collection  )
+    {
+        bool found = false;
+        Q_FOREACH(const QOrganizerCollection &col, lst) {
+            if (col.id() == collection.id()) {
+                found = true;
+            }
+        }
+        return found;
+    }
+
 private Q_SLOTS:
     void initTestCase()
     {
@@ -190,6 +201,9 @@ private Q_SLOTS:
         QCOMPARE(newCollection.metaData(QOrganizerCollection::KeyColor).toString(), QStringLiteral("red"));
         QCOMPARE(newCollection.extendedMetaData(QStringLiteral("collection-selected")).toBool(), false);
 
+        // wait collection to became writable
+        QTRY_VERIFY_WITH_TIMEOUT(!m_engineRead->collection(newCollection.id(), 0).extendedMetaData("collection-readonly").toBool(), 5000);
+
         // update the collection
         QSignalSpy updateCollection(m_engineRead, SIGNAL(collectionsChanged(QList<QOrganizerCollectionId>)));
         collection.setMetaData(QOrganizerCollection::KeyColor, "blue");
@@ -230,8 +244,8 @@ private Q_SLOTS:
         QList<QVariant> args = createdCollection.takeFirst();
         QCOMPARE(args.count(), 1);
 
-        QTRY_VERIFY(m_engineWrite->collections(&error).contains(collection));
-        QTRY_VERIFY(m_engineRead->collections(&error).contains(collection));
+        QVERIFY(containsCollection(m_engineWrite->collections(&error), collection));
+        QVERIFY(containsCollection(m_engineRead->collections(&error), collection));
     }
 
     void testRemoveCollection()
@@ -257,11 +271,11 @@ private Q_SLOTS:
 
         collections = m_engineWrite->collections(&error);
         QCOMPARE(collections.count(), initalCollectionCount);
-        QVERIFY(!collections.contains(collection));
+        QVERIFY(!containsCollection(collections, collection));
 
         collections = m_engineRead->collections(&error);
         QCOMPARE(collections.count(), initalCollectionCount);
-        QVERIFY(!collections.contains(collection));
+        QVERIFY(!containsCollection(collections, collection));
     }
 
     void testReadOnlyCollection()
