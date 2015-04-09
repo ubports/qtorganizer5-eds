@@ -36,6 +36,9 @@ protected:
     virtual void init();
     virtual void cleanup();
 
+
+    QString getEventFromEvolution(const QtOrganizer::QOrganizerItemId &id,
+                                  const QtOrganizer::QOrganizerCollectionId &collectionId = QtOrganizer::QOrganizerCollectionId());
     QString uniqueCollectionName() const;
 };
 

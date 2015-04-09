@@ -47,7 +47,6 @@ private Q_SLOTS:
     void initTestCase()
     {
         EDSBaseTest::init();
-        qDebug() << "INIT TEST CASE";
 
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
@@ -61,8 +60,6 @@ private Q_SLOTS:
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
         QTRY_COMPARE(createdCollection.count(), 1);
-
-        qDebug() << "END TEST CASE";
     }
 
     void cleanupTestCase()
@@ -377,7 +374,6 @@ private Q_SLOTS:
 
         QList<QOrganizerItemId> ids;
         ids << items[0].id();
-        qDebug() << "Check for item id:" << ids;
         items = m_engine->items(ids, hint, 0, 0);
         QCOMPARE(items.count(), 1);
         QOrganizerCollection collection = m_engine->defaultCollection(0);
@@ -806,7 +802,6 @@ private Q_SLOTS:
         QList<QOrganizerItemId> ids;
         QOrganizerItemFetchHint hint;
         ids << items[0].id();
-        qDebug() << "Find for id" << ids;
         QList<QOrganizerItem> newItems = m_engine->items(ids, hint, &errorMap, &error);
         QCOMPARE(newItems.size(), 1);
 
@@ -818,6 +813,108 @@ private Q_SLOTS:
         QCOMPARE(newAttendee.name(), attendee.name());
         QCOMPARE(newAttendee.participationRole(), attendee.participationRole());
         QCOMPARE(newAttendee.participationStatus(), attendee.participationStatus());
+    }
+
+    // BUG: #1440878
+    void testReminderOnTime()
+    {
+        static QString displayLabelValue = QStringLiteral("event reminder");
+        static QString descriptionValue = QStringLiteral("event with reminder");
+
+        QOrganizerEvent event;
+        QOrganizerItemAudibleReminder aReminder;
+        event.setStartDateTime(QDateTime::currentDateTime());
+        event.setDisplayLabel(displayLabelValue);
+        event.setDescription(descriptionValue);
+        aReminder.setSecondsBeforeStart(0);
+        aReminder.setDataUrl(QString());
+        event.saveDetail(&aReminder);
+
+        QOrganizerEvent event2;
+        aReminder = QOrganizerItemAudibleReminder();
+        event2.setStartDateTime(QDateTime::currentDateTime().addDays(2));
+        event2.setDisplayLabel(displayLabelValue + "_2");
+        event2.setDescription(descriptionValue);
+        aReminder.setSecondsBeforeStart(60);
+        aReminder.setDataUrl(QString());
+        event2.saveDetail(&aReminder);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        QSignalSpy createdItem(m_engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+        items << event << event2;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+        QTRY_COMPARE(createdItem.count(), 1);
+        QVERIFY(saveResult);
+
+        QString vcard = getEventFromEvolution(items[0].id());
+        QVERIFY(vcard.contains("TRIGGER;VALUE=DURATION;RELATED=START:PT0S"));
+
+        vcard = getEventFromEvolution(items[1].id());
+        QVERIFY(vcard.contains("TRIGGER;VALUE=DURATION;RELATED=START:-PT1M"));
+    }
+
+    void testExtendedProperties()
+    {
+        static QString displayLabelValue = QStringLiteral("event with extended property");
+        static QString descriptionValue = QStringLiteral("event with extended property");
+        QOrganizerItemId itemId;
+        QDateTime currentTime = QDateTime::currentDateTime();
+
+        {
+            // create a item with X-URL
+            QOrganizerEvent event;
+            event.setStartDateTime(currentTime);
+            event.setEndDateTime(currentTime.addSecs(60 * 30));
+            event.setDisplayLabel(displayLabelValue);
+            event.setDescription(descriptionValue);
+
+            QOrganizerItemExtendedDetail ex;
+            ex.setName(QStringLiteral("X-URL"));
+            ex.setData(QByteArray("http://canonical.com"));
+            event.saveDetail(&ex);
+
+            // save the new item
+            QtOrganizer::QOrganizerManager::Error error;
+            QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+            QList<QOrganizerItem> items;
+            QSignalSpy createdItem(m_engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+            items << event;
+            bool saveResult = m_engine->saveItems(&items,
+                                                  QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                                  &errorMap,
+                                                  &error);
+            QTRY_COMPARE(createdItem.count(), 1);
+            QVERIFY(saveResult);
+            QCOMPARE(error, QOrganizerManager::NoError);
+            QCOMPARE(items.size(), 1);
+            QVERIFY(errorMap.isEmpty());
+            QVERIFY(!items[0].id().isNull());
+            QCOMPARE(items[0].details(QOrganizerItemDetail::TypeExtendedDetail).size(), 1);
+            itemId = items[0].id();
+        }
+
+        // fetch for the item
+        {
+            QtOrganizer::QOrganizerManager::Error error;
+            QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+            QList<QOrganizerItemId> ids;
+            QOrganizerItemFetchHint hint;
+            ids << itemId;
+            QList<QOrganizerItem> items = m_engine->items(ids, hint, &errorMap, &error);
+            QCOMPARE(items.size(), 1);
+
+            QList<QOrganizerItemDetail> exs = items[0].details(QOrganizerItemDetail::TypeExtendedDetail);
+            QCOMPARE(exs.size(), 1);
+            QCOMPARE(exs[0].value(QOrganizerItemExtendedDetail::FieldName).toString(),
+                    QStringLiteral("X-URL"));
+            QCOMPARE(exs[0].value(QOrganizerItemExtendedDetail::FieldData).toByteArray(),
+                    QByteArray("http://canonical.com"));
+        }
     }
 };
 
