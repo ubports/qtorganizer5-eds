@@ -125,6 +125,9 @@ public:
     virtual QList<QtOrganizer::QOrganizerItemDetail::DetailType> supportedItemDetails(QtOrganizer::QOrganizerItemType::ItemType itemType) const;
     virtual QList<QtOrganizer::QOrganizerItemType::ItemType> supportedItemTypes() const;
 
+    // debug
+    int runningRequestCount() const;
+
 protected Q_SLOTS:
     void onSourceAdded(const QString &collectionId);
     void onSourceRemoved(const QString &collectionId);

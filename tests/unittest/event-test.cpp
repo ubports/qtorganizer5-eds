@@ -33,8 +33,6 @@ class EventTest : public QObject, public EDSBaseTest
 {
     Q_OBJECT
 private:
-    static const QString defaultCollectionName;
-    static const QString defaultTaskCollectionName;
     static const QString collectionTypePropertyName;
     static const QString taskListTypeName;
     static int signalIndex;
@@ -46,28 +44,38 @@ private:
 
 
 private Q_SLOTS:
-    void init()
+    void initTestCase()
     {
         EDSBaseTest::init();
+        qDebug() << "INIT TEST CASE";
 
-        signalIndex = 0;
-        m_itemRemovedTime = QDateTime();
-        m_requestFinishedTime = QDateTime();
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
         QtOrganizer::QOrganizerManager::Error error;
         m_collection = QOrganizerCollection();
-        m_collection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName);
+        m_collection.setMetaData(QOrganizerCollection::KeyName, uniqueCollectionName());
         m_collection.setExtendedMetaData(collectionTypePropertyName, taskListTypeName);
 
+        QSignalSpy createdCollection(m_engine, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
         bool saveResult = m_engine->saveCollection(&m_collection, &error);
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
+        QTRY_COMPARE(createdCollection.count(), 1);
+
+        qDebug() << "END TEST CASE";
     }
 
-    void cleanup()
+    void cleanupTestCase()
     {
+        delete m_engine;
         EDSBaseTest::cleanup();
+    }
+
+    void init()
+    {
+        signalIndex = 0;
+        m_itemRemovedTime = QDateTime();
+        m_requestFinishedTime = QDateTime();
     }
 
     //helper
@@ -121,9 +129,6 @@ private Q_SLOTS:
                                               &error);
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
-
-        // append new item to be removed after the test
-        appendToRemove(items[0].id());
 
         QOrganizerItemSortOrder sort;
         QOrganizerItemFetchHint hint;
@@ -198,9 +203,6 @@ private Q_SLOTS:
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
 
-        // append new item to be removed after the test
-        appendToRemove(items[0].id());
-
         QOrganizerItemSortOrder sort;
         QOrganizerItemFetchHint hint;
         QOrganizerItemIdFilter filter;
@@ -267,9 +269,6 @@ private Q_SLOTS:
         QVERIFY(errorMap.isEmpty());
         QVERIFY(!items[0].id().isNull());
 
-        // append new item to be removed after the test
-        appendToRemove(items[0].id());
-
         QOrganizerItemRemoveRequest req;
         connect(&req, SIGNAL(stateChanged(QOrganizerAbstractRequest::State)),
                 this, SLOT(requestFinished(QOrganizerAbstractRequest::State)));
@@ -316,11 +315,7 @@ private Q_SLOTS:
         QOrganizerItemId id = items[0].id();
         QVERIFY(!id.isNull());
 
-        // append new item to be removed after the test
-        appendToRemove(id);
-
         QOrganizerItemRemoveByIdRequest req;
-
         connect(&req, SIGNAL(stateChanged(QOrganizerAbstractRequest::State)),
                 this, SLOT(requestFinished(QOrganizerAbstractRequest::State)));
         connect(m_engine, SIGNAL(itemsRemoved(QList<QOrganizerItemId>)),
@@ -377,9 +372,6 @@ private Q_SLOTS:
         QVERIFY(errorMap.isEmpty());
         QVERIFY(!items[0].id().isNull());
 
-        // append new item to be removed after the test
-        appendToRemove(items[0].id());
-
         // check if item was created on the default collection
         QOrganizerItemFetchHint hint;
 
@@ -419,7 +411,6 @@ private Q_SLOTS:
         QCOMPARE(evs.count(), 10);
         Q_FOREACH(const QOrganizerItem &i, evs) {
             QVERIFY(!i.id().isNull());
-            appendToRemove(i.id());
         }
     }
 
@@ -440,7 +431,7 @@ private Q_SLOTS:
 
         QtOrganizer::QOrganizerManager::Error error;
         QOrganizerCollection eventCollection = QOrganizerCollection();
-        eventCollection.setMetaData(QOrganizerCollection::KeyName, defaultCollectionName + "_TEMP");
+        eventCollection.setMetaData(QOrganizerCollection::KeyName, uniqueCollectionName());
         bool saveResult = m_engine->saveCollection(&eventCollection, &error);
         QVERIFY(saveResult);
 
@@ -464,7 +455,6 @@ private Q_SLOTS:
         QCOMPARE(evs.count(), 20);
         Q_FOREACH(const QOrganizerItem &i, evs) {
             QVERIFY(!i.id().isNull());
-            appendToRemove(i.id());
         }
     }
 
@@ -508,8 +498,6 @@ private Q_SLOTS:
         QVERIFY(saveResult);
         QCOMPARE(error, QOrganizerManager::NoError);
         QCOMPARE(evs.count(), 2);
-        appendToRemove(evs[0].id());
-        appendToRemove(evs[1].id());
         QCOMPARE(errorMap.size(), 1);
         QCOMPARE(errorMap[1], QOrganizerManager::InvalidCollectionError);
     }
@@ -539,9 +527,6 @@ private Q_SLOTS:
         QVERIFY(errorMap.isEmpty());
         QOrganizerItemId id = items[0].id();
         QVERIFY(!id.isNull());
-
-        // append new item to be removed after the test
-        appendToRemove(id);
 
         QOrganizerItemFetchHint hint;
         QList<QOrganizerItemId> ids;
@@ -681,10 +666,161 @@ private Q_SLOTS:
         }
         QCOMPARE(expectedTags.size(), 0);
     }
+
+    void testFloatingTime()
+    {
+        static QString displayLabelValue = QStringLiteral("event with floating time");
+        static QString descriptionValue = QStringLiteral("event with floating time descs");
+
+        QOrganizerTodo todo;
+        todo.setCollectionId(m_collection.id());
+        QDateTime startDate = QDateTime::currentDateTime();
+        startDate = QDateTime(startDate.date(), startDate.time(), QTimeZone());
+        todo.setStartDateTime(startDate);
+        todo.setDisplayLabel(displayLabelValue);
+        todo.setDescription(descriptionValue);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        QSignalSpy createdItem(m_engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+        items << todo;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QCOMPARE(items.size(), 1);
+        QVERIFY(errorMap.isEmpty());
+        QVERIFY(!items[0].id().isNull());
+        // check saved item
+        QTRY_COMPARE(createdItem.count(), 1);
+
+        QOrganizerItemFetchHint hint;
+        QList<QOrganizerItemId> ids;
+        ids << items[0].id();
+        items = m_engine->items(ids, hint, &errorMap, &error);
+        QCOMPARE(items.count(), 1);
+
+        QOrganizerTodo newTodo = static_cast<QOrganizerTodo>(items[0]);
+        QCOMPARE(newTodo.startDateTime().timeSpec(), todo.startDateTime().timeSpec());
+        QVERIFY(!newTodo.startDateTime().timeZone().isValid());
+        QCOMPARE(newTodo.startDateTime().date(), startDate.date());
+        QCOMPARE(newTodo.startDateTime().time().hour(), startDate.time().hour());
+        QCOMPARE(newTodo.startDateTime().time().minute(), startDate.time().minute());
+        QCOMPARE(newTodo.startDateTime().time().second(), startDate.time().second());
+
+        // Update floating event
+        QSignalSpy updateItem(m_engine, SIGNAL(itemsChanged(QList<QOrganizerItemId>)));
+        startDate = QDateTime::currentDateTime();
+        startDate.addSecs(360);
+        startDate = QDateTime(startDate.date(), startDate.time(), QTimeZone());
+        items << newTodo;
+        saveResult = m_engine->saveItems(&items,
+                                         QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                         &errorMap,
+                                         &error);
+        QTRY_COMPARE(updateItem.count(), 1);
+
+        ids.clear();
+        ids << items[0].id();
+        items = m_engine->items(ids, hint, &errorMap, &error);
+        QCOMPARE(items.count(), 1);
+
+        newTodo = static_cast<QOrganizerTodo>(items[0]);
+        QCOMPARE(newTodo.startDateTime().timeSpec(), todo.startDateTime().timeSpec());
+        QVERIFY(!newTodo.startDateTime().timeZone().isValid());
+        QCOMPARE(newTodo.startDateTime().date(), startDate.date());
+        QCOMPARE(newTodo.startDateTime().time().hour(), startDate.time().hour());
+        QCOMPARE(newTodo.startDateTime().time().minute(), startDate.time().minute());
+        QCOMPARE(newTodo.startDateTime().time().second(), startDate.time().second());
+
+        // Remove floating event
+        QOrganizerItemRemoveByIdRequest req;
+        connect(&req, SIGNAL(stateChanged(QOrganizerAbstractRequest::State)),
+                this, SLOT(requestFinished(QOrganizerAbstractRequest::State)));
+        connect(m_engine, SIGNAL(itemsRemoved(QList<QOrganizerItemId>)),
+                this, SLOT(itemRemoved()));
+        req.setItemId(newTodo.id());
+
+        m_engine->startRequest(&req);
+        m_engine->waitForRequestFinished(&req, -1);
+
+        // check if the signal item removed was fired after the request finish
+        QTRY_VERIFY(m_requestFinishedTime.isValid());
+        QTRY_VERIFY(m_itemRemovedTime.isValid());
+        QVERIFY(m_itemRemovedTime > m_requestFinishedTime);
+
+        // check if item was removed
+        QOrganizerItemSortOrder sort;
+        QOrganizerItemIdFilter filter;
+        ids.clear();
+        ids << newTodo.id();
+        filter.setIds(ids);
+        items = m_engine->items(filter,
+                      QDateTime(),
+                      QDateTime(),
+                      10,
+                      sort,
+                      hint,
+                      &error);
+        QCOMPARE(items.count(), 0);
+    }
+
+    void testCreateEventWithAttendees()
+    {
+        static QString displayLabelValue = QStringLiteral("event with collection attendee");
+        static QString descriptionValue = QStringLiteral("event without collection");
+
+        QOrganizerEvent event;
+        event.setStartDateTime(QDateTime::currentDateTime());
+        event.setDisplayLabel(displayLabelValue);
+        event.setDescription(descriptionValue);
+
+
+        QOrganizerEventAttendee attendee;
+        attendee.setAttendeeId("Attendee ID");
+        attendee.setEmailAddress("test@email.com");
+        attendee.setName("Attendee Name");
+        attendee.setParticipationRole(QOrganizerEventAttendee::RoleHost);
+        attendee.setParticipationStatus(QOrganizerEventAttendee::StatusAccepted);
+        event.saveDetail(&attendee);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        QSignalSpy createdItem(m_engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+        items << event;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+        QTRY_COMPARE(createdItem.count(), 1);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QCOMPARE(items.size(), 1);
+        QVERIFY(errorMap.isEmpty());
+        QVERIFY(!items[0].id().isNull());
+
+        QList<QOrganizerItemId> ids;
+        QOrganizerItemFetchHint hint;
+        ids << items[0].id();
+        qDebug() << "Find for id" << ids;
+        QList<QOrganizerItem> newItems = m_engine->items(ids, hint, &errorMap, &error);
+        QCOMPARE(newItems.size(), 1);
+
+        QList<QOrganizerItemDetail> atts = newItems[0].details(QOrganizerItemDetail::TypeEventAttendee);
+        QCOMPARE(atts.size(), 1);
+        QOrganizerEventAttendee newAttendee = static_cast<QOrganizerEventAttendee>(atts[0]);
+        QCOMPARE(newAttendee.attendeeId(), attendee.attendeeId());
+        QCOMPARE(newAttendee.emailAddress(), attendee.emailAddress());
+        QCOMPARE(newAttendee.name(), attendee.name());
+        QCOMPARE(newAttendee.participationRole(), attendee.participationRole());
+        QCOMPARE(newAttendee.participationStatus(), attendee.participationStatus());
+    }
 };
 
-const QString EventTest::defaultCollectionName = QStringLiteral("TEST_EVENT_COLLECTION");
-const QString EventTest::defaultTaskCollectionName = QStringLiteral("TEST_EVENT_COLLECTION TASK LIST");
 const QString EventTest::collectionTypePropertyName = QStringLiteral("collection-type");
 const QString EventTest::taskListTypeName = QStringLiteral("Task List");
 int EventTest::signalIndex = 0;

@@ -44,7 +44,6 @@ public:
     virtual void finish(QtOrganizer::QOrganizerManager::Error error, QtOrganizer::QOrganizerAbstractRequest::State state) = 0;
     void wait();
     bool isWaiting();
-    bool isCanceling();
 
     template<class T>
     T* request() const {
@@ -53,15 +52,16 @@ public:
 
     template<class T>
     void emitChangeset(T *cs) {
-        m_parent->d->emitSharedSignals<T>(cs);
+        if (!m_parent.isNull()) {
+             m_parent->d->emitSharedSignals<T>(cs);
+        }
     }
 
 protected:
-    QOrganizerEDSEngine *m_parent;
+    QPointer<QOrganizerEDSEngine> m_parent;
     EClient *m_client;
     QtOrganizer::QOrganizerItemChangeSet m_changeSet;
     QMutex m_waiting;
-    QMutex m_canceling;
     bool m_finished;
 
     virtual ~RequestData();
@@ -69,8 +69,6 @@ protected:
 private:
     QPointer<QtOrganizer::QOrganizerAbstractRequest> m_req;
     GCancellable *m_cancellable;
-
-    static void onCancelled(GCancellable *cancellable, RequestData *self);
 };
 
 #endif
