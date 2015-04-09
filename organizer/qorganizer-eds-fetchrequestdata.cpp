@@ -29,27 +29,20 @@ FetchRequestData::FetchRequestData(QOrganizerEDSEngine *engine,
                                    QStringList collections,
                                    QOrganizerAbstractRequest *req)
     : RequestData(engine, req),
-      m_components(0),
       m_collections(collections)
 {
 }
 
 FetchRequestData::~FetchRequestData()
 {
-    if (m_components) {
-        g_slist_free_full(m_components, (GDestroyNotify)icalcomponent_free);
-        m_components = 0;
+    Q_FOREACH(GSList *components, m_components.values()) {
+        g_slist_free_full(components, (GDestroyNotify)icalcomponent_free);
     }
+    m_components.clear();
 }
 
 QString FetchRequestData::nextCollection()
 {
-    if (m_components) {
-        appendResults(parent()->parseEvents(m_current, m_components, true));
-        g_slist_free_full(m_components, (GDestroyNotify)icalcomponent_free);
-        m_components = 0;
-    }
-
     m_current = "";
     setClient(0);
     if (m_collections.size()) {
@@ -100,6 +93,17 @@ bool FetchRequestData::hasDateInterval() const
 void FetchRequestData::finish(QOrganizerManager::Error error,
                               QOrganizerAbstractRequest::State state)
 {
+    Q_FOREACH(const QString &key, m_components.keys()) {
+        GSList *components = m_components.value(key);
+        if (components) {
+            QOrganizerItemFetchRequest *req = request<QOrganizerItemFetchRequest>();
+            appendResults(parent()->parseEvents(key, components, true,
+                                                req->fetchHint().detailTypesHint()));
+            g_slist_free_full(components, (GDestroyNotify)icalcomponent_free);
+        }
+    }
+    m_components.clear();
+
     QOrganizerManagerEngine::updateItemFetchRequest(request<QOrganizerItemFetchRequest>(),
                                                     m_results,
                                                     error,
@@ -110,7 +114,9 @@ void FetchRequestData::finish(QOrganizerManager::Error error,
 
 void FetchRequestData::appendResult(icalcomponent *comp)
 {
-    m_components = g_slist_append(m_components, comp);
+    GSList *components = m_components.value(m_current, 0);
+    components = g_slist_append(components, comp);
+    m_components.insert(m_current, components);
 }
 
 int FetchRequestData::appendResults(QList<QOrganizerItem> results)

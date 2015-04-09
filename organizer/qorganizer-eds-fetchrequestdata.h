@@ -44,7 +44,7 @@ public:
 
 
 private:
-    GSList *m_components;
+    QMap<QString, GSList*> m_components;
     QStringList m_collections;
     QString m_current;
     QList<QtOrganizer::QOrganizerItem> m_results;
