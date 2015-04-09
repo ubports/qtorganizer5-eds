@@ -9,6 +9,7 @@ include(GNUInstallDirs)
 
 find_package(Qt5Core REQUIRED)
 add_definitions(-DQT_NO_KEYWORDS)
+add_definitions(-std=c++11)
 
 pkg_check_modules(GLIB REQUIRED glib-2.0>=2.32)
 pkg_check_modules(GIO REQUIRED gio-2.0>=2.32)

@@ -38,7 +38,6 @@ include_directories(
 )
 
 add_definitions(-DTEST_SUITE)
-add_definitions(-std=c++11)
 
 declare_test(itemid-test)
 declare_test(parseecal-test)
