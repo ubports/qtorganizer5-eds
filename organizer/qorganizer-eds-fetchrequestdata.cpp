@@ -22,6 +22,8 @@
 
 #include <QtOrganizer/QOrganizerItemFetchRequest>
 #include <QtOrganizer/QOrganizerItemCollectionFilter>
+#include <QtOrganizer/QOrganizerItemUnionFilter>
+#include <QtOrganizer/QOrganizerItemIntersectionFilter>
 
 using namespace QtOrganizer;
 
@@ -29,8 +31,10 @@ FetchRequestData::FetchRequestData(QOrganizerEDSEngine *engine,
                                    QStringList collections,
                                    QOrganizerAbstractRequest *req)
     : RequestData(engine, req),
-      m_collections(collections)
+      m_currentComponents(0)
 {
+    // filter collections related with the query
+    m_collections = filterCollections(collections);
 }
 
 FetchRequestData::~FetchRequestData()
@@ -43,6 +47,10 @@ FetchRequestData::~FetchRequestData()
 
 QString FetchRequestData::nextCollection()
 {
+    if (m_currentComponents) {
+        m_components.insert(m_current, m_currentComponents);
+        m_currentComponents = 0;
+    }
     m_current = "";
     setClient(0);
     if (m_collections.size()) {
@@ -84,21 +92,31 @@ time_t FetchRequestData::endDate() const
 
 bool FetchRequestData::hasDateInterval() const
 {
+    if (!filterIsValid()) {
+        return false;
+    }
+
     QDateTime endDate = request<QOrganizerItemFetchRequest>()->endDate();
     QDateTime startDate = request<QOrganizerItemFetchRequest>()->startDate();
 
     return (endDate.isValid() && startDate.isValid());
 }
 
+bool FetchRequestData::filterIsValid() const
+{
+    return (request<QOrganizerItemFetchRequest>()->filter().type() != QOrganizerItemFilter::InvalidFilter);
+}
+
 void FetchRequestData::finish(QOrganizerManager::Error error,
                               QOrganizerAbstractRequest::State state)
 {
+    QOrganizerItemFetchRequest *req = request<QOrganizerItemFetchRequest>();
+    QList<QOrganizerItemDetail::DetailType> detailHint = req->fetchHint().detailTypesHint();
+
     Q_FOREACH(const QString &key, m_components.keys()) {
         GSList *components = m_components.value(key);
         if (components) {
-            QOrganizerItemFetchRequest *req = request<QOrganizerItemFetchRequest>();
-            appendResults(parent()->parseEvents(key, components, true,
-                                                req->fetchHint().detailTypesHint()));
+            appendResults(parent()->parseEvents(key, components, true, detailHint));
             g_slist_free_full(components, (GDestroyNotify)icalcomponent_free);
         }
     }
@@ -114,19 +132,30 @@ void FetchRequestData::finish(QOrganizerManager::Error error,
 
 void FetchRequestData::appendResult(icalcomponent *comp)
 {
-    GSList *components = m_components.value(m_current, 0);
-    components = g_slist_append(components, comp);
-    m_components.insert(m_current, components);
+    m_currentComponents = g_slist_append(m_currentComponents, comp);
 }
 
 int FetchRequestData::appendResults(QList<QOrganizerItem> results)
 {
     int count = 0;
+    // check if we really need filter or sort the result
     QOrganizerItemFetchRequest *req = request<QOrganizerItemFetchRequest>();
-    Q_FOREACH(const QOrganizerItem &item, results) {
-        if (QOrganizerManagerEngine::testFilter(req->filter(), item)) {
-            QOrganizerManagerEngine::addSorted(&m_results, item, req->sorting());
-            count++;
+    QOrganizerItemFilter filter = req->filter();
+    if ((filter.type() == QOrganizerItemFilter::DefaultFilter) &&
+        req->sorting().isEmpty()) {
+        m_results += results;
+        count = results.size();
+    } else {
+        Q_FOREACH(const QOrganizerItem &item, results) {
+            if ((req->filter().type() == QOrganizerItemFilter::DefaultFilter) ||
+                QOrganizerManagerEngine::testFilter(req->filter(), item)) {
+                if (!req->sorting().isEmpty()) {
+                    QOrganizerManagerEngine::addSorted(&m_results, item, req->sorting());
+                } else {
+                    m_results << item;
+                }
+                count++;
+            }
         }
     }
     return count;
@@ -134,8 +163,13 @@ int FetchRequestData::appendResults(QList<QOrganizerItem> results)
 
 QString FetchRequestData::dateFilter()
 {
-    QDateTime startDate = request<QOrganizerItemFetchRequest>()->startDate();
-    QDateTime endDate = request<QOrganizerItemFetchRequest>()->endDate();
+    QOrganizerItemFetchRequest *r = request<QOrganizerItemFetchRequest>();
+    if (r->filter().type() == QOrganizerItemFilter::InvalidFilter) {
+        return QStringLiteral("");
+    }
+
+    QDateTime startDate = r->startDate();
+    QDateTime endDate = r->endDate();
 
     if (!startDate.isValid() ||
         !endDate.isValid()) {
@@ -144,7 +178,6 @@ QString FetchRequestData::dateFilter()
 
     gchar *startDateStr = isodate_from_time_t(startDate.toTime_t());
     gchar *endDateStr = isodate_from_time_t(endDate.toTime_t());
-
 
     QString query = QString("(occur-in-time-range? "
                             "(make-time \"%1\") (make-time \"%2\"))")
@@ -155,5 +188,56 @@ QString FetchRequestData::dateFilter()
     g_free(endDateStr);
 
     return query;
+}
+
+QStringList FetchRequestData::filterCollections(const QStringList &collections) const
+{
+    QStringList result;
+    if (filterIsValid()) {
+        QOrganizerItemFilter f = request<QOrganizerItemFetchRequest>()->filter();
+        QStringList cFilters = collectionsFromFilter(f);
+        if (cFilters.contains("*") || cFilters.isEmpty()) {
+            result = collections;
+        } else {
+            Q_FOREACH(const QString &f, collections) {
+                if (cFilters.contains(f)) {
+                    result << f;
+                }
+            }
+        }
+    }
+    return result;
+}
+
+QStringList FetchRequestData::collectionsFromFilter(const QOrganizerItemFilter &f) const
+{
+    QStringList result;
+
+    switch(f.type()) {
+    case QOrganizerItemFilter::CollectionFilter:
+    {
+        QOrganizerItemCollectionFilter cf = static_cast<QOrganizerItemCollectionFilter>(f);
+        Q_FOREACH(const QOrganizerCollectionId &id, cf.collectionIds()) {
+            result << id.toString();
+        }
+        break;
+    }
+    case QOrganizerItemFilter::IntersectionFilter:
+    {
+        QOrganizerItemIntersectionFilter intersec = static_cast<QOrganizerItemIntersectionFilter>(f);
+        Q_FOREACH(const QOrganizerItemFilter &f, intersec.filters()) {
+            result << collectionsFromFilter(f);
+        }
+        break;
+    }
+    case QOrganizerItemFilter::UnionFilter:
+        // TODO: better handle union filters, for now they will consider all collections
+        result << "*";
+        break;
+    default:
+        break;
+    }
+
+    return result;
 }
 

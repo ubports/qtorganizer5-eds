@@ -128,7 +128,13 @@ void QOrganizerEDSEngine::itemsAsync(QOrganizerItemFetchRequest *req)
     FetchRequestData *data = new FetchRequestData(this,
                                                   d->m_sourceRegistry->collectionsIds(),
                                                   req);
-    itemsAsyncStart(data);
+    // avoid query if the filter is invalid
+    if (data->filterIsValid()) {
+        itemsAsyncStart(data);
+    } else {
+        data->finish();
+        releaseRequestData(data);
+    }
 }
 
 void QOrganizerEDSEngine::itemsAsyncStart(FetchRequestData *data)
