@@ -31,6 +31,7 @@
 #include "qorganizer-eds-viewwatcher.h"
 #include "qorganizer-eds-enginedata.h"
 #include "qorganizer-eds-source-registry.h"
+#include "qorganizer-eds-parseeventthread.h"
 
 #include <QtCore/qdebug.h>
 #include <QtCore/QPointer>
@@ -1886,12 +1887,25 @@ void QOrganizerEDSEngine::parseReminders(ECalComponent *comp,
     }
 }
 
-QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(const QString &collectionId,
-                                                       GSList *events,
-                                                       bool isIcalEvents,
-                                                       QList<QOrganizerItemDetail::DetailType> detailsHint)
+void QOrganizerEDSEngine::parseEventsAsync(const QMap<QString, GSList *> &events,
+                                           bool isIcalEvents,
+                                           QList<QOrganizerItemDetail::DetailType> detailsHint,
+                                           QObject *source,
+                                           const QByteArray &slot)
 {
-    QOrganizerEDSCollectionEngineId *collection = d->m_sourceRegistry->collectionEngineId(collectionId);
+    QMap<QOrganizerEDSCollectionEngineId*, GSList*> request;
+    Q_FOREACH(const QString &collectionId, events.keys()) {
+        QOrganizerEDSCollectionEngineId *collection = d->m_sourceRegistry->collectionEngineId(collectionId);
+        request.insert(collection, events.value(collectionId));
+    }
+
+    // the thread will destroy itself when done
+    QOrganizerParseEventThread *thread = new QOrganizerParseEventThread(source, slot);
+    thread->start(request, isIcalEvents, detailsHint);
+}
+
+QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(QOrganizerEDSCollectionEngineId *collectionId, GSList *events, bool isIcalEvents, QList<QOrganizerItemDetail::DetailType> detailsHint)
+{
     QList<QOrganizerItem> items;
     for (GSList *l = events; l; l = l->next) {
         QOrganizerItem *item;
@@ -1924,7 +1938,7 @@ QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(const QString &collection
                 continue;
         }
         // id is mandatory
-        parseId(comp, item, collection);
+        parseId(comp, item, collectionId);
 
         if (detailsHint.isEmpty() ||
             detailsHint.contains(QOrganizerItemDetail::TypeDescription)) {
@@ -1972,6 +1986,15 @@ QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(const QString &collection
         }
     }
     return items;
+}
+
+QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(const QString &collectionId,
+                                                       GSList *events,
+                                                       bool isIcalEvents,
+                                                       QList<QOrganizerItemDetail::DetailType> detailsHint)
+{
+    QOrganizerEDSCollectionEngineId *collection = d->m_sourceRegistry->collectionEngineId(collectionId);
+    return parseEvents(collection, events, isIcalEvents, detailsHint);
 }
 
 void QOrganizerEDSEngine::parseStartTime(const QOrganizerItem &item, ECalComponent *comp)

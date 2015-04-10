@@ -143,6 +143,12 @@ private:
     QMap<QtOrganizer::QOrganizerAbstractRequest*, RequestData*> m_runningRequests;
 
     QList<QtOrganizer::QOrganizerItem> parseEvents(const QString &collectionId, GSList *events, bool isIcalEvents, QList<QtOrganizer::QOrganizerItemDetail::DetailType> detailsHint);
+    void parseEventsAsync(const QMap<QString, GSList *> &events,
+                          bool isIcalEvents,
+                          QList<QtOrganizer::QOrganizerItemDetail::DetailType> detailsHint,
+                          QObject *source,
+                          const QByteArray &slot);
+    static QList<QtOrganizer::QOrganizerItem> parseEvents(QOrganizerEDSCollectionEngineId *collectionId, GSList *events, bool isIcalEvents, QList<QtOrganizer::QOrganizerItemDetail::DetailType> detailsHint);
     static GSList *parseItems(ECalClient *client, QList<QtOrganizer::QOrganizerItem> items, bool *hasRecurrence);
 
     // QOrganizerItem -> ECalComponent
@@ -251,11 +257,14 @@ private:
     friend class ViewWatcher;
     friend class FetchRequestData;
     friend class FetchOcurrenceData;
+    friend class QOrganizerParseEventThread;
 };
 
+//FIXME: Do we really need this, this looks wrong
 using namespace QtOrganizer;
 Q_DECLARE_METATYPE(QList<QOrganizerCollectionId>)
 Q_DECLARE_METATYPE(QList<QOrganizerItemId>)
+Q_DECLARE_METATYPE(QList<QOrganizerItem>)
 
 #endif
 
