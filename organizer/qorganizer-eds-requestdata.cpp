@@ -124,12 +124,17 @@ void RequestData::deleteLater()
 }
 
 void RequestData::finish(QOrganizerManager::Error error,
-                         QtOrganizer::QOrganizerAbstractRequest::State state)
+                         QOrganizerAbstractRequest::State state)
 {
     Q_UNUSED(error);
     Q_UNUSED(state);
     m_finished = true;
-    deleteLater();
+
+    // When cancelling an operation the callback passed into the async function
+    // will be called and the request data object will be destroyed there
+    if (state != QOrganizerAbstractRequest::CanceledState) {
+        deleteLater();
+    }
 }
 
 void RequestData::setClient(EClient *client)
