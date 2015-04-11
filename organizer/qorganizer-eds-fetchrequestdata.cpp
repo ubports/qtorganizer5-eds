@@ -126,12 +126,18 @@ void FetchRequestData::finish(QOrganizerManager::Error error,
         m_parseListener = new FetchRequestDataParseListener(this,
                                                             error,
                                                             state);
-
+#if 1
         parent()->parseEventsAsync(m_components,
                                    true,
                                    request<QOrganizerItemFetchRequest>()->fetchHint().detailTypesHint(),
                                    m_parseListener,
                                    SLOT(onParseDone(QList<QtOrganizer::QOrganizerItem>)));
+#else
+        Q_FOREACH(const QString &id, m_components.keys()) {
+            appendResults(parent()->parseEvents(id, m_components[id], true, request<QOrganizerItemFetchRequest>()->fetchHint().detailTypesHint()));
+        }
+        finishContinue(error, state);
+#endif
     } else {
         finishContinue(error, state);
     }

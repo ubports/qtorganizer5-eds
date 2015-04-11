@@ -129,6 +129,7 @@ void RequestData::finish(QOrganizerManager::Error error,
     Q_UNUSED(error);
     Q_UNUSED(state);
     m_finished = true;
+    deleteLater();
 }
 
 void RequestData::setClient(EClient *client)

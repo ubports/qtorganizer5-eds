@@ -134,7 +134,7 @@ void QOrganizerEDSEngine::itemsAsync(QOrganizerItemFetchRequest *req)
         itemsAsyncStart(data);
     } else {
         data->finish();
-        releaseRequestData(data);
+        //releaseRequestData(data);
     }
 }
 
@@ -170,7 +170,7 @@ void QOrganizerEDSEngine::itemsAsyncStart(FetchRequestData *data)
         }
     } else {
         data->finish();
-        releaseRequestData(data);
+        //releaseRequestData(data);
     }
 }
 
@@ -216,8 +216,9 @@ void QOrganizerEDSEngine::itemsAsyncListedAsComps(GObject *source,
         gError = 0;
         if (data->isLive()) {
             data->finish(QOrganizerManager::InvalidCollectionError);
+        } else {
+            releaseRequestData(data);
         }
-        releaseRequestData(data);
         return;
     }
 
@@ -272,7 +273,7 @@ void QOrganizerEDSEngine::itemsByIdAsyncStart(FetchByIdRequestData *data)
         }
     } else if (data->end()) {
         data->finish();
-        releaseRequestData(data);
+        //releaseRequestData(data);
         return;
     }
     qWarning() << "Invalid item id" << id;
@@ -332,7 +333,7 @@ void QOrganizerEDSEngine::itemOcurrenceAsync(QOrganizerItemOccurrenceFetchReques
     } else {
         qWarning() << "Fail to find collection:" << req->parentItem().collectionId();
         data->finish(QOrganizerManager::DoesNotExistError);
-        releaseRequestData(data);
+        //releaseRequestData(data);
     }
 }
 
@@ -349,8 +350,9 @@ void QOrganizerEDSEngine::itemOcurrenceAsyncGetObjectDone(GObject *source,
         g_error_free(error);
         if (data->isLive()) {
             data->finish(QOrganizerManager::DoesNotExistError);
+        } else {
+            releaseRequestData(data);
         }
-        releaseRequestData(data);
         return;
     }
 
@@ -392,8 +394,9 @@ void QOrganizerEDSEngine::itemOcurrenceAsyncDone(FetchOcurrenceData *data)
 {
     if (data->isLive()) {
         data->finish();
+    } else {
+        releaseRequestData(data);
     }
-    releaseRequestData(data);
 }
 
 QList<QOrganizerItem> QOrganizerEDSEngine::items(const QList<QOrganizerItemId> &itemIds,
@@ -528,7 +531,7 @@ void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
 
     if (collectionId.isNull() && data->end()) {
         data->finish();
-        releaseRequestData(data);
+        //releaseRequestData(data);
         return;
     } else {
         bool createItems = true;
@@ -739,7 +742,7 @@ void QOrganizerEDSEngine::removeItemsByIdAsyncStart(RemoveByIdRequestData *data)
         data->commit();
     }
     data->finish();
-    releaseRequestData(data);
+    //releaseRequestData(data);
 }
 
 void QOrganizerEDSEngine::removeItemsAsync(QOrganizerItemRemoveRequest *req)
@@ -780,7 +783,7 @@ void QOrganizerEDSEngine::removeItemsAsyncStart(RemoveRequestData *data)
         data->commit();
     }
     data->finish();
-    releaseRequestData(data);
+    //releaseRequestData(data);
 }
 
 bool QOrganizerEDSEngine::removeItems(const QList<QOrganizerItemId> &itemIds,
@@ -895,7 +898,7 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
         g_error_free(gError);
         if (data->isLive()) {
             data->finish(QOrganizerManager::InvalidCollectionError);
-            releaseRequestData(data);
+            //releaseRequestData(data);
             return;
         }
     } else if (data->isLive()) {
@@ -921,7 +924,7 @@ gboolean QOrganizerEDSEngine::saveCollectionUpdateAsyncStart(SaveCollectionReque
                        data);
     } else {
         data->finish();
-        releaseRequestData(data);
+        //releaseRequestData(data);
     }
     return FALSE;
 }
@@ -1022,7 +1025,7 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
         }
     } else {
         data->finish();
-        releaseRequestData(data);
+        //releaseRequestData(data);
     }
 }
 
@@ -1912,7 +1915,12 @@ QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(QOrganizerEDSCollectionEn
         ECalComponent *comp;
         if (isIcalEvents) {
             icalcomponent *clone = icalcomponent_new_clone(static_cast<icalcomponent*>(l->data));
-            comp = e_cal_component_new_from_icalcomponent(clone);
+            if (clone && icalcomponent_is_valid(clone)) {
+                comp = e_cal_component_new_from_icalcomponent(clone);
+            } else {
+                qWarning() << "Fail to parse event";
+                continue;
+            }
         } else {
             comp = E_CAL_COMPONENT(l->data);
         }

@@ -41,7 +41,7 @@ public:
     QOrganizerEDSEngine *parent() const;
     virtual void cancel();
     void deleteLater();
-    virtual void finish(QtOrganizer::QOrganizerManager::Error error, QtOrganizer::QOrganizerAbstractRequest::State state) = 0;
+    virtual void finish(QtOrganizer::QOrganizerManager::Error error, QtOrganizer::QOrganizerAbstractRequest::State state);
     void wait(int msec = 0);
     bool isWaiting();
 
