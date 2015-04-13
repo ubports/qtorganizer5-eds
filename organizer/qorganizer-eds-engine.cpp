@@ -134,7 +134,6 @@ void QOrganizerEDSEngine::itemsAsync(QOrganizerItemFetchRequest *req)
         itemsAsyncStart(data);
     } else {
         data->finish();
-        //releaseRequestData(data);
     }
 }
 
@@ -170,7 +169,6 @@ void QOrganizerEDSEngine::itemsAsyncStart(FetchRequestData *data)
         }
     } else {
         data->finish();
-        //releaseRequestData(data);
     }
 }
 
@@ -273,7 +271,6 @@ void QOrganizerEDSEngine::itemsByIdAsyncStart(FetchByIdRequestData *data)
         }
     } else if (data->end()) {
         data->finish();
-        //releaseRequestData(data);
         return;
     }
     qWarning() << "Invalid item id" << id;
@@ -333,7 +330,6 @@ void QOrganizerEDSEngine::itemOcurrenceAsync(QOrganizerItemOccurrenceFetchReques
     } else {
         qWarning() << "Fail to find collection:" << req->parentItem().collectionId();
         data->finish(QOrganizerManager::DoesNotExistError);
-        //releaseRequestData(data);
     }
 }
 
@@ -531,7 +527,6 @@ void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
 
     if (collectionId.isNull() && data->end()) {
         data->finish();
-        //releaseRequestData(data);
         return;
     } else {
         bool createItems = true;
@@ -742,7 +737,6 @@ void QOrganizerEDSEngine::removeItemsByIdAsyncStart(RemoveByIdRequestData *data)
         data->commit();
     }
     data->finish();
-    //releaseRequestData(data);
 }
 
 void QOrganizerEDSEngine::removeItemsAsync(QOrganizerItemRemoveRequest *req)
@@ -783,7 +777,6 @@ void QOrganizerEDSEngine::removeItemsAsyncStart(RemoveRequestData *data)
         data->commit();
     }
     data->finish();
-    //releaseRequestData(data);
 }
 
 bool QOrganizerEDSEngine::removeItems(const QList<QOrganizerItemId> &itemIds,
@@ -898,7 +891,6 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
         g_error_free(gError);
         if (data->isLive()) {
             data->finish(QOrganizerManager::InvalidCollectionError);
-            //releaseRequestData(data);
             return;
         }
     } else if (data->isLive()) {
@@ -924,7 +916,6 @@ gboolean QOrganizerEDSEngine::saveCollectionUpdateAsyncStart(SaveCollectionReque
                        data);
     } else {
         data->finish();
-        //releaseRequestData(data);
     }
     return FALSE;
 }
@@ -1025,7 +1016,6 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
         }
     } else {
         data->finish();
-        //releaseRequestData(data);
     }
 }
 
