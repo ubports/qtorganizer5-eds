@@ -57,6 +57,9 @@ public:
         }
     }
 
+    // debug
+    static int instanceCount();
+
 protected:
     QPointer<QOrganizerEDSEngine> m_parent;
     EClient *m_client;
@@ -69,6 +72,8 @@ protected:
 private:
     QPointer<QtOrganizer::QOrganizerAbstractRequest> m_req;
     GCancellable *m_cancellable;
+
+    static int m_instanceCount;
 };
 
 #endif
