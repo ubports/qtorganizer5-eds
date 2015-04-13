@@ -264,6 +264,9 @@ private Q_SLOTS:
         QVERIFY(m_engineWrite->saveCollection(&collection, &error));
         QTRY_COMPARE(createCollection.count(), 1);
 
+        // wait collection to became writable
+        QTRY_VERIFY_WITH_TIMEOUT(!m_engineRead->collection(collection.id(), 0).extendedMetaData("collection-readonly").toBool(), 5000);
+
         // remove recent created collection
         QSignalSpy removeCollection(m_engineRead, SIGNAL(collectionsRemoved(QList<QOrganizerCollectionId>)));
         QVERIFY(m_engineWrite->removeCollection(collection.id(), &error));
