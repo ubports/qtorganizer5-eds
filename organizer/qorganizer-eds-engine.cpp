@@ -1798,11 +1798,17 @@ void QOrganizerEDSEngine::parseReminders(ECalComponent *comp, QtOrganizer::QOrga
 
         ECalComponentAlarmTrigger trigger;
         e_cal_component_alarm_get_trigger(alarm, &trigger);
+        int relSecs = 0;
         if (trigger.type == E_CAL_COMPONENT_ALARM_TRIGGER_RELATIVE_START) {
-            aDetail->setSecondsBeforeStart(icaldurationtype_as_int(trigger.u.rel_duration) * -1);
-        } else {
-            aDetail->setSecondsBeforeStart(0);
+            relSecs = - icaldurationtype_as_int(trigger.u.rel_duration);
+            if (relSecs < 0) {
+                relSecs = 0;
+                qWarning() << "QOrganizer does not support triggers after event start";
+            }
+        } else if (trigger.type != E_CAL_COMPONENT_ALARM_TRIGGER_NONE) {
+            qWarning() << "QOrganizer only supports triggers relative to event start.";
         }
+        aDetail->setSecondsBeforeStart(relSecs);
 
         ECalComponentAlarmRepeat aRepeat;
         e_cal_component_alarm_get_repeat(alarm, &aRepeat);
@@ -2414,12 +2420,10 @@ void QOrganizerEDSEngine::parseReminders(const QOrganizerItem &item, ECalCompone
                 break;
         }
 
-        if (reminder->secondsBeforeStart() > 0) {
-            ECalComponentAlarmTrigger trigger;
-            trigger.type = E_CAL_COMPONENT_ALARM_TRIGGER_RELATIVE_START;
-            trigger.u.rel_duration = icaldurationtype_from_int(- reminder->secondsBeforeStart());
-            e_cal_component_alarm_set_trigger(alarm, trigger);
-        }
+        ECalComponentAlarmTrigger trigger;
+        trigger.type = E_CAL_COMPONENT_ALARM_TRIGGER_RELATIVE_START;
+        trigger.u.rel_duration = icaldurationtype_from_int(- reminder->secondsBeforeStart());
+        e_cal_component_alarm_set_trigger(alarm, trigger);
 
         ECalComponentAlarmRepeat aRepeat;
         // TODO: check if this is really necessary

@@ -47,7 +47,6 @@ private Q_SLOTS:
     void initTestCase()
     {
         EDSBaseTest::init();
-        qDebug() << "INIT TEST CASE";
 
         m_engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
 
@@ -61,8 +60,6 @@ private Q_SLOTS:
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
         QTRY_COMPARE(createdCollection.count(), 1);
-
-        qDebug() << "END TEST CASE";
     }
 
     void cleanupTestCase()
@@ -377,7 +374,6 @@ private Q_SLOTS:
 
         QList<QOrganizerItemId> ids;
         ids << items[0].id();
-        qDebug() << "Check for item id:" << ids;
         items = m_engine->items(ids, hint, 0, 0);
         QCOMPARE(items.count(), 1);
         QOrganizerCollection collection = m_engine->defaultCollection(0);
@@ -819,10 +815,53 @@ private Q_SLOTS:
         QCOMPARE(newAttendee.participationStatus(), attendee.participationStatus());
     }
 
+    // BUG: #1440878
+    void testReminderOnTime()
+    {
+        static QString displayLabelValue = QStringLiteral("event reminder");
+        static QString descriptionValue = QStringLiteral("event with reminder");
+
+        QOrganizerEvent event;
+        QOrganizerItemAudibleReminder aReminder;
+        event.setStartDateTime(QDateTime::currentDateTime());
+        event.setDisplayLabel(displayLabelValue);
+        event.setDescription(descriptionValue);
+        aReminder.setSecondsBeforeStart(0);
+        aReminder.setDataUrl(QString());
+        event.saveDetail(&aReminder);
+
+        QOrganizerEvent event2;
+        aReminder = QOrganizerItemAudibleReminder();
+        event2.setStartDateTime(QDateTime::currentDateTime().addDays(2));
+        event2.setDisplayLabel(displayLabelValue + "_2");
+        event2.setDescription(descriptionValue);
+        aReminder.setSecondsBeforeStart(60);
+        aReminder.setDataUrl(QString());
+        event2.saveDetail(&aReminder);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        QSignalSpy createdItem(m_engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+        items << event << event2;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+        QTRY_COMPARE(createdItem.count(), 1);
+        QVERIFY(saveResult);
+
+        QString vcard = getEventFromEvolution(items[0].id());
+        QVERIFY(vcard.contains("TRIGGER;VALUE=DURATION;RELATED=START:PT0S"));
+
+        vcard = getEventFromEvolution(items[1].id());
+        QVERIFY(vcard.contains("TRIGGER;VALUE=DURATION;RELATED=START:-PT1M"));
+    }
+
     void testExtendedProperties()
     {
-        static QString displayLabelValue = QStringLiteral("event with collection attendee");
-        static QString descriptionValue = QStringLiteral("event without collection");
+        static QString displayLabelValue = QStringLiteral("event with extended property");
+        static QString descriptionValue = QStringLiteral("event with extended property");
         QOrganizerItemId itemId;
         QDateTime currentTime = QDateTime::currentDateTime();
 
