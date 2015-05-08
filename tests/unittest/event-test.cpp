@@ -705,7 +705,6 @@ private Q_SLOTS:
         QCOMPARE(newTodo.startDateTime().date(), startDate.date());
         QCOMPARE(newTodo.startDateTime().time().hour(), startDate.time().hour());
         QCOMPARE(newTodo.startDateTime().time().minute(), startDate.time().minute());
-        QCOMPARE(newTodo.startDateTime().time().second(), startDate.time().second());
 
         // Update floating event
         QSignalSpy updateItem(m_engine, SIGNAL(itemsChanged(QList<QOrganizerItemId>)));
@@ -730,7 +729,6 @@ private Q_SLOTS:
         QCOMPARE(newTodo.startDateTime().date(), startDate.date());
         QCOMPARE(newTodo.startDateTime().time().hour(), startDate.time().hour());
         QCOMPARE(newTodo.startDateTime().time().minute(), startDate.time().minute());
-        QCOMPARE(newTodo.startDateTime().time().second(), startDate.time().second());
 
         // Remove floating event
         QOrganizerItemRemoveByIdRequest req;
