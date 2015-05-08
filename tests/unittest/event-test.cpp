@@ -806,7 +806,6 @@ private Q_SLOTS:
         QList<QOrganizerItemId> ids;
         QOrganizerItemFetchHint hint;
         ids << items[0].id();
-        qDebug() << "Find for id" << ids;
         QList<QOrganizerItem> newItems = m_engine->items(ids, hint, &errorMap, &error);
         QCOMPARE(newItems.size(), 1);
 
@@ -818,6 +817,65 @@ private Q_SLOTS:
         QCOMPARE(newAttendee.name(), attendee.name());
         QCOMPARE(newAttendee.participationRole(), attendee.participationRole());
         QCOMPARE(newAttendee.participationStatus(), attendee.participationStatus());
+    }
+
+    void testExtendedProperties()
+    {
+        static QString displayLabelValue = QStringLiteral("event with collection attendee");
+        static QString descriptionValue = QStringLiteral("event without collection");
+        QOrganizerItemId itemId;
+        QDateTime currentTime = QDateTime::currentDateTime();
+
+        {
+            // create a item with X-URL
+            QOrganizerEvent event;
+            event.setStartDateTime(currentTime);
+            event.setEndDateTime(currentTime.addSecs(60 * 30));
+            event.setDisplayLabel(displayLabelValue);
+            event.setDescription(descriptionValue);
+
+            QOrganizerItemExtendedDetail ex;
+            ex.setName(QStringLiteral("X-URL"));
+            ex.setData(QByteArray("http://canonical.com"));
+            event.saveDetail(&ex);
+
+            // save the new item
+            QtOrganizer::QOrganizerManager::Error error;
+            QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+            QList<QOrganizerItem> items;
+            QSignalSpy createdItem(m_engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+            items << event;
+            bool saveResult = m_engine->saveItems(&items,
+                                                  QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                                  &errorMap,
+                                                  &error);
+            QTRY_COMPARE(createdItem.count(), 1);
+            QVERIFY(saveResult);
+            QCOMPARE(error, QOrganizerManager::NoError);
+            QCOMPARE(items.size(), 1);
+            QVERIFY(errorMap.isEmpty());
+            QVERIFY(!items[0].id().isNull());
+            QCOMPARE(items[0].details(QOrganizerItemDetail::TypeExtendedDetail).size(), 1);
+            itemId = items[0].id();
+        }
+
+        // fetch for the item
+        {
+            QtOrganizer::QOrganizerManager::Error error;
+            QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+            QList<QOrganizerItemId> ids;
+            QOrganizerItemFetchHint hint;
+            ids << itemId;
+            QList<QOrganizerItem> items = m_engine->items(ids, hint, &errorMap, &error);
+            QCOMPARE(items.size(), 1);
+
+            QList<QOrganizerItemDetail> exs = items[0].details(QOrganizerItemDetail::TypeExtendedDetail);
+            QCOMPARE(exs.size(), 1);
+            QCOMPARE(exs[0].value(QOrganizerItemExtendedDetail::FieldName).toString(),
+                    QStringLiteral("X-URL"));
+            QCOMPARE(exs[0].value(QOrganizerItemExtendedDetail::FieldData).toByteArray(),
+                    QByteArray("http://canonical.com"));
+        }
     }
 };
 

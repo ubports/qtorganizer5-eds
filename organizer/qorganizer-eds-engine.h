@@ -168,6 +168,7 @@ private:
     static void parseProgress(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseStatus(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
     static void parseAttendeeList(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
+    static void parseExtendedDetails(const QtOrganizer::QOrganizerItem &item, ECalComponent *comp);
 
     // ECalComponent -> QOrganizerItem
     static bool hasRecurrence(ECalComponent *comp);
@@ -193,6 +194,7 @@ private:
     static void parseProgress(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseStatus(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseAttendeeList(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseExtendedDetails(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
 
     static QDateTime fromIcalTime(struct icaltimetype value, const char *tzId);
     static icaltimetype fromQDateTime(const QDateTime &dateTime, bool allDay, QByteArray *tzId);
@@ -234,7 +236,7 @@ private:
     static void removeItemsAsyncStart(RemoveRequestData *data);
 
     void saveCollectionAsync(QtOrganizer::QOrganizerCollectionSaveRequest *req);
-    static void saveCollectionUpdateAsyncStart(SaveCollectionRequestData *data);
+    static gboolean saveCollectionUpdateAsyncStart(SaveCollectionRequestData *data);
     static void saveCollectionAsyncCommited(ESourceRegistry *registry, GAsyncResult *res, SaveCollectionRequestData *data);
     static void saveCollectionUpdateAsynCommited(ESource *source, GAsyncResult *res, SaveCollectionRequestData *data);
 

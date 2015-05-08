@@ -19,7 +19,7 @@
 #include "qorganizer-eds-requestdata.h"
 
 #include <QtCore/QDebug>
-#include <QtCore/QCoreApplication>
+#include <QtCore/QTimer>
 
 #include <QtOrganizer/QOrganizerAbstractRequest>
 #include <QtOrganizer/QOrganizerManagerEngine>
@@ -81,12 +81,24 @@ void RequestData::cancel()
     }
 }
 
-void RequestData::wait()
+void RequestData::wait(int msec)
 {
     QMutexLocker locker(&m_waiting);
-    while(!m_finished) {
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+    QEventLoop *loop = new QEventLoop;
+    QOrganizerAbstractRequest *req = m_req.data();
+    QObject::connect(req, &QOrganizerAbstractRequest::stateChanged, [req, loop](QOrganizerAbstractRequest::State newState) {
+        if (newState != QOrganizerAbstractRequest::ActiveState) {
+            loop->quit();
+        }
+    });
+    QTimer timeout;
+    if (msec > 0) {
+        timeout.setInterval(msec);
+        timeout.setSingleShot(true);
+        timeout.start();
     }
+    loop->exec(QEventLoop::AllEvents|QEventLoop::WaitForMoreEvents);
+    delete loop;
 }
 
 bool RequestData::isWaiting()
