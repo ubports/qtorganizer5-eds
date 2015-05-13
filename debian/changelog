@@ -1,3 +1,22 @@
+qtorganizer5-eds (0.1.1+15.04.20150508.2-0ubuntu1) vivid; urgency=medium
+
+  [ CI Train Bot ]
+  * New rebuild forced.
+
+  [ Renato Araujo Oliveira Filho ]
+  * Added a new extra metadata property in collection (read-only
+    property). (LP: #1347836)
+  * Avoid filter or sort results if not necessary.
+  * Implemented support for extended details. (LP: #1426519)
+  * Optimize query by filtering collections related with the current
+    query.
+  * Removed missing debug.
+  * Revert wrong commit.
+  * Save a trigger for reminders with with secondsBeforeStart equals 0.
+    (LP: #1440878)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 08 May 2015 20:01:44 +0000
+
 qtorganizer5-eds (0.1.1+15.04.20150309-0ubuntu1) vivid; urgency=medium
 
   [ Renato Araujo Oliveira Filho ]

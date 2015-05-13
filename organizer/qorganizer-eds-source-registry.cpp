@@ -182,6 +182,12 @@ EClient* SourceRegistry::client(const QString &collectionId)
                 qWarning() << "Fail to connect with client" << gError->message;
                 g_error_free(gError);
             } else {
+                // If the client is read only update the collection
+                if (e_client_is_readonly(client)) {
+                    QOrganizerCollection &c = m_collections[collectionId];
+                    c.setExtendedMetaData(COLLECTION_READONLY_METADATA, true);
+                    Q_EMIT sourceUpdated(collectionId);
+                }
                 m_clients.insert(collectionId, client);
             }
         }
@@ -282,7 +288,7 @@ void SourceRegistry::onSourceChanged(ESourceRegistry *registry,
     QString collectionId = self->findCollection(source);
     if (!collectionId.isEmpty() && self->m_collections.contains(collectionId)) {
         QOrganizerCollection &collection = self->m_collections[collectionId];
-        self->updateCollection(&collection, source);
+        self->updateCollection(&collection, source, self->m_clients.value(collectionId));
         Q_EMIT self->sourceUpdated(collectionId);
     } else {
         qWarning() << "Source changed not found";
@@ -298,7 +304,8 @@ void SourceRegistry::onSourceRemoved(ESourceRegistry *registry,
 }
 
 void SourceRegistry::updateCollection(QOrganizerCollection *collection,
-                                      ESource *source)
+                                      ESource *source,
+                                      EClient *client)
 {
     // name
     collection->setMetaData(QOrganizerCollection::KeyName,
@@ -325,4 +332,11 @@ void SourceRegistry::updateCollection(QOrganizerCollection *collection,
     bool selected = (e_source_selectable_get_selected(E_SOURCE_SELECTABLE(extCalendar)) == TRUE);
     collection->setExtendedMetaData(COLLECTION_SELECTED_METADATA, selected);
 
+    // writable
+    bool writable = e_source_get_writable(source);
+    // the source and client need to be writable
+    if (client) {
+        writable = writable && !e_client_is_readonly(client);
+    }
+    collection->setExtendedMetaData(COLLECTION_READONLY_METADATA, !writable);
 }
