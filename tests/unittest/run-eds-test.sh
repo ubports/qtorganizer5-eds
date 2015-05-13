@@ -29,6 +29,7 @@ export XDG_PICTURES_DIR=${TEST_TMP_DIR}
 export XDG_PUBLICSHARE_DIR=${TEST_TMP_DIR}
 export XDG_TEMPLATES_DIR=${TEST_TMP_DIR}
 export XDG_VIDEOS_DIR=${TEST_TMP_DIR}
+export EDS_TESTING=1
 export QORGANIZER_EDS_DEBUG=On
 export GIO_USE_VFS=local # needed to ensure GVFS shuts down cleanly after the test is over
 
@@ -38,8 +39,8 @@ rm -rf ${XDG_DATA_HOME}
 # run dbus-test-runner
 $1 --keep-env --max-wait=90 \
 --task $2 --task-name $3 --wait-until-complete --wait-for=org.gnome.evolution.dataserver.Calendar4 \
---task $4 --task-name "evolution" --wait-until-complete -r
-#--task $6 --task-name "source-registry" --wait-for=org.gtk.vfs.Daemon -r \
+--task $4 --task-name "evolution" --wait-until-complete --wait-for=org.gnome.evolution.dataserver.Sources3 -r \
+--task $6 --task-name "source-registry" -r
 #--task $7 --task-name "gvfsd" -r
 rv=$?
 
