@@ -294,7 +294,7 @@ void QOrganizerEDSEngine::itemsByIdAsyncListed(GObject *client,
     } else if (icalComp && data->isLive()) {
         GSList *events = g_slist_append(0, icalComp);
         QList<QOrganizerItem> items;
-                QOrganizerItemFetchByIdRequest *req = data->request<QOrganizerItemFetchByIdRequest>();
+        QOrganizerItemFetchByIdRequest *req = data->request<QOrganizerItemFetchByIdRequest>();
         items = data->parent()->parseEvents(data->currentCollectionId(),
                                             events,
                                             true,
