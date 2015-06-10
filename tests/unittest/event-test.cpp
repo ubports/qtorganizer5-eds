@@ -498,15 +498,16 @@ private Q_SLOTS:
         QCOMPARE(errorMap[1], QOrganizerManager::InvalidCollectionError);
     }
 
-    void testCreateAllDayEvent()
+    void testCreateAllDayTodo()
     {
         static QString displayLabelValue = QStringLiteral("All day title");
         static QString descriptionValue = QStringLiteral("All day description");
 
+        QDateTime eventDateTime = QDateTime(QDate(2013, 9, 3), QTime(0,30,0));
         QOrganizerTodo todo;
         todo.setCollectionId(m_collection.id());
         todo.setAllDay(true);
-        todo.setStartDateTime(QDateTime(QDate(2013, 9, 3), QTime(0,30,0)));
+        todo.setStartDateTime(eventDateTime);
         todo.setDisplayLabel(displayLabelValue);
         todo.setDescription(descriptionValue);
 
@@ -532,7 +533,51 @@ private Q_SLOTS:
 
         QOrganizerTodo todoResult = static_cast<QOrganizerTodo>(items[0]);
         QCOMPARE(todoResult.isAllDay(), true);
+        QCOMPARE(todoResult.startDateTime().date(), eventDateTime.date());
+        QCOMPARE(todoResult.startDateTime().time(), QTime(0, 0, 0));
     }
+
+    void testCreateAllDayEvent()
+    {
+        static QString displayLabelValue = QStringLiteral("All day title");
+        static QString descriptionValue = QStringLiteral("All day description");
+
+        QDateTime eventDateTime = QDateTime(QDate(2013, 9, 3), QTime(0,30,0));
+        QOrganizerEvent event;
+        event.setStartDateTime(eventDateTime);
+        event.setEndDateTime(eventDateTime.addDays(1));
+        event.setDisplayLabel(displayLabelValue);
+        event.setDescription(descriptionValue);
+        event.setAllDay(true);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        items << event;
+        bool saveResult = m_engine->saveItems(&items,
+                                            QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                            &errorMap,
+                                            &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QVERIFY(errorMap.isEmpty());
+        QOrganizerItemId id = items[0].id();
+        QVERIFY(!id.isNull());
+
+        QOrganizerItemFetchHint hint;
+        QList<QOrganizerItemId> ids;
+        ids << items[0].id();
+        items = m_engine->items(ids, hint, &errorMap, &error);
+        QCOMPARE(items.count(), 1);
+
+        QOrganizerEvent eventResult = static_cast<QOrganizerEvent>(items[0]);
+        QCOMPARE(eventResult.isAllDay(), true);
+        QCOMPARE(eventResult.startDateTime().date(), eventDateTime.date());
+        QCOMPARE(eventResult.startDateTime().time(), QTime(0, 0, 0));
+        QCOMPARE(eventResult.endDateTime().date(), eventDateTime.date().addDays(1));
+        QCOMPARE(eventResult.endDateTime().time(), QTime(0, 0, 0));
+    }
+
 
     void testCreateTodoEventWithStartDate()
     {
