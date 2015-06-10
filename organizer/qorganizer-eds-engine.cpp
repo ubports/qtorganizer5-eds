@@ -1212,7 +1212,8 @@ QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const cha
 {
     uint tmTime;
 
-    if (tzId) {
+    // check if ialtimetype contais a time and timezone
+    if (!icaltime_is_date(value) && tzId) {
         icaltimezone *timezone = icaltimezone_get_builtin_timezone_from_tzid(tzId);
         // fallback: sometimes the tzId contains the location name
         if (!timezone) {
@@ -1226,7 +1227,9 @@ QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const cha
         tmTime = icaltime_as_timet(value);
         QDateTime t = QDateTime::fromTime_t(tmTime).toUTC();
         // floating time contains invalid timezone
-        return QDateTime(t.date(), t.time(), QTimeZone());
+        return QDateTime(t.date(),
+                         (icaltime_is_date(value) ? QTime() : t.time()),
+                         QTimeZone());
     }
 }
 
@@ -1237,26 +1240,28 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
     QDateTime finalDate(dateTime);
     QTimeZone tz;
 
-    switch (finalDate.timeSpec()) {
-    case Qt::UTC:
-    case Qt::OffsetFromUTC:
-        // convert date to UTC timezone
-        tz = QTimeZone("UTC");
-        finalDate = finalDate.toTimeZone(tz);
-        break;
-    case Qt::TimeZone:
-        tz = finalDate.timeZone();
-        if (!tz.isValid()) {
-            // floating time
-            finalDate = QDateTime(finalDate.date(), finalDate.time(), Qt::UTC);
+    if (!allDay) {
+        switch (finalDate.timeSpec()) {
+        case Qt::UTC:
+        case Qt::OffsetFromUTC:
+            // convert date to UTC timezone
+            tz = QTimeZone("UTC");
+            finalDate = finalDate.toTimeZone(tz);
+            break;
+        case Qt::TimeZone:
+            tz = finalDate.timeZone();
+            if (!tz.isValid()) {
+                // floating time
+                finalDate = QDateTime(finalDate.date(), finalDate.time(), Qt::UTC);
+            }
+            break;
+        case Qt::LocalTime:
+            tz = QTimeZone(QTimeZone::systemTimeZoneId());
+            finalDate = finalDate.toTimeZone(tz);
+            break;
+        default:
+            break;
         }
-        break;
-    case Qt::LocalTime:
-        tz = QTimeZone(QTimeZone::systemTimeZoneId());
-        finalDate = finalDate.toTimeZone(tz);
-        break;
-    default:
-        break;
     }
 
     if (tz.isValid()) {
