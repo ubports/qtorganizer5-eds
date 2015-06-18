@@ -38,8 +38,8 @@ rm -rf ${XDG_DATA_HOME}
 
 # run dbus-test-runner
 $1 --keep-env --max-wait=90 \
---task $2 --task-name $3 --wait-until-complete --wait-for=org.gnome.evolution.dataserver.Calendar4 \
---task $4 --task-name "evolution" --wait-until-complete --wait-for=org.gnome.evolution.dataserver.Sources3 -r \
+--task $2 --task-name $3 --wait-until-complete --wait-for=org.gnome.evolution.dataserver.Calendar7 \
+--task $4 --task-name "evolution" --wait-until-complete --wait-for=org.gnome.evolution.dataserver.Sources4 -r \
 --task $6 --task-name "source-registry" -r
 #--task $7 --task-name "gvfsd" -r
 rv=$?
