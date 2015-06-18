@@ -92,6 +92,7 @@ QString EDSBaseTest::getEventFromEvolution(const QOrganizerItemId &id,
     }
     GScopedPointer<EClient> client(e_cal_client_connect_sync(calendar.data(),
                                                              E_CAL_CLIENT_SOURCE_TYPE_EVENTS,
+                                                             5, /* timeout */
                                                              0,
                                                              &error));
     if (error) {
