@@ -1225,11 +1225,7 @@ QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const cha
         return QDateTime::fromTime_t(tmTime, qTz);
     } else {
         tmTime = icaltime_as_timet(value);
-        QDateTime t = QDateTime::fromTime_t(tmTime).toUTC();
-        // floating time contains invalid timezone
-        return QDateTime(t.date(),
-                         (icaltime_is_date(value) ? QTime() : t.time()),
-                         QTimeZone());
+        return QDateTime::fromTime_t(tmTime).toUTC();
     }
 }
 
