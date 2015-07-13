@@ -49,7 +49,7 @@ add_library(${QORGANIZER_BACKEND} MODULE
 )
 
 include_directories(
-    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_BINARY_DIR}
     ${GLIB_INCLUDE_DIRS}
     ${GIO_INCLUDE_DIRS}
     ${ECAL_INCLUDE_DIRS}
