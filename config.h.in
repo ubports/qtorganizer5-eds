@@ -1,9 +1,18 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-#define TMP_DIR                     "@TMP_DIR@"
-#define EVOLUTION_CALENDAR_FACTORY  "@EVOLUTION_CALENDAR_FACTORY@"
-#define EVOLUTION_CALENDAR_SERVICE  "org.gnome.evolution.dataserver.Calendar7"
-#define QORGANIZER_DEV_PATH         "@CMAKE_BINARY_DIR@"
+#define TMP_DIR                         "@TMP_DIR@"
+#define EVOLUTION_CALENDAR_FACTORY      "@EVOLUTION_CALENDAR_FACTORY@"
+#define EVOLUTION_CALENDAR_SERVICE_NAME "@EVOLUTION_CALENDAR_SERVICE@"
+#define QORGANIZER_DEV_PATH             "@CMAKE_BINARY_DIR@"
+#define EVOLUTION_API_3_17               @EVOLUTION_API_3_17@
+
+#if EVOLUTION_API_3_17
+    #define E_CAL_CLIENT_CONNECT_SYNC(SOURCE, SOURCE_TYPE, CANCELLABLE, ERROR) \
+            e_cal_client_connect_sync(SOURCE, SOURCE_TYPE, -1, CANCELLABLE, ERROR)
+#else
+    #define E_CAL_CLIENT_CONNECT_SYNC(SOURCE, SOURCE_TYPE, CANCELLABLE, ERROR) \
+            e_cal_client_connect_sync(SOURCE, SOURCE_TYPE, CANCELLABLE, ERROR)
+#endif
 
 #endif
