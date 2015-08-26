@@ -1225,7 +1225,9 @@ QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const cha
         return QDateTime::fromTime_t(tmTime, qTz);
     } else {
         tmTime = icaltime_as_timet(value);
-        return QDateTime::fromTime_t(tmTime).toUTC();
+        QDateTime t = QDateTime::fromTime_t(tmTime).toUTC();
+        // floating time contains invalid timezone
+        return QDateTime(t.date(), t.time(), QTimeZone());
     }
 }
 
@@ -1249,6 +1251,9 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
             if (!tz.isValid()) {
                 // floating time
                 finalDate = QDateTime(finalDate.date(), finalDate.time(), Qt::UTC);
+            } else {
+                tz = QTimeZone("UTC");
+                finalDate = finalDate.toTimeZone(tz);
             }
             break;
         case Qt::LocalTime:
