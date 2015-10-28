@@ -1958,12 +1958,9 @@ void QOrganizerEDSEngine::parseMonthRecurrence(const QOrganizerRecurrenceRule &q
 {
     rule->freq = ICAL_MONTHLY_RECURRENCE;
 
-    QList<int> daysOfMonth = qRule.daysOfMonth().toList();
     int c = 0;
-    for (int d=1; d < ICAL_BY_MONTHDAY_SIZE; d++) {
-        if (daysOfMonth.contains(d)) {
-            rule->by_month_day[c++] = d;
-        }
+    Q_FOREACH(int daysOfMonth, qRule.daysOfMonth()) {
+        rule->by_month_day[c++] = daysOfMonth;
     }
     for (int d = c; d < ICAL_BY_MONTHDAY_SIZE; d++) {
         rule->by_month_day[d] = ICAL_RECURRENCE_ARRAY_MAX;
