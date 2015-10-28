@@ -1,3 +1,9 @@
+qtorganizer5-eds (0.1.1+15.10.20150723.1-0ubuntu2~gcc5.1) wily; urgency=medium
+
+  * No-change test rebuild for g++5 ABI transition
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Thu, 30 Jul 2015 21:36:36 +0000
+
 qtorganizer5-eds (0.1.1+15.10.20150723.1-0ubuntu1) wily; urgency=medium
 
   [ Iain Lane ]
