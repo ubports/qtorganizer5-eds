@@ -901,6 +901,44 @@ private Q_SLOTS:
         QVERIFY(vcard.contains("TRIGGER;VALUE=DURATION;RELATED=START:-PT1M"));
     }
 
+    // BUG: #1445577
+    void testUTCEvent()
+    {
+        static QString displayLabelValue = QStringLiteral("UTC event");
+        static QString descriptionValue = QStringLiteral("UTC event");
+        const QDateTime startDate(QDateTime::currentDateTime().toUTC());
+
+        QOrganizerEvent event;
+        event.setStartDateTime(startDate);
+        event.setDisplayLabel(displayLabelValue);
+        event.setDescription(descriptionValue);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        QSignalSpy createdItem(m_engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+        items << event;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+        QTRY_COMPARE(createdItem.count(), 1);
+        QVERIFY(saveResult);
+
+        QList<QOrganizerItemId> ids;
+        QOrganizerItemFetchHint hint;
+        ids << items[0].id();
+        QList<QOrganizerItem> newItems = m_engine->items(ids, hint, &errorMap, &error);
+        QCOMPARE(newItems.size(), 1);
+
+        QOrganizerEvent newEvent = static_cast<QOrganizerEvent>(newItems[0]);
+        QCOMPARE(newEvent.startDateTime().timeZoneAbbreviation(), QStringLiteral("UTC"));
+        QCOMPARE(newEvent.startDateTime().date(), startDate.date());
+        QCOMPARE(newEvent.startDateTime().time().hour(), startDate.time().hour());
+        QCOMPARE(newEvent.startDateTime().time().minute(), startDate.time().minute());
+        QCOMPARE(newEvent.startDateTime().time().second(), startDate.time().second());
+    }
+
     void testExtendedProperties()
     {
         static QString displayLabelValue = QStringLiteral("event with extended property");
