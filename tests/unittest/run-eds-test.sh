@@ -7,8 +7,9 @@ echo ARG3=$3 # test name
 echo ARG4=$4 # full executable path of evolution-calendar-factory
 echo ARG5=$5 # bus service name of calendar factory
 echo ARG6=$6 # full exectuable path of evolution-source-registry
-echo ARG7=$7 # full executable path of gvfs
-echo ARG8=$8 # config files
+echo ARG7=$7 # bus service name of evolution-source-registry
+echo ARG7=$8 # full executable path of gvfs
+echo ARG8=$9 # config files
 
 # set up the tmpdir and tell the shell to purge it when we exit
 export TEST_TMP_DIR=$(mktemp -p "${TMPDIR:-/tmp}" -d $3-XXXXXXXXXX) || exit 1
@@ -38,10 +39,9 @@ rm -rf ${XDG_DATA_HOME}
 
 # run dbus-test-runner
 $1 --keep-env --max-wait=90 \
---task $2 --task-name $3 --wait-until-complete --wait-for=org.gnome.evolution.dataserver.Calendar4 \
---task $4 --task-name "evolution" --wait-until-complete --wait-for=org.gnome.evolution.dataserver.Sources3 -r \
+--task $2 --task-name $3 --wait-until-complete --wait-for=$5 \
+--task $4 --task-name "evolution" --wait-until-complete --wait-for=$7 -r \
 --task $6 --task-name "source-registry" -r
-#--task $7 --task-name "gvfsd" -r
 rv=$?
 
 # if the test passed, blow away the tmpdir
