@@ -1220,22 +1220,34 @@ void QOrganizerEDSEngine::onViewChanged(QOrganizerItemChangeSet *change)
 QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const char *tzId)
 {
     uint tmTime;
+    bool allDayEvent = icaltime_is_date(value);
 
-    if (tzId) {
+    // check if ialtimetype contais a time and timezone
+    if (!allDayEvent && tzId) {
+        QByteArray tzLocationName;
         icaltimezone *timezone = icaltimezone_get_builtin_timezone_from_tzid(tzId);
-        // fallback: sometimes the tzId contains the location name
-        if (!timezone) {
-            timezone = icaltimezone_get_builtin_timezone(tzId);
+
+        if (icaltime_is_utc(value)) {
+            tzLocationName = "UTC";
+        } else {
+            // fallback: sometimes the tzId contains the location name
+            if (!timezone) {
+                timezone = icaltimezone_get_builtin_timezone(tzId);
+            }
+            tzLocationName = QByteArray(icaltimezone_get_location(timezone));
         }
+
         tmTime = icaltime_as_timet_with_zone(value, timezone);
-        QByteArray tzLocationName(icaltimezone_get_location(timezone));
         QTimeZone qTz(tzLocationName);
         return QDateTime::fromTime_t(tmTime, qTz);
     } else {
         tmTime = icaltime_as_timet(value);
         QDateTime t = QDateTime::fromTime_t(tmTime).toUTC();
-        // floating time contains invalid timezone
-        return QDateTime(t.date(), t.time(), QTimeZone());
+        // all day or floating time events will be saved with invalid timezone
+        return QDateTime(t.date(),
+                         // if the event is all day event save with emtpy time
+                         (allDayEvent ? QTime() : t.time()),
+                         QTimeZone());
     }
 }
 
@@ -1246,26 +1258,28 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
     QDateTime finalDate(dateTime);
     QTimeZone tz;
 
-    switch (finalDate.timeSpec()) {
-    case Qt::UTC:
-    case Qt::OffsetFromUTC:
-        // convert date to UTC timezone
-        tz = QTimeZone("UTC");
-        finalDate = finalDate.toTimeZone(tz);
-        break;
-    case Qt::TimeZone:
-        tz = finalDate.timeZone();
-        if (!tz.isValid()) {
-            // floating time
-            finalDate = QDateTime(finalDate.date(), finalDate.time(), Qt::UTC);
+    if (!allDay) {
+        switch (finalDate.timeSpec()) {
+        case Qt::UTC:
+        case Qt::OffsetFromUTC:
+            // convert date to UTC timezone
+            tz = QTimeZone("UTC");
+            finalDate = finalDate.toTimeZone(tz);
+            break;
+        case Qt::TimeZone:
+            tz = finalDate.timeZone();
+            if (!tz.isValid()) {
+                // floating time
+                finalDate = QDateTime(finalDate.date(), finalDate.time(), Qt::UTC);
+            }
+            break;
+        case Qt::LocalTime:
+            tz = QTimeZone(QTimeZone::systemTimeZoneId());
+            finalDate = finalDate.toTimeZone(tz);
+            break;
+        default:
+            break;
         }
-        break;
-    case Qt::LocalTime:
-        tz = QTimeZone(QTimeZone::systemTimeZoneId());
-        finalDate = finalDate.toTimeZone(tz);
-        break;
-    default:
-        break;
     }
 
     if (tz.isValid()) {
@@ -2065,12 +2079,9 @@ void QOrganizerEDSEngine::parseMonthRecurrence(const QOrganizerRecurrenceRule &q
 {
     rule->freq = ICAL_MONTHLY_RECURRENCE;
 
-    QList<int> daysOfMonth = qRule.daysOfMonth().toList();
     int c = 0;
-    for (int d=1; d < ICAL_BY_MONTHDAY_SIZE; d++) {
-        if (daysOfMonth.contains(d)) {
-            rule->by_month_day[c++] = d;
-        }
+    Q_FOREACH(int daysOfMonth, qRule.daysOfMonth()) {
+        rule->by_month_day[c++] = daysOfMonth;
     }
     for (int d = c; d < ICAL_BY_MONTHDAY_SIZE; d++) {
         rule->by_month_day[d] = ICAL_RECURRENCE_ARRAY_MAX;

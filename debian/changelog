@@ -1,3 +1,27 @@
+qtorganizer5-eds (0.1.1+16.04.20151029-0ubuntu1) xenial; urgency=medium
+
+  [ Gary.Wzl ]
+  * Correct save events with UTC format. (LP: #1445577)
+
+  [ Renato Araujo Oliveira Filho ]
+  * Correct save events with UTC format. (LP: #1445577)
+
+ -- Renato Araujo Oliveira Filho <renato.filho@canonical.com>  Thu, 29 Oct 2015 17:03:33 +0000
+
+qtorganizer5-eds (0.1.1+15.10.20150723.1-0ubuntu2~gcc5.1) wily; urgency=medium
+
+  * No-change test rebuild for g++5 ABI transition
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Thu, 30 Jul 2015 21:36:36 +0000
+
+qtorganizer5-eds (0.1.1+15.10.20150723.1-0ubuntu1) wily; urgency=medium
+
+  [ Iain Lane ]
+  * Adapt to API changes and new D-Bus service names in e-d-s 3.16 (LP:
+    #1469208)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Thu, 23 Jul 2015 14:16:49 +0000
+
 qtorganizer5-eds (0.1.1+15.04.20150508.2-0ubuntu1) vivid; urgency=medium
 
   [ CI Train Bot ]
