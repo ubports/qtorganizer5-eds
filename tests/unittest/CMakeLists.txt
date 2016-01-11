@@ -22,8 +22,8 @@ macro(declare_test TESTNAME)
 
     add_test(${TESTNAME}
              ${CMAKE_CURRENT_SOURCE_DIR}/run-eds-test.sh ${DBUS_RUNNER} ${CMAKE_CURRENT_BINARY_DIR}/${TESTNAME} ${TESTNAME}
-             ${EVOLUTION_CALENDAR_FACTORY} ${EVOLUTION_SOURCE_SERVICE_NAME}
-             ${EVOLUTION_SOURCE_REGISTRY}
+             ${EVOLUTION_CALENDAR_FACTORY} ${EVOLUTION_CALENDAR_SERVICE_NAME}
+             ${EVOLUTION_SOURCE_REGISTRY}  ${EVOLUTION_SOURCE_SERVICE_NAME}
              ${GVFSD})
 endmacro(declare_test testname)
 
@@ -38,7 +38,6 @@ include_directories(
 )
 
 add_definitions(-DTEST_SUITE)
-add_definitions(-std=c++11)
 
 declare_test(itemid-test)
 declare_test(parseecal-test)

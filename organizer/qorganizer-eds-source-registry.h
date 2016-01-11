@@ -30,7 +30,7 @@
 
 #define COLLECTION_CALLENDAR_TYPE_METADATA  "collection-type"
 #define COLLECTION_SELECTED_METADATA        "collection-selected"
-#define COLLECTION_WRITABLE_METADATA        "collection-writable"
+#define COLLECTION_READONLY_METADATA        "collection-readonly"
 
 class SourceRegistry : public QObject
 {
@@ -80,7 +80,9 @@ private:
 
     QString findCollection(ESource *source) const;
     QtOrganizer::QOrganizerCollection registerSource(ESource *source);
-    static void updateCollection(QtOrganizer::QOrganizerCollection *collection, ESource *source);
+    static void updateCollection(QtOrganizer::QOrganizerCollection *collection,
+                                 ESource *source,
+                                 EClient *client = 0);
 
 
     // glib callback

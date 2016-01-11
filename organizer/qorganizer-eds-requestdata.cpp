@@ -85,7 +85,6 @@ void RequestData::cancel()
 void RequestData::wait(int msec)
 {
     QMutexLocker locker(&m_waiting);
-
     QEventLoop *loop = new QEventLoop;
     QOrganizerAbstractRequest *req = m_req.data();
     QObject::connect(req, &QOrganizerAbstractRequest::stateChanged, [req, loop](QOrganizerAbstractRequest::State newState) {

@@ -60,6 +60,7 @@
 #include <QtOrganizer/QOrganizerEventOccurrence>
 #include <QtOrganizer/QOrganizerTodoOccurrence>
 #include <QtOrganizer/QOrganizerItemParent>
+#include <QtOrganizer/QOrganizerItemExtendedDetail>
 
 #include <glib.h>
 #include <libecal/libecal.h>
@@ -892,12 +893,13 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
     }
 }
 
-bool QOrganizerEDSEngine::saveCollectionUpdateAsyncStart(SaveCollectionRequestData *data)
+
+gboolean QOrganizerEDSEngine::saveCollectionUpdateAsyncStart(SaveCollectionRequestData *data)
 {
     // check if request was destroyed by the caller
     if (!data->isLive()) {
         releaseRequestData(data);
-        return false;
+        return FALSE;
     }
 
     ESource *source = data->nextSourceToUpdate();
@@ -910,7 +912,7 @@ bool QOrganizerEDSEngine::saveCollectionUpdateAsyncStart(SaveCollectionRequestDa
         data->finish();
         releaseRequestData(data);
     }
-    return false;
+    return FALSE;
 }
 
 void QOrganizerEDSEngine::saveCollectionUpdateAsynCommited(ESource *source,
@@ -1087,7 +1089,6 @@ bool QOrganizerEDSEngine::cancelRequest(QOrganizerAbstractRequest* req)
 bool QOrganizerEDSEngine::waitForRequestFinished(QOrganizerAbstractRequest* req, int msecs)
 {
     Q_ASSERT(req);
-    Q_UNUSED(msecs);
 
     RequestData *data = m_runningRequests.value(req);
     if (data) {
@@ -1216,22 +1217,34 @@ void QOrganizerEDSEngine::onViewChanged(QOrganizerItemChangeSet *change)
 QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const char *tzId)
 {
     uint tmTime;
+    bool allDayEvent = icaltime_is_date(value);
 
-    if (tzId) {
+    // check if ialtimetype contais a time and timezone
+    if (!allDayEvent && tzId) {
+        QByteArray tzLocationName;
         icaltimezone *timezone = icaltimezone_get_builtin_timezone_from_tzid(tzId);
-        // fallback: sometimes the tzId contains the location name
-        if (!timezone) {
-            timezone = icaltimezone_get_builtin_timezone(tzId);
+
+        if (icaltime_is_utc(value)) {
+            tzLocationName = "UTC";
+        } else {
+            // fallback: sometimes the tzId contains the location name
+            if (!timezone) {
+                timezone = icaltimezone_get_builtin_timezone(tzId);
+            }
+            tzLocationName = QByteArray(icaltimezone_get_location(timezone));
         }
+
         tmTime = icaltime_as_timet_with_zone(value, timezone);
-        QByteArray tzLocationName(icaltimezone_get_location(timezone));
         QTimeZone qTz(tzLocationName);
         return QDateTime::fromTime_t(tmTime, qTz);
     } else {
         tmTime = icaltime_as_timet(value);
         QDateTime t = QDateTime::fromTime_t(tmTime).toUTC();
-        // floating time contains invalid timezone
-        return QDateTime(t.date(), t.time(), QTimeZone());
+        // all day or floating time events will be saved with invalid timezone
+        return QDateTime(t.date(),
+                         // if the event is all day event save with emtpy time
+                         (allDayEvent ? QTime() : t.time()),
+                         QTimeZone());
     }
 }
 
@@ -1242,26 +1255,28 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
     QDateTime finalDate(dateTime);
     QTimeZone tz;
 
-    switch (finalDate.timeSpec()) {
-    case Qt::UTC:
-    case Qt::OffsetFromUTC:
-        // convert date to UTC timezone
-        tz = QTimeZone("UTC");
-        finalDate = finalDate.toTimeZone(tz);
-        break;
-    case Qt::TimeZone:
-        tz = finalDate.timeZone();
-        if (!tz.isValid()) {
-            // floating time
-            finalDate = QDateTime(finalDate.date(), finalDate.time(), Qt::UTC);
+    if (!allDay) {
+        switch (finalDate.timeSpec()) {
+        case Qt::UTC:
+        case Qt::OffsetFromUTC:
+            // convert date to UTC timezone
+            tz = QTimeZone("UTC");
+            finalDate = finalDate.toTimeZone(tz);
+            break;
+        case Qt::TimeZone:
+            tz = finalDate.timeZone();
+            if (!tz.isValid()) {
+                // floating time
+                finalDate = QDateTime(finalDate.date(), finalDate.time(), Qt::UTC);
+            }
+            break;
+        case Qt::LocalTime:
+            tz = QTimeZone(QTimeZone::systemTimeZoneId());
+            finalDate = finalDate.toTimeZone(tz);
+            break;
+        default:
+            break;
         }
-        break;
-    case Qt::LocalTime:
-        tz = QTimeZone(QTimeZone::systemTimeZoneId());
-        finalDate = finalDate.toTimeZone(tz);
-        break;
-    default:
-        break;
     }
 
     if (tz.isValid()) {
@@ -1625,6 +1640,20 @@ void QOrganizerEDSEngine::parseAttendeeList(ECalComponent *comp, QOrganizerItem 
     e_cal_component_free_attendee_list(attendeeList);
 }
 
+void QOrganizerEDSEngine::parseExtendedDetails(ECalComponent *comp, QOrganizerItem *item)
+{
+    icalcomponent *icalcomp = e_cal_component_get_icalcomponent(comp);
+    for (icalproperty *prop = icalcomponent_get_first_property(icalcomp, ICAL_X_PROPERTY);
+         prop != NULL;
+         prop = icalcomponent_get_next_property (icalcomp, ICAL_X_PROPERTY)) {
+
+        QOrganizerItemExtendedDetail ex;
+        ex.setName(QString::fromUtf8(icalproperty_get_x_name(prop)));
+        ex.setData(QByteArray(icalproperty_get_x(prop)));
+        item->saveDetail(&ex);
+    }
+}
+
 QOrganizerItem *QOrganizerEDSEngine::parseEvent(ECalComponent *comp)
 {
     QOrganizerItem *event;
@@ -1789,11 +1818,17 @@ void QOrganizerEDSEngine::parseReminders(ECalComponent *comp, QtOrganizer::QOrga
 
         ECalComponentAlarmTrigger trigger;
         e_cal_component_alarm_get_trigger(alarm, &trigger);
+        int relSecs = 0;
         if (trigger.type == E_CAL_COMPONENT_ALARM_TRIGGER_RELATIVE_START) {
-            aDetail->setSecondsBeforeStart(icaldurationtype_as_int(trigger.u.rel_duration) * -1);
-        } else {
-            aDetail->setSecondsBeforeStart(0);
+            relSecs = - icaldurationtype_as_int(trigger.u.rel_duration);
+            if (relSecs < 0) {
+                relSecs = 0;
+                qWarning() << "QOrganizer does not support triggers after event start";
+            }
+        } else if (trigger.type != E_CAL_COMPONENT_ALARM_TRIGGER_NONE) {
+            qWarning() << "QOrganizer only supports triggers relative to event start.";
         }
+        aDetail->setSecondsBeforeStart(relSecs);
 
         ECalComponentAlarmRepeat aRepeat;
         e_cal_component_alarm_get_repeat(alarm, &aRepeat);
@@ -1847,6 +1882,7 @@ QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(const QString &collection
         parseTags(comp, item);
         parseReminders(comp, item);
         parseAttendeeList(comp, item);
+        parseExtendedDetails(comp, item);
 
         items << *item;
         delete item;
@@ -1928,12 +1964,9 @@ void QOrganizerEDSEngine::parseMonthRecurrence(const QOrganizerRecurrenceRule &q
 {
     rule->freq = ICAL_MONTHLY_RECURRENCE;
 
-    QList<int> daysOfMonth = qRule.daysOfMonth().toList();
     int c = 0;
-    for (int d=1; d < ICAL_BY_MONTHDAY_SIZE; d++) {
-        if (daysOfMonth.contains(d)) {
-            rule->by_month_day[c++] = d;
-        }
+    Q_FOREACH(int daysOfMonth, qRule.daysOfMonth()) {
+        rule->by_month_day[c++] = daysOfMonth;
     }
     for (int d = c; d < ICAL_BY_MONTHDAY_SIZE; d++) {
         rule->by_month_day[d] = ICAL_RECURRENCE_ARRAY_MAX;
@@ -2166,6 +2199,25 @@ void QOrganizerEDSEngine::parseAttendeeList(const QOrganizerItem &item, ECalComp
     e_cal_component_free_attendee_list(attendeeList);
 }
 
+void QOrganizerEDSEngine::parseExtendedDetails(const QOrganizerItem &item, ECalComponent *comp)
+{
+    icalcomponent *icalcomp = e_cal_component_get_icalcomponent(comp);
+    Q_FOREACH(const QOrganizerItemExtendedDetail &ex, item.details(QOrganizerItemDetail::TypeExtendedDetail)) {
+        // We only support QByteArray.
+        // We could use QStream serialization but it will make it impossible to read it from glib side, for example indicators.
+        QByteArray data = ex.data().toByteArray();
+        if (data.isEmpty()) {
+            qWarning() << "Invalid value for property" << ex.name()
+                       <<". EDS only supports QByteArray values for extended properties";
+            continue;
+        }
+
+        icalproperty *xProp = icalproperty_new_x(data.constData());
+        icalproperty_set_x_name(xProp, ex.name().toUtf8().constData());
+        icalcomponent_add_property(icalcomp, xProp);
+    }
+}
+
 bool QOrganizerEDSEngine::hasRecurrence(ECalComponent *comp)
 {
     char *rid = e_cal_component_get_recurid_as_string(comp);
@@ -2385,12 +2437,10 @@ void QOrganizerEDSEngine::parseReminders(const QOrganizerItem &item, ECalCompone
                 break;
         }
 
-        if (reminder->secondsBeforeStart() > 0) {
-            ECalComponentAlarmTrigger trigger;
-            trigger.type = E_CAL_COMPONENT_ALARM_TRIGGER_RELATIVE_START;
-            trigger.u.rel_duration = icaldurationtype_from_int(- reminder->secondsBeforeStart());
-            e_cal_component_alarm_set_trigger(alarm, trigger);
-        }
+        ECalComponentAlarmTrigger trigger;
+        trigger.type = E_CAL_COMPONENT_ALARM_TRIGGER_RELATIVE_START;
+        trigger.u.rel_duration = icaldurationtype_from_int(- reminder->secondsBeforeStart());
+        e_cal_component_alarm_set_trigger(alarm, trigger);
 
         ECalComponentAlarmRepeat aRepeat;
         // TODO: check if this is really necessary
@@ -2439,6 +2489,7 @@ GSList *QOrganizerEDSEngine::parseItems(ECalClient *client,
         parseTags(item, comp);
         parseReminders(item, comp);
         parseAttendeeList(item, comp);
+        parseExtendedDetails(item, comp);
 
         if (!item.id().isNull()) {
             e_cal_component_commit_sequence(comp);
