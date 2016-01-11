@@ -64,12 +64,18 @@ find_program(EVOLUTION_SOURCE_REGISTRY evolution-source-registry
              PATHS /usr/lib/evolution/)
 find_program(GVFSD gvfsd
              PATHS /usr/lib/gvfs/)
-configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
-OPTION(EVOLUTION_SOURCE_SERVICE_NAME "DBus name for source registry")
-if(NOT EVOLUTION_SOURCE_SERVICE_NAME)
+if(EDATASERVER_VERSION VERSION_LESS "3.16")
+    set(EVOLUTION_API_3_17 "0")
     set(EVOLUTION_SOURCE_SERVICE_NAME "org.gnome.evolution.dataserver.Sources3")
+    set(EVOLUTION_CALENDAR_SERVICE_NAME "org.gnome.evolution.dataserver.Calendar4")
+else()
+    set(EVOLUTION_API_3_17 "1")
+    set(EVOLUTION_SOURCE_SERVICE_NAME "org.gnome.evolution.dataserver.Sources4")
+    set(EVOLUTION_CALENDAR_SERVICE_NAME "org.gnome.evolution.dataserver.Calendar7")
 endif()
+
+configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 add_subdirectory(organizer)
 if(DBUS_RUNNER)
