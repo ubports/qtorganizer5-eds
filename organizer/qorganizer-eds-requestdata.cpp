@@ -26,6 +26,7 @@
 #include <QtOrganizer/QOrganizerManagerEngine>
 
 using namespace QtOrganizer;
+int RequestData::m_instanceCount = 0;
 
 RequestData::RequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbstractRequest *req)
     : m_parent(engine),
@@ -36,6 +37,7 @@ RequestData::RequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbs
     QOrganizerManagerEngine::updateRequestState(req, QOrganizerAbstractRequest::ActiveState);
     m_cancellable = g_cancellable_new();
     m_parent->m_runningRequests.insert(req, this);
+    m_instanceCount++;
 }
 
 RequestData::~RequestData()
@@ -47,6 +49,7 @@ RequestData::~RequestData()
     if (m_client) {
         g_clear_object(&m_client);
     }
+    m_instanceCount--;
 }
 
 GCancellable* RequestData::cancellable() const
@@ -112,6 +115,11 @@ bool RequestData::isWaiting()
     return result;
 }
 
+int RequestData::instanceCount()
+{
+    return m_instanceCount;
+}
+
 void RequestData::deleteLater()
 {
     if (isWaiting()) {
@@ -125,11 +133,17 @@ void RequestData::deleteLater()
 }
 
 void RequestData::finish(QOrganizerManager::Error error,
-                         QtOrganizer::QOrganizerAbstractRequest::State state)
+                         QOrganizerAbstractRequest::State state)
 {
     Q_UNUSED(error);
     Q_UNUSED(state);
     m_finished = true;
+
+    // When cancelling an operation the callback passed for the async function
+    // will be called and the request data object will be destroyed there
+    if (state != QOrganizerAbstractRequest::CanceledState) {
+        deleteLater();
+    }
 }
 
 void RequestData::setClient(EClient *client)
