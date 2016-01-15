@@ -33,16 +33,19 @@ public:
     ~FetchRequestData();
 
     QString nextCollection();
+    QString nextParentId();
     QString collection() const;
     time_t startDate() const;
     time_t endDate() const;
     bool hasDateInterval() const;
     bool filterIsValid() const;
     void cancel();
+    void compileCurrentIds();
 
     void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError,
                 QtOrganizer::QOrganizerAbstractRequest::State state = QtOrganizer::QOrganizerAbstractRequest::FinishedState);
     void appendResult(icalcomponent *comp);
+    void appendDeatachedResult(icalcomponent *comp);
     int appendResults(QList<QtOrganizer::QOrganizerItem> results);
     QString dateFilter();
 
@@ -50,6 +53,8 @@ private:
     FetchRequestDataParseListener *m_parseListener;
     QMap<QString, GSList*> m_components;
     QStringList m_collections;
+    QSet<QString> m_currentParentIds;
+    QStringList m_deatachedIds;
     QString m_current;
     GSList* m_currentComponents;
     QList<QtOrganizer::QOrganizerItem> m_results;
