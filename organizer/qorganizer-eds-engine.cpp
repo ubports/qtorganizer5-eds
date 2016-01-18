@@ -228,10 +228,10 @@ void QOrganizerEDSEngine::itemsAsyncListByIdListed(GObject *source,
 }
 
 
-void QOrganizerEDSEngine::itemsAsyncListed(ECalComponent *comp,
-                                           time_t instanceStart,
-                                           time_t instanceEnd,
-                                           FetchRequestData *data)
+gboolean QOrganizerEDSEngine::itemsAsyncListed(ECalComponent *comp,
+                                               time_t instanceStart,
+                                               time_t instanceEnd,
+                                               FetchRequestData *data)
 {
     Q_UNUSED(instanceStart);
     Q_UNUSED(instanceEnd);
@@ -241,7 +241,9 @@ void QOrganizerEDSEngine::itemsAsyncListed(ECalComponent *comp,
         if (icalComp) {
             data->appendResult(icalComp);
         }
+        return TRUE;
     }
+    return FALSE;
 }
 
 void QOrganizerEDSEngine::itemsAsyncListedAsComps(GObject *source,
