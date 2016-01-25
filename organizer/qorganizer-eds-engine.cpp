@@ -133,7 +133,6 @@ void QOrganizerEDSEngine::itemsAsync(QOrganizerItemFetchRequest *req)
         itemsAsyncStart(data);
     } else {
         data->finish();
-        releaseRequestData(data);
     }
 }
 
