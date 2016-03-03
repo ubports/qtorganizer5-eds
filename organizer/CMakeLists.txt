@@ -10,6 +10,7 @@ set(QORGANIZER_BACKEND_SRCS
     qorganizer-eds-engine.cpp
     qorganizer-eds-enginedata.cpp
     qorganizer-eds-engineid.cpp
+    qorganizer-eds-parseeventthread.cpp
     qorganizer-eds-removecollectionrequestdata.cpp
     qorganizer-eds-removerequestdata.cpp
     qorganizer-eds-removebyidrequestdata.cpp
@@ -28,6 +29,7 @@ set(QORGANIZER_BACKEND_HDRS
     qorganizer-eds-engine.h
     qorganizer-eds-enginedata.h
     qorganizer-eds-engineid.h
+    qorganizer-eds-parseeventthread.h
     qorganizer-eds-removecollectionrequestdata.h
     qorganizer-eds-removerequestdata.h
     qorganizer-eds-removebyidrequestdata.h

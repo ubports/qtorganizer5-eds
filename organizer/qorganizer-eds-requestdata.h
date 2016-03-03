@@ -41,7 +41,7 @@ public:
     QOrganizerEDSEngine *parent() const;
     virtual void cancel();
     void deleteLater();
-    virtual void finish(QtOrganizer::QOrganizerManager::Error error, QtOrganizer::QOrganizerAbstractRequest::State state) = 0;
+    virtual void finish(QtOrganizer::QOrganizerManager::Error error, QtOrganizer::QOrganizerAbstractRequest::State state);
     void wait(int msec = 0);
     bool isWaiting();
 
@@ -57,6 +57,9 @@ public:
         }
     }
 
+    // debug
+    static int instanceCount();
+
 protected:
     QPointer<QOrganizerEDSEngine> m_parent;
     EClient *m_client;
@@ -69,6 +72,8 @@ protected:
 private:
     QPointer<QtOrganizer::QOrganizerAbstractRequest> m_req;
     GCancellable *m_cancellable;
+
+    static int m_instanceCount;
 };
 
 #endif

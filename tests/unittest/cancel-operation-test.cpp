@@ -24,6 +24,7 @@
 #include <QtOrganizer>
 
 #include "qorganizer-eds-engine.h"
+#include "qorganizer-eds-requestdata.h"
 #include "eds-base-test.h"
 
 
@@ -55,6 +56,7 @@ private Q_SLOTS:
 
     void cleanup()
     {
+        QTRY_COMPARE(RequestData::instanceCount(), 0);
         delete m_engine;
         m_engine = 0;
         EDSBaseTest::cleanup();

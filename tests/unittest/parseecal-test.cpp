@@ -34,8 +34,22 @@ using namespace QtOrganizer;
 class ParseEcalTest : public QObject
 {
     Q_OBJECT
+private:
+    static const QString vEvent;
+    QList<QOrganizerItem> m_itemsParsed;
+
+public Q_SLOTS:
+    void onEventAsyncParsed(QList<QOrganizerItem> items)
+    {
+        m_itemsParsed = items;
+    }
 
 private Q_SLOTS:
+    void cleanup()
+    {
+        m_itemsParsed.clear();
+    }
+
     void testParseStartTime()
     {
         QDateTime startTime = QDateTime::currentDateTime();
@@ -359,7 +373,76 @@ private Q_SLOTS:
 
         g_object_unref(comp);
     }
+
+    void testAsyncParse()
+    {
+        qRegisterMetaType<QList<QOrganizerItem> >();
+        QOrganizerEDSEngine *engine = QOrganizerEDSEngine::createEDSEngine(QMap<QString, QString>());
+        QVERIFY(engine);
+        icalcomponent *ical = icalcomponent_new_from_string(vEvent.toUtf8().data());
+        QVERIFY(ical);
+        QVERIFY(icalcomponent_is_valid(ical));
+
+        QList<QOrganizerItemDetail::DetailType> detailsHint;
+        GSList *events = g_slist_append(0, ical);
+        QMap<QString, GSList*> eventMap;
+        eventMap.insert(engine->defaultCollection(0).id().toString(), events);
+        engine->parseEventsAsync(eventMap, true, detailsHint, this, SLOT(onEventAsyncParsed(QList<QOrganizerItem>)));
+
+        QTRY_COMPARE(m_itemsParsed.size(), 1);
+        QOrganizerEvent ev = m_itemsParsed.at(0);
+        QDateTime eventTime(QDate(2015,04, 8), QTime(19, 0, 0), QTimeZone("America/Recife"));
+        QCOMPARE(ev.startDateTime(), eventTime);
+        QCOMPARE(ev.endDateTime(), eventTime.addSecs(30 * 60));
+        QCOMPARE(ev.displayLabel(), QStringLiteral("one minute after start"));
+        QCOMPARE(ev.description(), QStringLiteral("event to parse"));
+
+        QOrganizerRecurrenceRule rrule = ev.recurrenceRule();
+        QCOMPARE(rrule.frequency(), QOrganizerRecurrenceRule::Daily);
+        QCOMPARE(rrule.limitType(), QOrganizerRecurrenceRule::NoLimit);
+
+        QList<QDate> except = ev.exceptionDates().toList();
+        qSort(except);
+        QCOMPARE(except.size(), 2);
+        QCOMPARE(except.at(0), QDate(2015, 4, 9));
+        QCOMPARE(except.at(1), QDate(2015, 5, 1));
+
+        QOrganizerItemVisualReminder vreminder = ev.detail(QOrganizerItemDetail::TypeVisualReminder);
+        QCOMPARE(vreminder.secondsBeforeStart(), 60);
+        QCOMPARE(vreminder.message(), QStringLiteral("alarm to parse"));
+
+        g_slist_free_full(events, (GDestroyNotify)icalcomponent_free);
+        delete engine;
+    }
 };
+
+const QString ParseEcalTest::vEvent = QStringLiteral(""
+"BEGIN:VEVENT\r\n"
+"UID:20150408T215243Z-19265-1000-5926-24@renato-ubuntu\r\n"
+"DTSTAMP:20150408T214536Z\r\n"
+"DTSTART;TZID=/freeassociation.sourceforge.net/Tzfile/America/Recife:\r\n"
+" 20150408T190000\r\n"
+"DTEND;TZID=/freeassociation.sourceforge.net/Tzfile/America/Recife:\r\n"
+" 20150408T193000\r\n"
+"TRANSP:OPAQUE\r\n"
+"SEQUENCE:6\r\n"
+"SUMMARY:one minute after start\r\n"
+"DESCRIPTION:event to parse\r\n"
+"CLASS:PUBLIC\r\n"
+"CREATED:20150408T215308Z\r\n"
+"LAST-MODIFIED:20150409T200807Z\r\n"
+"RRULE:FREQ=DAILY\r\n"
+"EXDATE;VALUE=DATE:20150501\r\n"
+"EXDATE;VALUE=DATE:20150409\r\n"
+"BEGIN:VALARM\r\n"
+"X-EVOLUTION-ALARM-UID:20150408T215549Z-19265-1000-5926-38@renato-ubuntu\r\n"
+"ACTION:DISPLAY\r\n"
+"TRIGGER;VALUE=DURATION;RELATED=START:-PT1M\r\n"
+"DESCRIPTION:alarm to parse\r\n"
+"END:VALARM\r\n"
+"END:VEVENT\r\n"
+"");
+
 
 QTEST_MAIN(ParseEcalTest)
 
