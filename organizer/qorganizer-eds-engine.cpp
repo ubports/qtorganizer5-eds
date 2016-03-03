@@ -1340,6 +1340,10 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
         *tzId = QByteArray(icaltimezone_get_tzid(timezone));
         return icaltime_from_timet_with_zone(finalDate.toTime_t(), allDay, timezone);
     } else {
+        if (!finalDate.isValid()) {
+            finalDate = QDateTime(finalDate.date(),
+                                  allDay || !finalDate.time().isValid() ? QTime(0, 0, 0) : finalDate.time());
+        }
         *tzId = "";
         return icaltime_from_timet(finalDate.toTime_t(), allDay);
     }
