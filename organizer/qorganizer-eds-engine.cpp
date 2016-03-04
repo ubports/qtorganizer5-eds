@@ -1052,23 +1052,43 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
 
     ESource *source = data->begin();
     if (source) {
-        if (e_source_get_remote_deletable(source)) {
+        ESourceRegistry *registry = NULL;
+        gboolean accountRemovable = e_source_get_removable(source);
+        gboolean remoteDeletable = e_source_get_remote_deletable(source);
+
+        if ((accountRemovable == FALSE) && (remoteDeletable == FALSE)) {
+            qWarning() << "Account not removable will refetch source";
+            // WORKAROUND: Sometimes EDS take longer to make a account removable with this we
+            // force EDS to update sources infomation
+            registry  = e_source_registry_new_sync(NULL, NULL);
+            source = e_source_registry_ref_source(registry, e_source_get_uid(source));
+            accountRemovable = e_source_get_removable(source);
+            remoteDeletable = e_source_get_remote_deletable(source);
+        }
+
+        if (remoteDeletable == TRUE) {
             data->setRemoteDeletable(true);
             e_source_remote_delete(source, data->cancellable(),
                                    (GAsyncReadyCallback) QOrganizerEDSEngine::removeCollectionAsyncStart,
                                    data);
-        } else if (e_source_get_removable(source)) {
+        } else if (accountRemovable == TRUE) {
             e_source_remove(source, data->cancellable(),
                             (GAsyncReadyCallback) QOrganizerEDSEngine::removeCollectionAsyncStart,
                             data);
         } else {
-            qWarning() << "Source not removable";
+            qWarning() << "Source not removable" << e_source_get_uid(source);
             data->commit(QOrganizerManager::InvalidCollectionError);
             removeCollectionAsyncStart(0, 0, data);
+        }
+
+        if (registry) {
+            g_object_unref(source);
+            g_object_unref(registry);
         }
     } else {
         data->finish();
     }
+
 }
 
 void QOrganizerEDSEngine::releaseRequestData(RequestData *data)
