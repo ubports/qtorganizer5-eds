@@ -19,6 +19,7 @@
 #include "qorganizer-eds-requestdata.h"
 
 #include <QtCore/QDebug>
+#include <QtCore/QEventLoop>
 #include <QtCore/QTimer>
 
 #include <QtOrganizer/QOrganizerAbstractRequest>

@@ -35,7 +35,6 @@
 
 #include <QtCore/qdebug.h>
 #include <QtCore/QPointer>
-#include <QtCore/QCoreApplication>
 #include <QtCore/QTimeZone>
 
 #include <QtOrganizer/QOrganizerEventAttendee>
@@ -134,6 +133,7 @@ void QOrganizerEDSEngine::itemsAsync(QOrganizerItemFetchRequest *req)
         itemsAsyncStart(data);
     } else {
         data->finish();
+        releaseRequestData(data);
     }
 }
 
@@ -900,6 +900,7 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
     }
 }
 
+
 gboolean QOrganizerEDSEngine::saveCollectionUpdateAsyncStart(SaveCollectionRequestData *data)
 {
     // check if request was destroyed by the caller
@@ -1013,6 +1014,7 @@ void QOrganizerEDSEngine::removeCollectionAsyncStart(GObject *sourceObject,
         } else {
             qWarning() << "Source not removable";
             data->commit(QOrganizerManager::InvalidCollectionError);
+            removeCollectionAsyncStart(0, 0, data);
         }
     } else {
         data->finish();

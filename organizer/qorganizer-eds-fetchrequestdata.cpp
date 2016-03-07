@@ -199,6 +199,7 @@ QString FetchRequestData::dateFilter()
 {
     QOrganizerItemFetchRequest *r = request<QOrganizerItemFetchRequest>();
     if (r->filter().type() == QOrganizerItemFilter::InvalidFilter) {
+        qWarning("Query for events with invalid filter type");
         return QStringLiteral("");
     }
 
@@ -290,5 +291,3 @@ void FetchRequestDataParseListener::onParseDone(QList<QOrganizerItem> results)
     m_data->appendResults(results);
     m_data->finishContinue(m_error, m_state);
 }
-
-
