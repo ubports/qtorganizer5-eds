@@ -133,7 +133,6 @@ void QOrganizerEDSEngine::itemsAsync(QOrganizerItemFetchRequest *req)
         itemsAsyncStart(data);
     } else {
         data->finish();
-        releaseRequestData(data);
     }
 }
 
@@ -175,16 +174,63 @@ void QOrganizerEDSEngine::itemsAsyncStart(FetchRequestData *data)
 void QOrganizerEDSEngine::itemsAsyncDone(FetchRequestData *data)
 {
     if (data->isLive()) {
-        itemsAsyncStart(data);
+        data->compileCurrentIds();
+        itemsAsyncFetchDeatachedItems(data);
     } else {
         releaseRequestData(data);
     }
 }
 
-void QOrganizerEDSEngine::itemsAsyncListed(ECalComponent *comp,
-                                           time_t instanceStart,
-                                           time_t instanceEnd,
-                                           FetchRequestData *data)
+void QOrganizerEDSEngine::itemsAsyncFetchDeatachedItems(FetchRequestData *data)
+{
+    QString parentId = data->nextParentId();
+    if (!parentId.isEmpty()) {
+        e_cal_client_get_objects_for_uid(E_CAL_CLIENT(data->client()),
+                                         parentId.toUtf8().data(),
+                                         data->cancellable(),
+                                         (GAsyncReadyCallback) QOrganizerEDSEngine::itemsAsyncListByIdListed,
+                                         data);
+    } else {
+        itemsAsyncStart(data);
+    }
+}
+
+void QOrganizerEDSEngine::itemsAsyncListByIdListed(GObject *source,
+                                                   GAsyncResult *res,
+                                                   FetchRequestData *data)
+{
+    Q_UNUSED(source);
+    GError *gError = 0;
+    GSList *events = 0;
+    e_cal_client_get_objects_for_uid_finish(E_CAL_CLIENT(data->client()),
+                                            res,
+                                            &events,
+                                            &gError);
+    if (gError) {
+        qWarning() << "Fail to list deatached events in calendar" << gError->message;
+        g_error_free(gError);
+        gError = 0;
+        if (data->isLive()) {
+            data->finish(QOrganizerManager::InvalidCollectionError);
+        } else {
+            releaseRequestData(data);
+        }
+        return;
+    }
+
+    for(GSList *e = events; e != NULL; e = e->next) {
+        icalcomponent * ical = e_cal_component_get_icalcomponent(static_cast<ECalComponent*>(e->data));
+        data->appendDeatachedResult(ical);
+    }
+
+    itemsAsyncFetchDeatachedItems(data);
+}
+
+
+gboolean QOrganizerEDSEngine::itemsAsyncListed(ECalComponent *comp,
+                                               time_t instanceStart,
+                                               time_t instanceEnd,
+                                               FetchRequestData *data)
 {
     Q_UNUSED(instanceStart);
     Q_UNUSED(instanceEnd);
@@ -194,7 +240,9 @@ void QOrganizerEDSEngine::itemsAsyncListed(ECalComponent *comp,
         if (icalComp) {
             data->appendResult(icalComp);
         }
+        return TRUE;
     }
+    return FALSE;
 }
 
 void QOrganizerEDSEngine::itemsAsyncListedAsComps(GObject *source,
@@ -662,7 +710,9 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
             QOrganizerEDSEngineId *eid = new QOrganizerEDSEngineId(currentCollectionId,
                                                                    QString::fromUtf8(uid));
             item.setId(QOrganizerItemId(eid));
-            item.setGuid(QString::fromUtf8(uid));
+            item.setGuid(QString("%1/%2")
+                         .arg(eid->m_collectionId)
+                         .arg(eid->m_itemId));
 
             QOrganizerEDSCollectionEngineId *edsCollectionId = new QOrganizerEDSCollectionEngineId(currentCollectionId);
             item.setCollectionId(QOrganizerCollectionId(edsCollectionId));
@@ -2349,12 +2399,21 @@ void QOrganizerEDSEngine::parseId(ECalComponent *comp,
                                   QOrganizerItem *item,
                                   QOrganizerEDSCollectionEngineId *edsCollectionId)
 {
+
     ECalComponentId *id = e_cal_component_get_id(comp);
     QOrganizerEDSEngineId *edsParentId = 0;
-    QOrganizerEDSEngineId *edsId = QOrganizerEDSEngineId::fromComponentId(edsCollectionId->m_collectionId, id, &edsParentId);
+    QOrganizerEDSEngineId *edsId;
 
+    if (!edsCollectionId) {
+        qWarning() << "Parse Id with null collection";
+        return;
+    }
+
+    edsId = QOrganizerEDSEngineId::fromComponentId(edsCollectionId->m_collectionId, id, &edsParentId);
     item->setId(QOrganizerItemId(edsId));
-    item->setGuid(QString::fromUtf8(id->uid));
+    item->setGuid(QString("%1/%2")
+                    .arg(edsCollectionId->m_collectionId)
+                    .arg(edsId->m_itemId));
 
     if (edsParentId) {
         QOrganizerItemParent itemParent = item->detail(QOrganizerItemDetail::TypeParent);
@@ -2633,14 +2692,12 @@ void QOrganizerEDSEngine::parseId(const QOrganizerItem &item, ECalComponent *com
         e_cal_component_set_uid(comp, cId.toUtf8().data());
 
         if (!rId.isEmpty()) {
-            ECalComponentRange *recur_id;
+            ECalComponentRange recur_id;
             struct icaltimetype tt = icaltime_from_string(rId.toUtf8().data());
 
-            recur_id = g_new0 (ECalComponentRange, 1);
-            recur_id->type = E_CAL_COMPONENT_RANGE_SINGLE;
-            recur_id->datetime.value = &tt;
-            e_cal_component_set_recurid(comp, recur_id);
-            g_free (recur_id);
+            recur_id.type = E_CAL_COMPONENT_RANGE_SINGLE;
+            recur_id.datetime.value = &tt;
+            e_cal_component_set_recurid(comp, &recur_id);
         }
     }
 }

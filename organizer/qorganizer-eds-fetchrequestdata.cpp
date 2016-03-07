@@ -17,6 +17,7 @@
  */
 
 #include "qorganizer-eds-fetchrequestdata.h"
+#include "qorganizer-eds-engineid.h"
 
 #include <QtCore/QDebug>
 
@@ -62,6 +63,16 @@ QString FetchRequestData::nextCollection()
     } else {
         return QString();
     }
+}
+
+QString FetchRequestData::nextParentId()
+{
+    QString nextId;
+    if (!m_currentParentIds.isEmpty()) {
+        nextId = m_currentParentIds.values().first();
+        m_currentParentIds.remove(nextId);
+    }
+    return nextId;
 }
 
 QString FetchRequestData::collection() const
@@ -119,6 +130,16 @@ void FetchRequestData::cancel()
     RequestData::cancel();
 }
 
+void FetchRequestData::compileCurrentIds()
+{
+    for(GSList *e = m_currentComponents; e != NULL; e = e->next) {
+        icalcomponent *icalComp = static_cast<icalcomponent *>(e->data);
+        if (e_cal_util_component_has_recurrences (icalComp)) {
+            m_currentParentIds.insert(QString::fromUtf8(icalcomponent_get_uid(icalComp)));
+        }
+    }
+}
+
 void FetchRequestData::finish(QOrganizerManager::Error error,
                               QOrganizerAbstractRequest::State state)
 {
@@ -126,21 +147,18 @@ void FetchRequestData::finish(QOrganizerManager::Error error,
         m_parseListener = new FetchRequestDataParseListener(this,
                                                             error,
                                                             state);
-#if 1
-        parent()->parseEventsAsync(m_components,
-                                   true,
-                                   request<QOrganizerItemFetchRequest>()->fetchHint().detailTypesHint(),
-                                   m_parseListener,
-                                   SLOT(onParseDone(QList<QtOrganizer::QOrganizerItem>)));
-#else
-        Q_FOREACH(const QString &id, m_components.keys()) {
-            appendResults(parent()->parseEvents(id, m_components[id], true, request<QOrganizerItemFetchRequest>()->fetchHint().detailTypesHint()));
+        QOrganizerItemFetchRequest *req =  request<QOrganizerItemFetchRequest>();
+        if (req) {
+            parent()->parseEventsAsync(m_components,
+                                       true,
+                                       req->fetchHint().detailTypesHint(),
+                                       m_parseListener,
+                                       SLOT(onParseDone(QList<QtOrganizer::QOrganizerItem>)));
+
+            return;
         }
-        finishContinue(error, state);
-#endif
-    } else {
-        finishContinue(error, state);
     }
+    finishContinue(error, state);
 }
 
 void FetchRequestData::finishContinue(QOrganizerManager::Error error,
@@ -169,27 +187,43 @@ void FetchRequestData::appendResult(icalcomponent *comp)
     m_currentComponents = g_slist_append(m_currentComponents, comp);
 }
 
+void FetchRequestData::appendDeatachedResult(icalcomponent *comp)
+{
+    const gchar *uid;
+    struct icaltimetype rid;
+
+    uid = icalcomponent_get_uid(comp);
+    rid = icalcomponent_get_recurrenceid(comp);
+
+    for(GSList *e=m_currentComponents; e != NULL; e = e->next) {
+        icalcomponent *ical = static_cast<icalcomponent *>(e->data);
+        if ((g_strcmp0(uid, icalcomponent_get_uid(ical)) == 0) &&
+            (icaltime_compare(rid, icalcomponent_get_recurrenceid(ical)) == 0)) {
+
+            // replace instance event
+            icalcomponent_free (ical);
+            e->data = icalcomponent_new_clone(comp);
+            QString itemId = QString("%1/%2#%3")
+                    .arg(QString(m_current).replace(QOrganizerEDSEngineId::managerUriStatic() + ":", ""))
+                    .arg(QString::fromUtf8(uid))
+                    .arg(QString::fromUtf8(icaltime_as_ical_string(rid)));
+            m_deatachedIds.append(itemId);
+            break;
+        }
+    }
+}
+
 int FetchRequestData::appendResults(QList<QOrganizerItem> results)
 {
     int count = 0;
-    // check if we really need filter or sort the result
     QOrganizerItemFetchRequest *req = request<QOrganizerItemFetchRequest>();
     QOrganizerItemFilter filter = req->filter();
-    if ((filter.type() == QOrganizerItemFilter::DefaultFilter) &&
-        req->sorting().isEmpty()) {
-        m_results += results;
-        count = results.size();
-    } else {
-        Q_FOREACH(const QOrganizerItem &item, results) {
-            if ((req->filter().type() == QOrganizerItemFilter::DefaultFilter) ||
-                QOrganizerManagerEngine::testFilter(req->filter(), item)) {
-                if (!req->sorting().isEmpty()) {
-                    QOrganizerManagerEngine::addSorted(&m_results, item, req->sorting());
-                } else {
-                    m_results << item;
-                }
-                count++;
-            }
+    QList<QOrganizerItemSortOrder> sorting = req->sorting();
+
+    Q_FOREACH(QOrganizerItem item, results) {
+        if (QOrganizerManagerEngine::testFilter(filter, item)) {
+            QOrganizerManagerEngine::addSorted(&m_results, item, sorting);
+            count++;
         }
     }
     return count;

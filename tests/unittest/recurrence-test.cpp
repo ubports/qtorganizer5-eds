@@ -632,6 +632,79 @@ private Q_SLOTS:
         QCOMPARE(savedRule.limitDate().isValid(), false);
         QCOMPARE(savedRule.limitCount(), -1);
     }
+
+    void testModifiedRecurrenceDescription()
+    {
+        static QString displayLabelValue = QStringLiteral("testModifiedRecurrenceDescription test");
+        static QString descriptionValue = QStringLiteral("testModifiedRecurrenceDescription description");
+
+        // create  a recurrence event
+        QOrganizerEvent ev;
+        ev.setCollectionId(m_collection.id());
+        ev.setStartDateTime(QDateTime(QDate(2013, 12, 2), QTime(0,0,0)));
+        ev.setEndDateTime(QDateTime(QDate(2013, 12, 2), QTime(0,30,0)));
+        ev.setDisplayLabel(displayLabelValue);
+        ev.setDescription(descriptionValue);
+
+        QOrganizerRecurrenceRule rule;
+        rule.setFrequency(QOrganizerRecurrenceRule::Daily);
+        rule.setLimit(QDate(2013, 12, 31));
+        ev.setRecurrenceRule(rule);
+
+        QSignalSpy itemsAdded(m_engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        items << ev;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
+        QTRY_COMPARE_WITH_TIMEOUT(itemsAdded.count(), 1, 10000);
+
+        // modify the second ocurrence
+        QOrganizerItemSortOrder sort;
+        QOrganizerItemFetchHint hint;
+        QOrganizerItemCollectionFilter filter;
+        filter.setCollectionId(m_collection.id());
+
+        items = m_engine->items(filter,
+                                QDateTime(QDate(2013, 12, 1), QTime(0,0,0)),
+                                QDateTime(QDate(2013, 12, 31), QTime(0,0,0)),
+                                100,
+                                sort,
+                                hint,
+                                &error);
+
+        QOrganizerItem ocurr = items.at(1);
+        ocurr.setDescription(QString("%1 modified").arg(descriptionValue));
+        items.clear();
+        items << ocurr;
+        saveResult = m_engine->saveItems(&items,
+                                         QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                         &errorMap,
+                                         &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
+        QVERIFY(errorMap.isEmpty());
+        QTRY_COMPARE_WITH_TIMEOUT(itemsAdded.count(), 2, 10000);
+
+        // Fetch items by date and check if the modified recurrence has his own id
+        items = m_engine->items(filter,
+                                QDateTime(QDate(2013, 12, 1), QTime(0,0,0)),
+                                QDateTime(QDate(2013, 12, 31), QTime(0,0,0)),
+                                100,
+                                sort,
+                                hint,
+                                &error);
+
+        // Check if the modified item appear on the list
+        QOrganizerItem ocurr1 = items.at(1);
+        QCOMPARE(ocurr1.description(), QString("%1 modified").arg(descriptionValue));
+        QVERIFY(!ocurr1.id().isNull());
+    }
 };
 
 QTEST_MAIN(RecurrenceTest)

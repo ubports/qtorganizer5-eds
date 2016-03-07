@@ -217,9 +217,11 @@ private:
     // glib callback
     void itemsAsync(QtOrganizer::QOrganizerItemFetchRequest *req);
     static void itemsAsyncStart(FetchRequestData *data);
-    static void itemsAsyncListed(ECalComponent *comp, time_t instanceStart, time_t instanceEnd, FetchRequestData *data);
+    static gboolean itemsAsyncListed(ECalComponent *comp, time_t instanceStart, time_t instanceEnd, FetchRequestData *data);
     static void itemsAsyncDone(FetchRequestData *data);
     static void itemsAsyncListedAsComps(GObject *source, GAsyncResult *res, FetchRequestData *data);
+    static void itemsAsyncFetchDeatachedItems(FetchRequestData *data);
+    static void itemsAsyncListByIdListed(GObject *source, GAsyncResult *res, FetchRequestData *data);
 
     void itemsByIdAsync(QtOrganizer::QOrganizerItemFetchByIdRequest *req);
     static void itemsByIdAsyncStart(FetchByIdRequestData *data);
