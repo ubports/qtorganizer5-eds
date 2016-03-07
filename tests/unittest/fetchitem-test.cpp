@@ -24,6 +24,7 @@
 #include <QtOrganizer>
 
 #include "qorganizer-eds-engine.h"
+#include "qorganizer-eds-requestdata.h"
 #include "eds-base-test.h"
 
 
@@ -92,6 +93,11 @@ private Q_SLOTS:
         EDSBaseTest::cleanup();
     }
 
+    void cleanup()
+    {
+        QTRY_COMPARE(RequestData::instanceCount(), 0);
+    }
+
     void testFetchById()
     {
         QList<QOrganizerItemId> request;
@@ -116,8 +122,6 @@ private Q_SLOTS:
                         qDebug() << "\t" << de;
                         qDebug() << "\t" << d;
                         QFAIL("Retrieved item is not equal");
-                    } else {
-                        qDebug() << "Detail equal";
                     }
                 }
             }

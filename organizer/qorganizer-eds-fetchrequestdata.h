@@ -22,6 +22,8 @@
 #include "qorganizer-eds-requestdata.h"
 #include <glib.h>
 
+class FetchRequestDataParseListener;
+
 class FetchRequestData : public RequestData
 {
 public:
@@ -36,6 +38,7 @@ public:
     time_t endDate() const;
     bool hasDateInterval() const;
     bool filterIsValid() const;
+    void cancel();
 
     void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError,
                 QtOrganizer::QOrganizerAbstractRequest::State state = QtOrganizer::QOrganizerAbstractRequest::FinishedState);
@@ -43,8 +46,8 @@ public:
     int appendResults(QList<QtOrganizer::QOrganizerItem> results);
     QString dateFilter();
 
-
 private:
+    FetchRequestDataParseListener *m_parseListener;
     QMap<QString, GSList*> m_components;
     QStringList m_collections;
     QString m_current;
@@ -53,6 +56,27 @@ private:
 
     QStringList filterCollections(const QStringList &collections) const;
     QStringList collectionsFromFilter(const QtOrganizer::QOrganizerItemFilter &f) const;
+    void finishContinue(QtOrganizer::QOrganizerManager::Error error,
+                        QtOrganizer::QOrganizerAbstractRequest::State state);
+
+    friend class FetchRequestDataParseListener;
+};
+
+class FetchRequestDataParseListener : public QObject
+{
+    Q_OBJECT
+public:
+    FetchRequestDataParseListener(FetchRequestData *data,
+                                  QtOrganizer::QOrganizerManager::Error error,
+                                  QtOrganizer::QOrganizerAbstractRequest::State state);
+
+private Q_SLOTS:
+    void onParseDone(QList<QtOrganizer::QOrganizerItem> results);
+
+private:
+    FetchRequestData *m_data;
+    QtOrganizer::QOrganizerManager::Error m_error;
+    QtOrganizer::QOrganizerAbstractRequest::State m_state;
 };
 
 #endif

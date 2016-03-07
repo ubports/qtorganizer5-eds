@@ -31,6 +31,7 @@ FetchRequestData::FetchRequestData(QOrganizerEDSEngine *engine,
                                    QStringList collections,
                                    QOrganizerAbstractRequest *req)
     : RequestData(engine, req),
+      m_parseListener(0),
       m_currentComponents(0)
 {
     // filter collections related with the query
@@ -39,6 +40,8 @@ FetchRequestData::FetchRequestData(QOrganizerEDSEngine *engine,
 
 FetchRequestData::~FetchRequestData()
 {
+    delete m_parseListener;
+
     Q_FOREACH(GSList *components, m_components.values()) {
         g_slist_free_full(components, (GDestroyNotify)icalcomponent_free);
     }
@@ -107,18 +110,49 @@ bool FetchRequestData::filterIsValid() const
     return (request<QOrganizerItemFetchRequest>()->filter().type() != QOrganizerItemFilter::InvalidFilter);
 }
 
+void FetchRequestData::cancel()
+{
+    if (m_parseListener) {
+        delete m_parseListener;
+        m_parseListener = 0;
+    }
+    RequestData::cancel();
+}
+
 void FetchRequestData::finish(QOrganizerManager::Error error,
                               QOrganizerAbstractRequest::State state)
 {
-    QOrganizerItemFetchRequest *req = request<QOrganizerItemFetchRequest>();
-    QList<QOrganizerItemDetail::DetailType> detailHint = req->fetchHint().detailTypesHint();
-
-    Q_FOREACH(const QString &key, m_components.keys()) {
-        GSList *components = m_components.value(key);
-        if (components) {
-            appendResults(parent()->parseEvents(key, components, true, detailHint));
-            g_slist_free_full(components, (GDestroyNotify)icalcomponent_free);
+    if (!m_components.isEmpty()) {
+        m_parseListener = new FetchRequestDataParseListener(this,
+                                                            error,
+                                                            state);
+#if 1
+        parent()->parseEventsAsync(m_components,
+                                   true,
+                                   request<QOrganizerItemFetchRequest>()->fetchHint().detailTypesHint(),
+                                   m_parseListener,
+                                   SLOT(onParseDone(QList<QtOrganizer::QOrganizerItem>)));
+#else
+        Q_FOREACH(const QString &id, m_components.keys()) {
+            appendResults(parent()->parseEvents(id, m_components[id], true, request<QOrganizerItemFetchRequest>()->fetchHint().detailTypesHint()));
         }
+        finishContinue(error, state);
+#endif
+    } else {
+        finishContinue(error, state);
+    }
+}
+
+void FetchRequestData::finishContinue(QOrganizerManager::Error error,
+                                      QOrganizerAbstractRequest::State state)
+{
+    if (m_parseListener) {
+        m_parseListener->deleteLater();
+        m_parseListener = 0;
+    }
+
+    Q_FOREACH(GSList *components, m_components.values()) {
+        g_slist_free_full(components, (GDestroyNotify)icalcomponent_free);
     }
     m_components.clear();
 
@@ -240,4 +274,21 @@ QStringList FetchRequestData::collectionsFromFilter(const QOrganizerItemFilter &
 
     return result;
 }
+
+FetchRequestDataParseListener::FetchRequestDataParseListener(FetchRequestData *data,
+                                                             QOrganizerManager::Error error,
+                                                             QOrganizerAbstractRequest::State state)
+    : QObject(0),
+      m_data(data),
+      m_error(error),
+      m_state(state)
+{
+}
+
+void FetchRequestDataParseListener::onParseDone(QList<QOrganizerItem> results)
+{
+    m_data->appendResults(results);
+    m_data->finishContinue(m_error, m_state);
+}
+
 
