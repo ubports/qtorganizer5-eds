@@ -142,7 +142,7 @@ private:
     QOrganizerEDSEngineData *d;
     QMap<QtOrganizer::QOrganizerAbstractRequest*, RequestData*> m_runningRequests;
 
-    QList<QtOrganizer::QOrganizerItem> parseEvents(const QString &collectionId, GSList *events, bool isIcalEvents);
+    QList<QtOrganizer::QOrganizerItem> parseEvents(const QString &collectionId, GSList *events, bool isIcalEvents, QList<QtOrganizer::QOrganizerItemDetail::DetailType> detailsHint);
     static GSList *parseItems(ECalClient *client, QList<QtOrganizer::QOrganizerItem> items, bool *hasRecurrence);
 
     // QOrganizerItem -> ECalComponent
@@ -177,7 +177,7 @@ private:
     static void parseDescription(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseComments(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseTags(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
-    static void parseReminders(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
+    static void parseReminders(ECalComponent *comp, QtOrganizer::QOrganizerItem *item, QList<QtOrganizer::QOrganizerItemDetail::DetailType> detailsHint = QList<QtOrganizer::QOrganizerItemDetail::DetailType>());
     static QUrl dencodeAttachment(ECalComponentAlarm *alarm);
     static void parseAudibleReminderAttachment(ECalComponentAlarm *alarm, QtOrganizer::QOrganizerItemReminder *aDetail);
     static void parseVisualReminderAttachment(ECalComponentAlarm *alarm, QtOrganizer::QOrganizerItemReminder *aDetail);
@@ -199,9 +199,9 @@ private:
     static QDateTime fromIcalTime(struct icaltimetype value, const char *tzId);
     static icaltimetype fromQDateTime(const QDateTime &dateTime, bool allDay, QByteArray *tzId);
 
-    static QtOrganizer::QOrganizerItem *parseEvent(ECalComponent *comp);
-    static QtOrganizer::QOrganizerItem *parseToDo(ECalComponent *comp);
-    static QtOrganizer::QOrganizerItem *parseJournal(ECalComponent *comp);
+    static QtOrganizer::QOrganizerItem *parseEvent(ECalComponent *comp, QList<QtOrganizer::QOrganizerItemDetail::DetailType> detailsHint);
+    static QtOrganizer::QOrganizerItem *parseToDo(ECalComponent *comp, QList<QtOrganizer::QOrganizerItemDetail::DetailType> detailsHint);
+    static QtOrganizer::QOrganizerItem *parseJournal(ECalComponent *comp, QList<QtOrganizer::QOrganizerItemDetail::DetailType> detailsHint);
 
     static ECalComponent *createDefaultComponent(ECalClient *client, icalcomponent_kind iKind, ECalComponentVType eType);
     static ECalComponent *parseEventItem(ECalClient *client, const QtOrganizer::QOrganizerItem &item);

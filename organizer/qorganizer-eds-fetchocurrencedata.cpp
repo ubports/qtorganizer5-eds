@@ -68,8 +68,10 @@ void FetchOcurrenceData::finish(QOrganizerManager::Error error,
     QList<QtOrganizer::QOrganizerItem> results;
 
     if (m_components) {
-        QString collectionId = request<QOrganizerItemOccurrenceFetchRequest>()->parentItem().collectionId().toString();
-        results = parent()->parseEvents(collectionId, m_components, true);
+        QOrganizerItemOccurrenceFetchRequest *req = request<QOrganizerItemOccurrenceFetchRequest>();
+        QString collectionId = req->parentItem().collectionId().toString();
+        results = parent()->parseEvents(collectionId, m_components, true,
+                                        req->fetchHint().detailTypesHint());
         g_slist_free_full(m_components, (GDestroyNotify)icalcomponent_free);
         m_components = 0;
     }
