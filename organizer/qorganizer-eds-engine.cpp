@@ -1340,6 +1340,10 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
         *tzId = QByteArray(icaltimezone_get_tzid(timezone));
         return icaltime_from_timet_with_zone(finalDate.toTime_t(), allDay, timezone);
     } else {
+        if (!finalDate.isValid()) {
+            finalDate = QDateTime(finalDate.date(),
+                                  allDay || !finalDate.time().isValid() ? QTime(0, 0, 0) : finalDate.time());
+        }
         *tzId = "";
         return icaltime_from_timet(finalDate.toTime_t(), allDay);
     }
@@ -2078,8 +2082,18 @@ void QOrganizerEDSEngine::parseEndTime(const QOrganizerItem &item, ECalComponent
 {
     QOrganizerEventTime etr = item.detail(QOrganizerItemDetail::TypeEventTime);
     if (!etr.isEmpty()) {
+        QDateTime eventEndDateTime = etr.endDateTime();
+        if (etr.startDateTime() > eventEndDateTime) {
+            eventEndDateTime = etr.startDateTime();
+        }
+
+        if (etr.isAllDay() &&
+            (eventEndDateTime.date() == etr.startDateTime().date())) {
+            eventEndDateTime = etr.startDateTime().addDays(1);
+        }
+
         QByteArray tzId;
-        struct icaltimetype ict = fromQDateTime(etr.endDateTime(), etr.isAllDay(), &tzId);
+        struct icaltimetype ict = fromQDateTime(eventEndDateTime, etr.isAllDay(), &tzId);
         ECalComponentDateTime dt;
         dt.tzid = tzId.isEmpty() ? NULL : tzId.constData();
         dt.value = &ict;
@@ -2270,8 +2284,18 @@ void QOrganizerEDSEngine::parseDueDate(const QtOrganizer::QOrganizerItem &item, 
 {
     QOrganizerTodoTime ttr = item.detail(QOrganizerItemDetail::TypeTodoTime);
     if (!ttr.isEmpty() && !ttr.dueDateTime().isNull()) {
+        QDateTime dueDateTime = ttr.dueDateTime();
+        if (ttr.startDateTime() > dueDateTime) {
+            dueDateTime = ttr.startDateTime();
+        }
+
+        if (ttr.isAllDay() &&
+            (dueDateTime.date() == ttr.startDateTime().date())) {
+            dueDateTime = ttr.startDateTime().addDays(1);
+        }
+
         QByteArray tzId;
-        struct icaltimetype ict = fromQDateTime(ttr.dueDateTime(), ttr.isAllDay(), &tzId);
+        struct icaltimetype ict = fromQDateTime(dueDateTime, ttr.isAllDay(), &tzId);
         ECalComponentDateTime dt;
         dt.tzid = tzId.isEmpty() ? NULL : tzId.constData();
         dt.value = &ict;
