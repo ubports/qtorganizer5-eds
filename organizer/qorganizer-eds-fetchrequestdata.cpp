@@ -174,10 +174,14 @@ void FetchRequestData::finishContinue(QOrganizerManager::Error error,
     }
     m_components.clear();
 
-    QOrganizerManagerEngine::updateItemFetchRequest(request<QOrganizerItemFetchRequest>(),
-                                                    m_results,
-                                                    error,
-                                                    state);
+    QOrganizerItemFetchRequest *req =  request<QOrganizerItemFetchRequest>();
+    if (req) {
+        QOrganizerManagerEngine::updateItemFetchRequest(req,
+                                                        m_results,
+                                                        error,
+                                                        state);
+    }
+
     // TODO: emit changeset???
     RequestData::finish(error, state);
 }
