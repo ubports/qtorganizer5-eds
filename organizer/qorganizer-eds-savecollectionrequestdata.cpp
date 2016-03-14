@@ -72,7 +72,14 @@ void SaveCollectionRequestData::commitSourceCreated()
 
     for(; i != 0; i = i->next) {
         ESource *source = E_SOURCE(i->data);
-        QOrganizerCollection collection = parent()->d->m_sourceRegistry->insert(source);
+        SourceRegistry *registry = parent()->d->m_sourceRegistry;
+        QOrganizerCollection collection =registry->insert(source);
+        bool isDefault = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(source), "is-default"));
+        if (isDefault) {
+            SourceRegistry *registry = parent()->d->m_sourceRegistry;
+            Q_ASSERT(registry);
+            registry->setDefaultCollection(collection);
+        }
         m_results.insert(m_sources.key(source), collection);
         m_changeSet.insertAddedCollection(collection.id());
     }
@@ -86,8 +93,16 @@ void SaveCollectionRequestData::commitSourceUpdated(ESource *source,
 
     if (error == QOrganizerManager::NoError) {
         QOrganizerEDSCollectionEngineId *id;
-        QOrganizerCollection collection = SourceRegistry::parseSource(source, &id);
+        bool isDefault = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(source), "is-default"));
+        QOrganizerCollection collection = SourceRegistry::parseSource(source, isDefault, &id);
         m_results.insert(index, collection);
+
+        if (isDefault) {
+            SourceRegistry *registry = parent()->d->m_sourceRegistry;
+            Q_ASSERT(registry);
+            registry->setDefaultCollection(collection);
+        }
+
         m_changeSet.insertChangedCollection(collection.id());
     } else {
         m_errorMap.insert(index, error);
@@ -194,6 +209,10 @@ void SaveCollectionRequestData::parseCollections()
             // update selected
             bool selected = collection.extendedMetaData(COLLECTION_SELECTED_METADATA).toBool();
             e_source_selectable_set_selected(E_SOURCE_SELECTABLE(extCalendar), selected);
+
+            // default collection
+            bool isDefault = collection.extendedMetaData(COLLECTION_DEFAULT_METADATA).toBool();
+            g_object_set_data(G_OBJECT(source), "is-default", GINT_TO_POINTER(isDefault));
 
             m_sources.insert(index, source);
             if (isNew) {
