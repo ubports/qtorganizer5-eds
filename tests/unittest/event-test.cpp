@@ -578,6 +578,93 @@ private Q_SLOTS:
         QCOMPARE(eventResult.endDateTime().time(), QTime(0, 0, 0));
     }
 
+    void testModifyAllDayEvent()
+    {
+        static QString displayLabelValue = QStringLiteral("All day title");
+        static QString descriptionValue = QStringLiteral("All day description");
+
+        QDateTime eventDateTime = QDateTime(QDate(2013, 9, 3), QTime(0,30,0));
+        QOrganizerEvent event;
+        event.setStartDateTime(eventDateTime);
+        event.setEndDateTime(eventDateTime.addDays(1));
+        event.setDisplayLabel(displayLabelValue);
+        event.setDescription(descriptionValue);
+        event.setAllDay(true);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        items << event;
+        bool saveResult = m_engine->saveItems(&items,
+                                            QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                            &errorMap,
+                                            &error);
+        QVERIFY(saveResult);
+
+        QOrganizerEvent eventResult = static_cast<QOrganizerEvent>(items[0]);
+        eventResult.setDescription(QStringLiteral("New description"));
+        items.clear();
+        items << eventResult;
+        saveResult = m_engine->saveItems(&items,
+                                         QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                         &errorMap,
+                                         &error);
+
+        QOrganizerItemFetchHint hint;
+        QList<QOrganizerItemId> ids;
+        ids << items[0].id();
+        items = m_engine->items(ids, hint, &errorMap, &error);
+        QCOMPARE(items.count(), 1);
+
+        eventResult = static_cast<QOrganizerEvent>(items[0]);
+        QCOMPARE(eventResult.description(), QStringLiteral("New description"));
+        QCOMPARE(eventResult.isAllDay(), true);
+        QCOMPARE(eventResult.startDateTime().date(), eventDateTime.date());
+        QCOMPARE(eventResult.startDateTime().time(), QTime(0, 0, 0));
+        QCOMPARE(eventResult.endDateTime().date(), eventDateTime.date().addDays(1));
+        QCOMPARE(eventResult.endDateTime().time(), QTime(0, 0, 0));
+    }
+
+    void testCreateAllDayEventWithInvalidEndDate()
+    {
+        static QString displayLabelValue = QStringLiteral("All day title");
+        static QString descriptionValue = QStringLiteral("All day description");
+
+        QDateTime eventDateTime = QDateTime(QDate(2013, 9, 3), QTime(0,30,0));
+        QOrganizerEvent event;
+        event.setStartDateTime(eventDateTime);
+        event.setEndDateTime(eventDateTime.addDays(-10));
+        event.setDisplayLabel(displayLabelValue);
+        event.setDescription(descriptionValue);
+        event.setAllDay(true);
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        items << event;
+        bool saveResult = m_engine->saveItems(&items,
+                                            QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                            &errorMap,
+                                            &error);
+        QVERIFY(saveResult);
+        QCOMPARE(error, QOrganizerManager::NoError);
+        QVERIFY(errorMap.isEmpty());
+        QOrganizerItemId id = items[0].id();
+        QVERIFY(!id.isNull());
+
+        QOrganizerItemFetchHint hint;
+        QList<QOrganizerItemId> ids;
+        ids << items[0].id();
+        items = m_engine->items(ids, hint, &errorMap, &error);
+        QCOMPARE(items.count(), 1);
+
+        QOrganizerEvent eventResult = static_cast<QOrganizerEvent>(items[0]);
+        QCOMPARE(eventResult.isAllDay(), true);
+        QCOMPARE(eventResult.startDateTime().date(), eventDateTime.date());
+        QCOMPARE(eventResult.startDateTime().time(), QTime(0, 0, 0));
+        QCOMPARE(eventResult.endDateTime().date(), eventDateTime.date().addDays(1));
+        QCOMPARE(eventResult.endDateTime().time(), QTime(0, 0, 0));
+    }
 
     void testCreateTodoEventWithStartDate()
     {
@@ -997,6 +1084,178 @@ private Q_SLOTS:
                     QByteArray("http://canonical.com"));
         }
     }
+
+    void testFetchHint()
+    {
+        static QString displayLabelValue = QStringLiteral("event for fetch hint test");
+        static QString descriptionValue = QStringLiteral("event for fetch hint test");
+        QOrganizerItemId itemId;
+
+        {
+            QOrganizerEvent event;
+            event.setStartDateTime(QDateTime::currentDateTime());
+            event.setEndDateTime(QDateTime::currentDateTime().addSecs(60 * 30));
+            event.setDisplayLabel(displayLabelValue);
+            event.setDescription(descriptionValue);
+
+            // TAGS
+            event.setTags(QStringList() << "Tag0" << "Tag1" << "Tag2");
+
+            // ExtendedDetails
+            QOrganizerItemExtendedDetail ex;
+            ex.setName(QStringLiteral("X-URL"));
+            ex.setData(QByteArray("http://canonical.com"));
+            event.saveDetail(&ex);
+
+            // Reminders
+            QOrganizerItemVisualReminder vReminder;
+            vReminder.setDataUrl(QUrl("http://www.alarms.com"));
+            vReminder.setMessage("Test visual reminder");
+            event.saveDetail(&vReminder);
+
+            QOrganizerItemAudibleReminder aReminder;
+            aReminder.setSecondsBeforeStart(0);
+            aReminder.setDataUrl(QUrl("http://www.audible.com"));
+            event.saveDetail(&aReminder);
+
+            // Attendee
+            QOrganizerEventAttendee attendee;
+            attendee.setAttendeeId("Attendee ID");
+            attendee.setEmailAddress("test@email.com");
+            attendee.setName("Attendee Name");
+            attendee.setParticipationRole(QOrganizerEventAttendee::RoleHost);
+            attendee.setParticipationStatus(QOrganizerEventAttendee::StatusAccepted);
+            event.saveDetail(&attendee);
+
+            // save the new item
+            QtOrganizer::QOrganizerManager::Error error;
+            QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+            QList<QOrganizerItem> items;
+            QSignalSpy createdItem(m_engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+            items << event;
+            bool saveResult = m_engine->saveItems(&items,
+                                                  QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                                  &errorMap,
+                                                  &error);
+            QTRY_COMPARE(createdItem.count(), 1);
+            QVERIFY(saveResult);
+            itemId = items[0].id();
+        }
+
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItemId> ids;
+        QOrganizerItemFetchHint hint;
+        ids << itemId;
+
+        // Fetch ExtendedDetails
+        {
+            QList<QOrganizerItemDetail::DetailType> details;
+            details << QOrganizerItemDetail::TypeExtendedDetail;
+            hint.setDetailTypesHint(details);
+            QList<QOrganizerItem> items = m_engine->items(ids, hint, &errorMap, &error);
+            QCOMPARE(items.size(), 1);
+            QOrganizerEvent event = items[0];
+            QList<QOrganizerItemDetail> xDetails = event.details(QOrganizerItemDetail::TypeExtendedDetail);
+            QList<QOrganizerItemDetail> vreminders = event.details(QOrganizerItemDetail::TypeVisualReminder);
+            QList<QOrganizerItemDetail> areminders = event.details(QOrganizerItemDetail::TypeAudibleReminder);
+            QList<QOrganizerItemDetail> attendee = event.details(QOrganizerItemDetail::TypeEventAttendee);
+            QStringList tags = event.tags();
+
+            QCOMPARE(xDetails.size(), 1);
+            QCOMPARE(vreminders.size(), 0);
+            QCOMPARE(areminders.size(), 0);
+            QCOMPARE(attendee.size(), 0);
+            QCOMPARE(tags.size(), 0);
+        }
+
+        // Fetch TAGS, Attendee
+        {
+            QList<QOrganizerItemDetail::DetailType> details;
+            details << QOrganizerItemDetail::TypeTag
+                    << QOrganizerItemDetail::TypeEventAttendee;
+            hint.setDetailTypesHint(details);
+            QList<QOrganizerItem> items = m_engine->items(ids, hint, &errorMap, &error);
+            QCOMPARE(items.size(), 1);
+            QOrganizerEvent event = items[0];
+            QList<QOrganizerItemDetail> xDetails = event.details(QOrganizerItemDetail::TypeExtendedDetail);
+            QList<QOrganizerItemDetail> vreminders = event.details(QOrganizerItemDetail::TypeVisualReminder);
+            QList<QOrganizerItemDetail> areminders = event.details(QOrganizerItemDetail::TypeAudibleReminder);
+            QList<QOrganizerItemDetail> attendee = event.details(QOrganizerItemDetail::TypeEventAttendee);
+            QStringList tags = event.tags();
+
+            QCOMPARE(xDetails.size(), 0);
+            QCOMPARE(vreminders.size(), 0);
+            QCOMPARE(areminders.size(), 0);
+            QCOMPARE(attendee.size(), 1);
+            QCOMPARE(tags.size(), 3);
+        }
+
+        // Fetch TAGS, Reminders, Attendee
+        {
+            QList<QOrganizerItemDetail::DetailType> details;
+            details << QOrganizerItemDetail::TypeTag
+                    << QOrganizerItemDetail::TypeEventAttendee
+                    << QOrganizerItemDetail::TypeReminder;
+            hint.setDetailTypesHint(details);
+            QList<QOrganizerItem> items = m_engine->items(ids, hint, &errorMap, &error);
+            QCOMPARE(items.size(), 1);
+            QOrganizerEvent event = items[0];
+            QList<QOrganizerItemDetail> xDetails = event.details(QOrganizerItemDetail::TypeExtendedDetail);
+            QList<QOrganizerItemDetail> vreminders = event.details(QOrganizerItemDetail::TypeVisualReminder);
+            QList<QOrganizerItemDetail> areminders = event.details(QOrganizerItemDetail::TypeAudibleReminder);
+            QList<QOrganizerItemDetail> attendee = event.details(QOrganizerItemDetail::TypeEventAttendee);
+            QStringList tags = event.tags();
+
+            QCOMPARE(xDetails.size(), 0);
+            QCOMPARE(vreminders.size(), 1);
+            QCOMPARE(areminders.size(), 1);
+            QCOMPARE(attendee.size(), 1);
+            QCOMPARE(tags.size(), 3);
+        }
+
+        // Fetch VisualReminders
+        {
+            QList<QOrganizerItemDetail::DetailType> details;
+            details << QOrganizerItemDetail::TypeVisualReminder;
+            hint.setDetailTypesHint(details);
+            QList<QOrganizerItem> items = m_engine->items(ids, hint, &errorMap, &error);
+            QCOMPARE(items.size(), 1);
+            QOrganizerEvent event = items[0];
+            QList<QOrganizerItemDetail> xDetails = event.details(QOrganizerItemDetail::TypeExtendedDetail);
+            QList<QOrganizerItemDetail> vreminders = event.details(QOrganizerItemDetail::TypeVisualReminder);
+            QList<QOrganizerItemDetail> areminders = event.details(QOrganizerItemDetail::TypeAudibleReminder);
+            QList<QOrganizerItemDetail> attendee = event.details(QOrganizerItemDetail::TypeEventAttendee);
+            QStringList tags = event.tags();
+
+            QCOMPARE(xDetails.size(), 0);
+            QCOMPARE(vreminders.size(), 1);
+            QCOMPARE(areminders.size(), 0);
+            QCOMPARE(attendee.size(), 0);
+            QCOMPARE(tags.size(), 0);
+        }
+
+        // Fetch AudibleReminders
+        {
+            QList<QOrganizerItemDetail::DetailType> details;
+            details << QOrganizerItemDetail::TypeAudibleReminder;
+            hint.setDetailTypesHint(details);
+            QList<QOrganizerItem> items = m_engine->items(ids, hint, &errorMap, &error);
+            QCOMPARE(items.size(), 1);
+            QOrganizerEvent event = items[0];
+            QList<QOrganizerItemDetail> xDetails = event.details(QOrganizerItemDetail::TypeExtendedDetail);
+            QList<QOrganizerItemDetail> vreminders = event.details(QOrganizerItemDetail::TypeVisualReminder);
+            QList<QOrganizerItemDetail> areminders = event.details(QOrganizerItemDetail::TypeAudibleReminder);
+            QList<QOrganizerItemDetail> attendee = event.details(QOrganizerItemDetail::TypeEventAttendee);
+            QStringList tags = event.tags();
+
+            QCOMPARE(xDetails.size(), 0);
+            QCOMPARE(vreminders.size(), 0);
+            QCOMPARE(areminders.size(), 1);
+            QCOMPARE(attendee.size(), 0);
+            QCOMPARE(tags.size(), 0);
+        }
+   }
 };
 
 const QString EventTest::collectionTypePropertyName = QStringLiteral("collection-type");

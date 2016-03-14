@@ -25,6 +25,7 @@
 #include <QtOrganizer>
 
 #include "qorganizer-eds-engine.h"
+#include "qorganizer-eds-source-registry.h"
 #include "eds-base-test.h"
 
 
@@ -194,6 +195,9 @@ private Q_SLOTS:
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(!collection.id().isNull());
         QTRY_COMPARE(collectionCreated.count(), 1);
+
+        // wait for the collection to became writable
+        QTRY_COMPARE_WITH_TIMEOUT(collection.extendedMetaData(QStringLiteral(COLLECTION_READONLY_METADATA)).toBool(), true, 10000);
 
         // Check if the collection was stored correct
         QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), &error);

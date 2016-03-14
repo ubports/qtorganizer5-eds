@@ -1,3 +1,18 @@
+qtorganizer5-eds (0.1.1+16.04.20160307-0ubuntu1) xenial; urgency=medium
+
+  * Avoid query on sources that is not part of the filter.
+  * Fix qdatetime value before convert it to time_t. Update event end
+    time if saving event with startDate > endDate;
+  * Implemented event parse EDS -> QOrganizer in a thread to avoid main
+    thread be blocked.
+  * Implemented support for filter event details during the event query.
+  * Optimize event query.
+  * Populate event list with detached events.
+  * Request a new source from EDS if the actual source still marked as
+    not removable.
+
+ -- Renato Araujo Oliveira Filho <renato.filho@canonical.com>  Mon, 07 Mar 2016 17:42:01 +0000
+
 qtorganizer5-eds (0.1.1+16.04.20151029-0ubuntu1) xenial; urgency=medium
 
   [ Gary.Wzl ]

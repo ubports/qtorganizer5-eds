@@ -51,6 +51,7 @@ EDSBaseTest::EDSBaseTest()
 {
     qRegisterMetaType<QList<QOrganizerCollectionId> >();
     qRegisterMetaType<QList<QOrganizerItemId> >();
+    qRegisterMetaType<QList<QOrganizerItem> >();
     QCoreApplication::addLibraryPath(QORGANIZER_DEV_PATH);
 }
 
@@ -70,6 +71,7 @@ void EDSBaseTest::init()
 
 void EDSBaseTest::cleanup()
 {
+    QTest::qWait(1000);
 }
 
 QString EDSBaseTest::getEventFromEvolution(const QOrganizerItemId &id,
