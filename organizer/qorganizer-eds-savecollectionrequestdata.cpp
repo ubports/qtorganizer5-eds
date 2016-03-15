@@ -73,11 +73,10 @@ void SaveCollectionRequestData::commitSourceCreated()
     for(; i != 0; i = i->next) {
         ESource *source = E_SOURCE(i->data);
         SourceRegistry *registry = parent()->d->m_sourceRegistry;
-        QOrganizerCollection collection =registry->insert(source);
+        Q_ASSERT(registry);
+        QOrganizerCollection collection = registry->insert(source);
         bool isDefault = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(source), "is-default"));
         if (isDefault) {
-            SourceRegistry *registry = parent()->d->m_sourceRegistry;
-            Q_ASSERT(registry);
             registry->setDefaultCollection(collection);
         }
         m_results.insert(m_sources.key(source), collection);
