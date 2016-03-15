@@ -31,6 +31,7 @@
 #define COLLECTION_CALLENDAR_TYPE_METADATA  "collection-type"
 #define COLLECTION_SELECTED_METADATA        "collection-selected"
 #define COLLECTION_READONLY_METADATA        "collection-readonly"
+#define COLLECTION_DEFAULT_METADATA         "collection-default"
 
 class SourceRegistry : public QObject
 {
@@ -42,6 +43,7 @@ public:
     ESourceRegistry *object() const;
     void load();
     QtOrganizer::QOrganizerCollection defaultCollection() const;
+    void setDefaultCollection(QtOrganizer::QOrganizerCollection &collection);
     QtOrganizer::QOrganizerCollection collection(const QString &collectionId) const;
     QList<QtOrganizer::QOrganizerCollection> collections() const;
     QStringList collectionsIds() const;
@@ -56,6 +58,7 @@ public:
     void clear();
 
     static QtOrganizer::QOrganizerCollection parseSource(ESource *source,
+                                                         bool isDefault,
                                                          QOrganizerEDSCollectionEngineId **edsId);
 
 Q_SIGNALS:
@@ -77,10 +80,13 @@ private:
     int m_sourceChangedId;
     int m_sourceEnabledId;
     int m_sourceDisabledId;
+    int m_defaultSourceChangedId;
 
     QString findCollection(ESource *source) const;
-    QtOrganizer::QOrganizerCollection registerSource(ESource *source);
+    QtOrganizer::QOrganizerCollection registerSource(ESource *source, bool isDefault = false);
+    void updateDefaultCollection(QtOrganizer::QOrganizerCollection *collection);
     static void updateCollection(QtOrganizer::QOrganizerCollection *collection,
+                                 bool isDefault,
                                  ESource *source,
                                  EClient *client = 0);
 
@@ -95,6 +101,9 @@ private:
     static void onSourceRemoved(ESourceRegistry *registry,
                                 ESource *source,
                                 SourceRegistry *self);
+    static void onDefaultCalendarChanged(ESourceRegistry *registry,
+                                         GParamSpec *pspec,
+                                         SourceRegistry *self);
 };
 
 #endif

@@ -12,7 +12,8 @@ SourceRegistry::SourceRegistry(QObject *parent)
       m_sourceRemovedId(0),
       m_sourceChangedId(0),
       m_sourceEnabledId(0),
-      m_sourceDisabledId(0)
+      m_sourceDisabledId(0),
+      m_defaultSourceChangedId(0)
 {
 }
 
@@ -26,6 +27,7 @@ SourceRegistry::~SourceRegistry()
         g_signal_handler_disconnect(m_sourceRegistry, m_sourceChangedId);
         g_signal_handler_disconnect(m_sourceRegistry, m_sourceEnabledId);
         g_signal_handler_disconnect(m_sourceRegistry, m_sourceDisabledId);
+        g_signal_handler_disconnect(m_sourceRegistry, m_defaultSourceChangedId);
 
         g_clear_object(&m_sourceRegistry);
 
@@ -73,7 +75,10 @@ void SourceRegistry::load()
                      "source-removed",
                      (GCallback) SourceRegistry::onSourceRemoved,
                      this);
-
+    m_defaultSourceChangedId =  g_signal_connect(m_sourceRegistry,
+                     "notify::default-calendar",
+                      G_CALLBACK(SourceRegistry::onDefaultCalendarChanged),
+                      this);
 
     // We use calendar as default source, if you are trying to use other source type
     // you need to set the item source id manually
@@ -82,9 +87,10 @@ void SourceRegistry::load()
     GList *sources = e_source_registry_list_sources(m_sourceRegistry, 0);
     for(int i = 0, iMax = g_list_length(sources); i < iMax; i++) {
         ESource *source = E_SOURCE(g_list_nth_data(sources, i));
+        bool isDefault = e_source_equal(defaultCalendarSource, source);
 
-        QOrganizerCollection collection = registerSource(source);
-        if (e_source_equal(defaultCalendarSource, source)) {
+        QOrganizerCollection collection = registerSource(source, isDefault);
+        if (isDefault) {
             m_defaultCollection = collection;
         }
     }
@@ -100,6 +106,19 @@ void SourceRegistry::load()
 QtOrganizer::QOrganizerCollection SourceRegistry::defaultCollection() const
 {
     return m_defaultCollection;
+}
+
+void SourceRegistry::setDefaultCollection(QtOrganizer::QOrganizerCollection &collection)
+{
+    if (m_defaultCollection.id() == collection.id())
+        return;
+
+    QOrganizerEDSCollectionEngineId *eid = m_collectionsMap.value(collection.id().toString(), 0);
+    if (eid && eid->m_esource) {
+        e_source_registry_set_default_calendar(m_sourceRegistry, eid->m_esource);
+    } else {
+        qWarning() << "Fail to set default collection" << collection.id();
+    }
 }
 
 QOrganizerCollection SourceRegistry::collection(const QString &collectionId) const
@@ -228,7 +247,7 @@ QString SourceRegistry::findCollection(ESource *source) const
     return QString();
 }
 
-QOrganizerCollection SourceRegistry::registerSource(ESource *source)
+QOrganizerCollection SourceRegistry::registerSource(ESource *source, bool isDefault)
 {
     QString collectionId = findCollection(source);
     if (collectionId.isEmpty()) {
@@ -240,7 +259,7 @@ QOrganizerCollection SourceRegistry::registerSource(ESource *source)
 
         if ( isEnabled && (isCalendar || isTaskList || isMemoList || isAlarms)) {
             QOrganizerEDSCollectionEngineId *edsId = 0;
-            QOrganizerCollection collection = parseSource(source, &edsId);
+            QOrganizerCollection collection = parseSource(source, isDefault, &edsId);
             QString collectionId = collection.id().toString();
 
             if (!m_collectionsMap.contains(collectionId)) {
@@ -262,7 +281,23 @@ QOrganizerCollection SourceRegistry::registerSource(ESource *source)
 
 }
 
+void SourceRegistry::updateDefaultCollection(QOrganizerCollection *collection)
+{
+    if (m_defaultCollection.id() != collection->id()) {
+        QString oldDefaultCollectionId = m_defaultCollection.id().toString();
+
+        collection->setExtendedMetaData(COLLECTION_DEFAULT_METADATA, true);
+        m_defaultCollection = *collection;
+        Q_EMIT sourceUpdated(m_defaultCollection.id().toString());
+
+        QOrganizerCollection &old = m_collections[oldDefaultCollectionId];
+        old.setExtendedMetaData(COLLECTION_DEFAULT_METADATA, false);
+        Q_EMIT sourceUpdated(oldDefaultCollectionId);
+    }
+}
+
 QOrganizerCollection SourceRegistry::parseSource(ESource *source,
+                                                 bool isDefault,
                                                  QOrganizerEDSCollectionEngineId **edsId)
 {
     *edsId = new QOrganizerEDSCollectionEngineId(source);
@@ -270,7 +305,7 @@ QOrganizerCollection SourceRegistry::parseSource(ESource *source,
     QOrganizerCollection collection;
 
     collection.setId(id);
-    updateCollection(&collection, source);
+    updateCollection(&collection, isDefault, source);
     return collection;
 }
 
@@ -290,7 +325,9 @@ void SourceRegistry::onSourceChanged(ESourceRegistry *registry,
     QString collectionId = self->findCollection(source);
     if (!collectionId.isEmpty() && self->m_collections.contains(collectionId)) {
         QOrganizerCollection &collection = self->m_collections[collectionId];
-        self->updateCollection(&collection, source, self->m_clients.value(collectionId));
+        self->updateCollection(&collection,
+                               self->m_defaultCollection.id() == collection.id(),
+                               source, self->m_clients.value(collectionId));
         Q_EMIT self->sourceUpdated(collectionId);
     } else {
         qWarning() << "Source changed not found";
@@ -305,7 +342,27 @@ void SourceRegistry::onSourceRemoved(ESourceRegistry *registry,
     self->remove(source);
 }
 
+void SourceRegistry::onDefaultCalendarChanged(ESourceRegistry *registry,
+                                              GParamSpec *pspec,
+                                              SourceRegistry *self)
+{
+    Q_UNUSED(registry);
+    Q_UNUSED(pspec);
+
+    ESource *defaultCalendar = e_source_registry_ref_default_calendar(self->m_sourceRegistry);
+    if (!defaultCalendar)
+        return;
+
+    QString collectionId = self->findCollection(defaultCalendar);
+    if (!collectionId.isEmpty()) {
+        QOrganizerCollection &collection = self->m_collections[collectionId];
+        self->updateDefaultCollection(&collection);
+    }
+    g_object_unref(defaultCalendar);
+}
+
 void SourceRegistry::updateCollection(QOrganizerCollection *collection,
+                                      bool isDefault,
                                       ESource *source,
                                       EClient *client)
 {
@@ -341,4 +398,7 @@ void SourceRegistry::updateCollection(QOrganizerCollection *collection,
         writable = writable && !e_client_is_readonly(client);
     }
     collection->setExtendedMetaData(COLLECTION_READONLY_METADATA, !writable);
+
+    // default
+    collection->setExtendedMetaData(COLLECTION_DEFAULT_METADATA, isDefault);
 }

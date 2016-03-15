@@ -297,6 +297,60 @@ private Q_SLOTS:
             }
         }
     }
+
+    void testCreateNewDefaultCollection()
+    {
+        static QString newCollection = uniqueCollectionName();
+
+        // Create a new default collection
+        QOrganizerCollection collection;
+        QtOrganizer::QOrganizerManager::Error error;
+        collection.setMetaData(QOrganizerCollection::KeyName, newCollection);
+        collection.setMetaData(QOrganizerCollection::KeyColor, QStringLiteral("red"));
+        collection.setExtendedMetaData(QStringLiteral("collection-selected"), true);
+        collection.setExtendedMetaData(QStringLiteral("collection-default"), true);
+
+        QSignalSpy createdCollection(m_engineRead, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
+        QVERIFY(m_engineWrite->saveCollection(&collection, &error));
+        // create collection
+        QTRY_COMPARE(createdCollection.count(), 1);
+
+        // wait collection to became the default one
+        QTRY_COMPARE_WITH_TIMEOUT(m_engineRead->defaultCollection(0).id(), collection.id(), 5000);
+    }
+
+    void testUpdateDefaultCollection()
+    {
+        static QString newCollectionId = uniqueCollectionName();
+
+        // store current default collection
+        QOrganizerCollection defaultCollection = m_engineRead->defaultCollection(0);
+
+        // Create a collection
+        QOrganizerCollection collection;
+        QtOrganizer::QOrganizerManager::Error error;
+        collection.setMetaData(QOrganizerCollection::KeyName, newCollectionId);
+        QSignalSpy createCollection(m_engineRead, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
+        QVERIFY(m_engineWrite->saveCollection(&collection, &error));
+        QTRY_COMPARE(createCollection.count(), 1);
+        // wait collection to became writable
+        QTRY_VERIFY_WITH_TIMEOUT(!m_engineRead->collection(collection.id(), 0).extendedMetaData("collection-readonly").toBool(), 5000);
+
+        // make sure that the new collection is not default
+        QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), 0);
+        QCOMPARE(newCollection.extendedMetaData(QStringLiteral("collection-default")).toBool(), false);
+        QVERIFY(newCollection.id() != defaultCollection.id());
+
+        // mark new collection as default
+        QSignalSpy changedCollection(m_engineRead, SIGNAL(collectionsChanged(QList<QOrganizerCollectionId>)));
+        newCollection.setExtendedMetaData(QStringLiteral("collection-default"), true);
+        QVERIFY(m_engineWrite->saveCollection(&newCollection, &error));
+        // old default collection will change, and the new one
+        QTRY_COMPARE(changedCollection.count() , 3);
+
+        // wait collection to became the default one
+        QTRY_COMPARE_WITH_TIMEOUT(m_engineRead->defaultCollection(0).id(), newCollection.id(), 5000);
+    }
 };
 
 const QString CollectionTest::collectionTypePropertyName = QStringLiteral("collection-type");
