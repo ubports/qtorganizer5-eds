@@ -1,3 +1,10 @@
+qtorganizer5-eds (0.1.1+16.04.20160315-0ubuntu1) xenial; urgency=medium
+
+  * Implemented support to change the default collection using
+    'collection-default' meta data. (LP: #1373945)
+
+ -- Renato Araujo Oliveira Filho <renato.filho@canonical.com>  Tue, 15 Mar 2016 17:54:13 +0000
+
 qtorganizer5-eds (0.1.1+16.04.20160307-0ubuntu1) xenial; urgency=medium
 
   * Avoid query on sources that is not part of the filter.
