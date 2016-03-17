@@ -20,6 +20,7 @@
 #define __QORGANIZER_EDS_SOURCEREGISTRY_H__
 
 #include <QtCore/QObject>
+#include <QtCore/QSettings>
 
 #include <QtOrganizer/QOrganizerCollectionId>
 #include <QtOrganizer/QOrganizerCollection>
@@ -67,6 +68,7 @@ Q_SIGNALS:
     void sourceUpdated(const QString &collectionId);
 
 private:
+    QSettings m_settings;
     ESourceRegistry *m_sourceRegistry;
     QtOrganizer::QOrganizerCollection m_defaultCollection;
     QMap<QString, EClient*> m_clients;
@@ -82,6 +84,7 @@ private:
     int m_sourceDisabledId;
     int m_defaultSourceChangedId;
 
+    QByteArray defaultCollectionId() const;
     QString findCollection(ESource *source) const;
     QtOrganizer::QOrganizerCollection registerSource(ESource *source, bool isDefault = false);
     void updateDefaultCollection(QtOrganizer::QOrganizerCollection *collection);

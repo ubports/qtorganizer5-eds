@@ -5,6 +5,8 @@
 
 using namespace QtOrganizer;
 
+static const QString DEFAULT_COLLECTION_SETTINGS("qtpim/default-colection");
+
 SourceRegistry::SourceRegistry(QObject *parent)
     : QObject(parent),
       m_sourceRegistry(0),
@@ -80,28 +82,27 @@ void SourceRegistry::load()
                       G_CALLBACK(SourceRegistry::onDefaultCalendarChanged),
                       this);
 
-    // We use calendar as default source, if you are trying to use other source type
-    // you need to set the item source id manually
-    ESource *defaultCalendarSource = e_source_registry_ref_default_calendar(m_sourceRegistry);
-
+    QByteArray defaultId = defaultCollectionId();
     GList *sources = e_source_registry_list_sources(m_sourceRegistry, 0);
+    bool foundDefault = false;
     for(int i = 0, iMax = g_list_length(sources); i < iMax; i++) {
         ESource *source = E_SOURCE(g_list_nth_data(sources, i));
-        bool isDefault = e_source_equal(defaultCalendarSource, source);
-
+        bool isDefault = (g_strcmp0(defaultId.constData(), e_source_get_uid(source)) == 0);
         QOrganizerCollection collection = registerSource(source, isDefault);
+
         if (isDefault) {
+            foundDefault = true;
             m_defaultCollection = collection;
         }
     }
 
-    g_list_free_full(sources, g_object_unref);
-
-    if (defaultCalendarSource) {
-        g_object_unref(defaultCalendarSource);
+    if (!foundDefault) {
+        //fallback to first collection
+        m_defaultCollection = m_collections.first();
     }
-}
 
+    g_list_free_full(sources, g_object_unref);
+}
 
 QtOrganizer::QOrganizerCollection SourceRegistry::defaultCollection() const
 {
@@ -113,12 +114,9 @@ void SourceRegistry::setDefaultCollection(QtOrganizer::QOrganizerCollection &col
     if (m_defaultCollection.id() == collection.id())
         return;
 
-    QOrganizerEDSCollectionEngineId *eid = m_collectionsMap.value(collection.id().toString(), 0);
-    if (eid && eid->m_esource) {
-        e_source_registry_set_default_calendar(m_sourceRegistry, eid->m_esource);
-    } else {
-        qWarning() << "Fail to set default collection" << collection.id();
-    }
+    updateDefaultCollection(&collection);
+    QString edsId = m_defaultCollection.id().toString().split(":").last();
+    m_settings.setValue(DEFAULT_COLLECTION_SETTINGS, edsId);
 }
 
 QOrganizerCollection SourceRegistry::collection(const QString &collectionId) const
@@ -183,6 +181,12 @@ void SourceRegistry::remove(const QString &collectionId)
         if (client) {
             g_object_unref(client);
         }
+    }
+
+    // update default collection if necessary
+    if (m_defaultCollection.id().toString() == collectionId) {
+        m_defaultCollection = QOrganizerCollection();
+        setDefaultCollection(m_collections.first());
     }
 }
 
@@ -290,9 +294,11 @@ void SourceRegistry::updateDefaultCollection(QOrganizerCollection *collection)
         m_defaultCollection = *collection;
         Q_EMIT sourceUpdated(m_defaultCollection.id().toString());
 
-        QOrganizerCollection &old = m_collections[oldDefaultCollectionId];
-        old.setExtendedMetaData(COLLECTION_DEFAULT_METADATA, false);
-        Q_EMIT sourceUpdated(oldDefaultCollectionId);
+        if (m_collections.contains(oldDefaultCollectionId)) {
+            QOrganizerCollection &old = m_collections[oldDefaultCollectionId];
+            old.setExtendedMetaData(COLLECTION_DEFAULT_METADATA, false);
+            Q_EMIT sourceUpdated(oldDefaultCollectionId);
+        }
     }
 }
 
@@ -307,6 +313,20 @@ QOrganizerCollection SourceRegistry::parseSource(ESource *source,
     collection.setId(id);
     updateCollection(&collection, isDefault, source);
     return collection;
+}
+
+QByteArray SourceRegistry::defaultCollectionId() const
+{
+    QVariant id = m_settings.value(DEFAULT_COLLECTION_SETTINGS);
+    if (id.isValid()) {
+        return id.toString().toUtf8();
+    }
+
+    // fallback to eds default collection
+    ESource *defaultCalendarSource = e_source_registry_ref_default_calendar(m_sourceRegistry);
+    QString eId = QString::fromUtf8(e_source_get_uid(defaultCalendarSource));
+    g_object_unref(defaultCalendarSource);
+    return eId.toUtf8();
 }
 
 void SourceRegistry::onSourceAdded(ESourceRegistry *registry,
@@ -348,6 +368,11 @@ void SourceRegistry::onDefaultCalendarChanged(ESourceRegistry *registry,
 {
     Q_UNUSED(registry);
     Q_UNUSED(pspec);
+
+    if (self->m_settings.value(DEFAULT_COLLECTION_SETTINGS).isValid()) {
+        // we are using client confinguration
+        return;
+    }
 
     ESource *defaultCalendar = e_source_registry_ref_default_calendar(self->m_sourceRegistry);
     if (!defaultCalendar)
