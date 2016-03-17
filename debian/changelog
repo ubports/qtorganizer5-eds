@@ -1,3 +1,9 @@
+qtorganizer5-eds (0.1.1+16.04.20160317-0ubuntu1) xenial; urgency=medium
+
+  * Store default collection information on QSettings.
+
+ -- Renato Araujo Oliveira Filho <renato.filho@canonical.com>  Thu, 17 Mar 2016 17:13:20 +0000
+
 qtorganizer5-eds (0.1.1+16.04.20160315-0ubuntu1) xenial; urgency=medium
 
   * Implemented support to change the default collection using
