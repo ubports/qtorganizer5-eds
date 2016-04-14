@@ -1315,11 +1315,12 @@ QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const cha
     } else {
         tmTime = icaltime_as_timet(value);
         QDateTime t = QDateTime::fromTime_t(tmTime).toUTC();
-        // all day or floating time events will be saved with invalid timezone
+        // all day events will be saved with local time
+        // floating time events will be saved with invalid time zone
         return QDateTime(t.date(),
                          // if the event is all day event save with emtpy time
                          (allDayEvent ? QTime() : t.time()),
-                         QTimeZone());
+                         (allDayEvent ? QTimeZone(QTimeZone::systemTimeZoneId()) : QTimeZone()));
     }
 }
 
