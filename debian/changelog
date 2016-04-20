@@ -1,3 +1,10 @@
+qtorganizer5-eds (0.1.1+16.04.20160420-0ubuntu1) xenial; urgency=medium
+
+  * Save all days events in UTC time format to avoid problems with while
+    converting it to QML. (LP: #1563742)
+
+ -- Renato Araujo Oliveira Filho <renato.filho@canonical.com>  Wed, 20 Apr 2016 23:52:18 +0000
+
 qtorganizer5-eds (0.1.1+16.04.20160317-0ubuntu1) xenial; urgency=medium
 
   * Store default collection information on QSettings.
