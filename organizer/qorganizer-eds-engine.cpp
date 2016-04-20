@@ -1314,12 +1314,11 @@ QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const cha
         return QDateTime::fromTime_t(tmTime, qTz);
     } else {
         tmTime = icaltime_as_timet(value);
-        QDateTime t = QDateTime::fromTime_t(tmTime).toUTC();
-        // all day events will be saved with local time
-        // floating time events will be saved with invalid time zone
+        QDateTime t = QDateTime::fromTime_t(tmTime, Qt::UTC);
+        // all day events will set as local time
+        // floating time events will be set with invalid time zone
         return QDateTime(t.date(),
-                         // if the event is all day event save with emtpy time
-                         (allDayEvent ? QTime() : t.time()),
+                         (allDayEvent ? QTime(0,0,0) : t.time()),
                          (allDayEvent ? QTimeZone(QTimeZone::systemTimeZoneId()) : QTimeZone()));
     }
 }
@@ -1361,10 +1360,11 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
         *tzId = QByteArray(icaltimezone_get_tzid(timezone));
         return icaltime_from_timet_with_zone(finalDate.toTime_t(), allDay, timezone);
     } else {
-        if (!finalDate.isValid()) {
-            finalDate = QDateTime(finalDate.date(),
-                                  allDay || !finalDate.time().isValid() ? QTime(0, 0, 0) : finalDate.time());
-        }
+        bool invalidTime = allDay || !finalDate.time().isValid();
+        finalDate = QDateTime(finalDate.date(),
+                              invalidTime ? QTime(0, 0, 0) : finalDate.time(),
+                              Qt::UTC);
+
         *tzId = "";
         return icaltime_from_timet(finalDate.toTime_t(), allDay);
     }
