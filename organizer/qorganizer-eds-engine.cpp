@@ -2444,7 +2444,6 @@ void QOrganizerEDSEngine::parseId(ECalComponent *comp,
                                   QOrganizerItem *item,
                                   QOrganizerEDSCollectionEngineId *edsCollectionId)
 {
-
     ECalComponentId *id = e_cal_component_get_id(comp);
     QOrganizerEDSEngineId *edsParentId = 0;
     QOrganizerEDSEngineId *edsId;
@@ -2738,11 +2737,17 @@ void QOrganizerEDSEngine::parseId(const QOrganizerItem &item, ECalComponent *com
 
         if (!rId.isEmpty()) {
             ECalComponentRange recur_id;
-            struct icaltimetype tt = icaltime_from_string(rId.toUtf8().data());
+
+            // use component tz on recurrence id
+            ECalComponentDateTime dt;
+            e_cal_component_get_dtstart(comp, &dt);
+            dt.value = g_new(icaltimetype, 1);
+            *dt.value = icaltime_from_string(rId.toUtf8().data());
 
             recur_id.type = E_CAL_COMPONENT_RANGE_SINGLE;
-            recur_id.datetime.value = &tt;
+            recur_id.datetime = dt;
             e_cal_component_set_recurid(comp, &recur_id);
+            e_cal_component_free_datetime(&dt);
         }
     }
 }
