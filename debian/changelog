@@ -1,3 +1,10 @@
+qtorganizer5-eds (0.1.1+16.04.20160506.1-0ubuntu1) xenial; urgency=medium
+
+  * Make sure that recurrence-id contains the event timezone. (LP:
+    #1577416)
+
+ -- Renato Araujo Oliveira Filho <renato.filho@canonical.com>  Fri, 06 May 2016 14:46:28 +0000
+
 qtorganizer5-eds (0.1.1+16.04.20160420-0ubuntu1) xenial; urgency=medium
 
   * Save all days events in UTC time format to avoid problems with while
