@@ -88,7 +88,6 @@ QString EDSBaseTest::getEventFromEvolution(const QOrganizerItemId &id,
     if (collectionId.isNull()) {
         calendar.reset(e_source_registry_ref_default_calendar(sourceRegistry.data()));
     } else {
-        qDebug() << "collection" <<  collectionId.toString().split(":").last().toUtf8().data();
         calendar.reset(e_source_registry_ref_source(sourceRegistry.data(),
                                                     collectionId.toString().split(":").last().toUtf8().data()));
     }
