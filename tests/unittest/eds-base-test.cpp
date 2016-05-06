@@ -77,7 +77,6 @@ void EDSBaseTest::cleanup()
 QString EDSBaseTest::getEventFromEvolution(const QOrganizerItemId &id,
                                            const QOrganizerCollectionId &collectionId)
 {
-    QString uid = id.toString().split("/").last();
     GError *error = 0;
     GScopedPointer<ESourceRegistry> sourceRegistry(e_source_registry_new_sync(0, &error));
     if (error) {
@@ -90,7 +89,7 @@ QString EDSBaseTest::getEventFromEvolution(const QOrganizerItemId &id,
         calendar.reset(e_source_registry_ref_default_calendar(sourceRegistry.data()));
     } else {
         calendar.reset(e_source_registry_ref_source(sourceRegistry.data(),
-                                                    collectionId.toString().toUtf8().data()));
+                                                    collectionId.toString().split(":").last().toUtf8().data()));
     }
     GScopedPointer<EClient> client(E_CAL_CLIENT_CONNECT_SYNC(calendar.data(),
                                                              E_CAL_CLIENT_SOURCE_TYPE_EVENTS,
@@ -103,8 +102,20 @@ QString EDSBaseTest::getEventFromEvolution(const QOrganizerItemId &id,
     }
 
     icalcomponent *obj = 0;
+    QString uid = id.toString().split("/").last();
+    QString ruid;
+
+    // recurrence id
+    if (uid.contains("#")) {
+        QStringList ids = uid.split("#");
+        uid = ids[0];
+        ruid = ids[1];
+    }
+
     e_cal_client_get_object_sync(reinterpret_cast<ECalClient*>(client.data()),
-                                 uid.toUtf8().data(), 0, &obj, 0, &error);
+                                 uid.toUtf8().data(),
+                                 ruid.toUtf8().data(),
+                                 &obj, 0, &error);
     if (error) {
         qWarning() << "Fail to retrieve object:" << error->message;
         g_error_free(error);
