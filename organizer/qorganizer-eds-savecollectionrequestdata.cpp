@@ -163,7 +163,8 @@ void SaveCollectionRequestData::parseCollections()
         bool isNew = true;
         if (collection.id().isNull()) {
             GError *gError = 0;
-            source = e_source_new(0, 0, &gError);
+            QString sourceId = QOrganizerEDSCollectionEngineId::genSourceId(collection);
+            source = e_source_new_with_uid(sourceId.toUtf8().constData(), NULL, &gError);
             if (gError) {
                 m_errorMap.insert(index, QOrganizerManager::UnspecifiedError);
                 qWarning() << "Fail to create source:" << gError->message;
@@ -223,4 +224,3 @@ void SaveCollectionRequestData::parseCollections()
         }
     }
 }
-

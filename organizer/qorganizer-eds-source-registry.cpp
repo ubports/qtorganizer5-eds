@@ -310,7 +310,11 @@ QOrganizerCollection SourceRegistry::parseSource(ESource *source,
     QOrganizerCollectionId id(*edsId);
     QOrganizerCollection collection;
 
+    // id
     collection.setId(id);
+    // account id
+    collection.setExtendedMetaData(COLLECTION_ACCOUNT_ID_METADATA, (*edsId)->accountId());
+
     updateCollection(&collection, isDefault, source);
     return collection;
 }

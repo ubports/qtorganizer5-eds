@@ -351,6 +351,30 @@ private Q_SLOTS:
         // wait collection to became the default one
         QTRY_COMPARE_WITH_TIMEOUT(m_engineRead->defaultCollection(0).id(), newCollection.id(), 5000);
     }
+
+    void testSaveCollectionWithAccountId()
+    {
+        static QString newCollectionId = uniqueCollectionName();
+
+        // Create a collection
+        QOrganizerCollection collection;
+        QtOrganizer::QOrganizerManager::Error error;
+        collection.setMetaData(QOrganizerCollection::KeyName, newCollectionId);
+        collection.setExtendedMetaData(COLLECTION_ACCOUNT_ID_METADATA, 99);
+
+        QSignalSpy createCollection(m_engineRead, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
+        QVERIFY(m_engineWrite->saveCollection(&collection, &error));
+        QTRY_COMPARE(createCollection.count(), 1);
+
+        // check if collection contains the account id in the id
+        QCOMPARE(collection.extendedMetaData(COLLECTION_ACCOUNT_ID_METADATA).toInt(), 99);
+
+        // Query for collection
+        QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), 0);
+
+        // check account field
+        QCOMPARE(newCollection.extendedMetaData(COLLECTION_ACCOUNT_ID_METADATA).toInt(), 99);
+    }
 };
 
 const QString CollectionTest::collectionTypePropertyName = QStringLiteral("collection-type");

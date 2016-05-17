@@ -18,8 +18,12 @@
 
 #include "qorganizer-eds-collection-engineid.h"
 #include "qorganizer-eds-engineid.h"
+#include "qorganizer-eds-source-registry.h"
 
 #include <QtCore/QDebug>
+#include <QtCore/QUuid>
+
+#include <QtOrganizer/QOrganizerCollection>
 
 QOrganizerEDSCollectionEngineId::QOrganizerEDSCollectionEngineId(ESource *source)
     : m_esource(source)
@@ -93,6 +97,38 @@ QString QOrganizerEDSCollectionEngineId::managerUri() const
     return QOrganizerEDSEngineId::managerUriStatic();
 }
 
+// collections created by qorganizer will contain this format:
+// <display-name-base-64>_<uuid-base-64>[_<account-id>]
+int QOrganizerEDSCollectionEngineId::accountId() const
+{
+    QByteArray decodedId = QByteArray::fromBase64(m_collectionId.toUtf8());
+    QList<QByteArray> idFields = decodedId.split(':');
+    if (idFields.size() == 3) {
+        bool ok = false;
+        int id = idFields.last().toInt(&ok);
+        if (ok)
+            return id;
+    }
+    return -1;
+}
+
+QString QOrganizerEDSCollectionEngineId::genSourceId(const QtOrganizer::QOrganizerCollection &collection)
+{
+    QByteArray id;
+    QUuid uuid = QUuid::createUuid();
+
+    id = collection.metaData(QtOrganizer::QOrganizerCollection::KeyName).toString().toUtf8() +
+         ":" + uuid.toByteArray();
+
+    bool ok = false;
+    int collectionId = collection.extendedMetaData(COLLECTION_ACCOUNT_ID_METADATA).toInt(&ok);
+    if (ok) {
+        id += QString(":%1").arg(collectionId);
+    }
+
+    return QString(id.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals));
+}
+
 QString QOrganizerEDSCollectionEngineId::toString() const
 {
     return m_collectionId;
@@ -111,7 +147,7 @@ uint QOrganizerEDSCollectionEngineId::hash() const
 #ifndef QT_NO_DEBUG_STREAM
 QDebug& QOrganizerEDSCollectionEngineId::debugStreamOut(QDebug& dbg) const
 {
-    dbg.nospace() << "QOrganizerEDSCollectionEngineId(" << managerUri() << "," << m_collectionId << ")";
+    dbg.nospace() << "QOrganizerEDSCollectionEngineId(" << managerUri() << "," <<  QByteArray::fromBase64(m_collectionId.toUtf8()) << ")";
     return dbg.maybeSpace();
 }
 

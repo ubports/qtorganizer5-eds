@@ -814,6 +814,7 @@ void QOrganizerEDSEngine::removeItemsAsyncStart(RemoveRequestData *data)
     QOrganizerCollectionId collection = data->next();
     for(; !collection.isNull(); collection = data->next()) {
         EClient *client = data->parent()->d->m_sourceRegistry->client(collection.toString());
+        Q_ASSERT(client);
         data->setClient(client);
         g_object_unref(client);
         GSList *ids = data->compIds();
