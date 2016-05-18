@@ -103,7 +103,7 @@ int QOrganizerEDSCollectionEngineId::accountId() const
 {
     QByteArray decodedId = QByteArray::fromBase64(m_collectionId.toUtf8());
     QList<QByteArray> idFields = decodedId.split(':');
-    if (idFields.size() == 3) {
+    if (idFields.size() == 2) {
         bool ok = false;
         int id = idFields.last().toInt(&ok);
         if (ok)
@@ -114,16 +114,13 @@ int QOrganizerEDSCollectionEngineId::accountId() const
 
 QString QOrganizerEDSCollectionEngineId::genSourceId(const QtOrganizer::QOrganizerCollection &collection)
 {
-    QByteArray id;
-    QUuid uuid = QUuid::createUuid();
+    QByteArray id(QUuid::createUuid().toByteArray());
 
-    id = collection.metaData(QtOrganizer::QOrganizerCollection::KeyName).toString().toUtf8() +
-         ":" + uuid.toByteArray();
-
+    // append accoutnt id if necessary
     bool ok = false;
-    int collectionId = collection.extendedMetaData(COLLECTION_ACCOUNT_ID_METADATA).toInt(&ok);
-    if (ok) {
-        id += QString(":%1").arg(collectionId);
+    int accountId = collection.extendedMetaData(COLLECTION_ACCOUNT_ID_METADATA).toInt(&ok);
+    if (ok && (accountId >= 0)) {
+        id += QString(":%1").arg(accountId);
     }
 
     return QString(id.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals));
