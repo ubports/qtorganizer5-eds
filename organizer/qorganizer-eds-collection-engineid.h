@@ -20,7 +20,6 @@
 #define __QORGANIZER_EDS_COLLECTION_ENGINEID_H__
 
 #include <QtOrganizer/QOrganizerCollectionEngineId>
-#include <QtOrganizer/QOrganizerCollection>
 
 #include <libedataserver/libedataserver.h>
 #include <libecal/libecal.h>
@@ -38,7 +37,6 @@ public:
     bool isLessThan(const QtOrganizer::QOrganizerCollectionEngineId* other) const;
 
     QString managerUri() const;
-    int accountId() const;
     QOrganizerEDSCollectionEngineId *clone() const;
 
     QString toString() const;
@@ -48,8 +46,6 @@ public:
 #ifndef QT_NO_DEBUG_STREAM
     QDebug& debugStreamOut(QDebug& dbg) const;
 #endif
-
-    static QString genSourceId(const QtOrganizer::QOrganizerCollection &collection);
 
 private:
     QString m_collectionId;

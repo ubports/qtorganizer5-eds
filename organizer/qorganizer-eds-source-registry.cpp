@@ -2,6 +2,7 @@
 #include "config.h"
 
 #include <QtCore/QDebug>
+#include <evolution-data-server-ubuntu/e-source-ubuntu.h>
 
 using namespace QtOrganizer;
 
@@ -312,11 +313,42 @@ QOrganizerCollection SourceRegistry::parseSource(ESource *source,
 
     // id
     collection.setId(id);
-    // account id
-    collection.setExtendedMetaData(COLLECTION_ACCOUNT_ID_METADATA, (*edsId)->accountId());
 
     updateCollection(&collection, isDefault, source);
     return collection;
+}
+
+ESource *SourceRegistry::newSourceFromCollection(const QtOrganizer::QOrganizerCollection &collection)
+{
+    if (!collection.id().isNull()) {
+        qWarning() << "Fail to create source from collection: Collection already has id.";
+        return NULL;
+    }
+
+    GError *gError = 0;
+    ESource *source = e_source_new(NULL, NULL, &gError);
+
+    if (gError) {
+        qWarning() << "Fail to create source:" << gError->message;
+        g_error_free(gError);
+        return NULL;
+    }
+
+    bool ok = false;
+    int accountId = collection.extendedMetaData(COLLECTION_ACCOUNT_ID_METADATA).toInt(&ok);
+    if (!ok) {
+        accountId = 0;
+    }
+    bool syncReadOnly = collection.extendedMetaData(COLLECTION_SYNC_READONLY_METADATA).toBool();
+
+    e_source_set_parent(source, "local-stub");
+    ESourceUbuntu *extUbuntu = E_SOURCE_UBUNTU(e_source_get_extension(source, E_SOURCE_EXTENSION_UBUNTU));
+    Q_ASSERT(extUbuntu);
+    e_source_ubuntu_set_account_id(extUbuntu, accountId);
+    e_source_ubuntu_set_writable(extUbuntu, syncReadOnly);
+    e_source_ubuntu_set_autoremove(extUbuntu, TRUE);
+
+    return source;
 }
 
 QByteArray SourceRegistry::defaultCollectionId() const
@@ -430,4 +462,18 @@ void SourceRegistry::updateCollection(QOrganizerCollection *collection,
 
     // default
     collection->setExtendedMetaData(COLLECTION_DEFAULT_METADATA, isDefault);
+
+    // Ubuntu Extension
+    if (e_source_has_extension(source, E_SOURCE_EXTENSION_UBUNTU)) {
+        ESourceUbuntu *extUbuntu = E_SOURCE_UBUNTU(e_source_get_extension(source, E_SOURCE_EXTENSION_UBUNTU));
+
+        collection->setExtendedMetaData(COLLECTION_ACCOUNT_ID_METADATA, e_source_ubuntu_get_account_id(extUbuntu));
+        bool syncWritable = e_source_ubuntu_get_writable(extUbuntu);
+
+        collection->setExtendedMetaData(COLLECTION_SYNC_READONLY_METADATA, !syncWritable);
+        if (!syncWritable) {
+            // Set account as read-only if not sync writable
+            collection->setExtendedMetaData(COLLECTION_READONLY_METADATA, syncWritable);
+        }
+    }
 }

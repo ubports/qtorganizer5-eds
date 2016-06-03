@@ -15,6 +15,7 @@ pkg_check_modules(GLIB REQUIRED glib-2.0>=2.32)
 pkg_check_modules(GIO REQUIRED gio-2.0>=2.32)
 pkg_check_modules(EDATASERVER REQUIRED libedataserver-1.2>=3.8)
 pkg_check_modules(ECAL REQUIRED REQUIRED libecal-1.2>=3.8)
+pkg_check_modules(UEDS REQUIRED REQUIRED evolution-data-server-ubuntu)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)

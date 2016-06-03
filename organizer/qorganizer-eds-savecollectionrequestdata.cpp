@@ -26,6 +26,8 @@
 #include <QtOrganizer/QOrganizerCollectionSaveRequest>
 #include <QtOrganizer/QOrganizerCollectionChangeSet>
 
+#include <evolution-data-server-ubuntu/e-source-ubuntu.h>
+
 using namespace QtOrganizer;
 
 SaveCollectionRequestData::SaveCollectionRequestData(QOrganizerEDSEngine *engine,
@@ -160,21 +162,11 @@ void SaveCollectionRequestData::parseCollections()
     int index = 0;
     Q_FOREACH(const QOrganizerCollection &collection, request<QOrganizerCollectionSaveRequest>()->collections()) {
         ESource *source = 0;
-        bool isNew = true;
-        if (collection.id().isNull()) {
-            GError *gError = 0;
-            QString sourceId = QOrganizerEDSCollectionEngineId::genSourceId(collection);
-            source = e_source_new_with_uid(sourceId.toUtf8().constData(), NULL, &gError);
-            if (gError) {
-                m_errorMap.insert(index, QOrganizerManager::UnspecifiedError);
-                qWarning() << "Fail to create source:" << gError->message;
-                g_error_free(gError);
-                Q_ASSERT(false);
-            }
-            e_source_set_parent(source, "local-stub");
+        bool isNew = collection.id().isNull();
+        if (isNew) {
+            source = SourceRegistry::newSourceFromCollection(collection);
         } else {
             source = m_parent->d->m_sourceRegistry->source(collection.id().toString());
-            isNew = false;
         }
 
         QVariant callendarType = collection.extendedMetaData(COLLECTION_CALLENDAR_TYPE_METADATA);
@@ -187,7 +179,6 @@ void SaveCollectionRequestData::parseCollections()
         } else {
             extCalendar = E_SOURCE_BACKEND(e_source_get_extension(source, E_SOURCE_EXTENSION_CALENDAR));
         }
-
 
         if (source) {
             if (isNew) {
@@ -213,6 +204,17 @@ void SaveCollectionRequestData::parseCollections()
             // default collection
             bool isDefault = collection.extendedMetaData(COLLECTION_DEFAULT_METADATA).toBool();
             g_object_set_data(G_OBJECT(source), "is-default", GINT_TO_POINTER(isDefault));
+
+            // Ubuntu extension
+            bool ok = false;
+            uint accountId = collection.extendedMetaData(COLLECTION_ACCOUNT_ID_METADATA).toUInt(&ok);
+            bool syncWritable = collection.extendedMetaData(COLLECTION_SYNC_READONLY_METADATA).toBool();
+            if ((ok && (accountId > 0)) || syncWritable) {
+                ESourceUbuntu *extUbuntu = E_SOURCE_UBUNTU(e_source_get_extension(source, E_SOURCE_EXTENSION_UBUNTU));
+                e_source_ubuntu_set_writable(extUbuntu, syncWritable);
+                e_source_ubuntu_set_account_id(extUbuntu, accountId);
+            }
+
 
             m_sources.insert(index, source);
             if (isNew) {

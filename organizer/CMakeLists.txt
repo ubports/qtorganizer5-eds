@@ -56,12 +56,14 @@ include_directories(
     ${GIO_INCLUDE_DIRS}
     ${ECAL_INCLUDE_DIRS}
     ${EDATASERVER_INCLUDE_DIRS}
+    ${UEDS_INCLIDE_DIRS}
 )
 
 target_link_libraries(${QORGANIZER_BACKEND}-lib
     ${GLIB_LIBRARIES}
     ${ECAL_LIBRARIES}
     ${EDATASERVER_LIBRARIES}
+    ${UEDS_LIBRARIES}
 )
 
 target_link_libraries(${QORGANIZER_BACKEND}
