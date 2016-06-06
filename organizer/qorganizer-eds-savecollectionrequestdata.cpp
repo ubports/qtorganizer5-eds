@@ -209,12 +209,15 @@ void SaveCollectionRequestData::parseCollections()
             bool ok = false;
             uint accountId = collection.extendedMetaData(COLLECTION_ACCOUNT_ID_METADATA).toUInt(&ok);
             bool syncWritable = collection.extendedMetaData(COLLECTION_SYNC_READONLY_METADATA).toBool();
-            if ((ok && (accountId > 0)) || syncWritable) {
+            QString metadata = collection.extendedMetaData(COLLECTION_DATA_METADATA).toString();
+            if ((ok && (accountId > 0)) ||
+                syncWritable ||
+                !metadata.isEmpty()) {
                 ESourceUbuntu *extUbuntu = E_SOURCE_UBUNTU(e_source_get_extension(source, E_SOURCE_EXTENSION_UBUNTU));
                 e_source_ubuntu_set_writable(extUbuntu, syncWritable);
                 e_source_ubuntu_set_account_id(extUbuntu, accountId);
+                e_source_ubuntu_set_metadata(extUbuntu, metadata.toUtf8().constData());
             }
-
 
             m_sources.insert(index, source);
             if (isNew) {

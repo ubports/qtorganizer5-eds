@@ -35,6 +35,7 @@
 #define COLLECTION_DEFAULT_METADATA         "collection-default"
 #define COLLECTION_SYNC_READONLY_METADATA   "collection-sync-readonly"
 #define COLLECTION_ACCOUNT_ID_METADATA      "collection-account-id"
+#define COLLECTION_DATA_METADATA            "collection-metadata"
 
 class SourceRegistry : public QObject
 {

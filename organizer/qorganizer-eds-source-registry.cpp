@@ -478,5 +478,8 @@ void SourceRegistry::updateCollection(QOrganizerCollection *collection,
             // Set account as read-only if not sync writable
             collection->setExtendedMetaData(COLLECTION_READONLY_METADATA, syncWritable);
         }
+
+        const gchar *data = e_source_ubuntu_get_metadata(extUbuntu);
+        collection->setExtendedMetaData(COLLECTION_DATA_METADATA, data ? QString::fromUtf8(data) : QString());
     }
 }
