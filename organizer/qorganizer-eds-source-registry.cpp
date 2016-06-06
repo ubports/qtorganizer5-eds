@@ -343,10 +343,13 @@ ESource *SourceRegistry::newSourceFromCollection(const QtOrganizer::QOrganizerCo
 
     e_source_set_parent(source, "local-stub");
     ESourceUbuntu *extUbuntu = E_SOURCE_UBUNTU(e_source_get_extension(source, E_SOURCE_EXTENSION_UBUNTU));
-    Q_ASSERT(extUbuntu);
-    e_source_ubuntu_set_account_id(extUbuntu, accountId);
-    e_source_ubuntu_set_writable(extUbuntu, syncReadOnly);
-    e_source_ubuntu_set_autoremove(extUbuntu, TRUE);
+    if (!extUbuntu) {
+        qWarning() << "Source does not contains 'ubuntu' extension:" << collection;
+    } else {
+        e_source_ubuntu_set_account_id(extUbuntu, accountId);
+        e_source_ubuntu_set_writable(extUbuntu, syncReadOnly);
+        e_source_ubuntu_set_autoremove(extUbuntu, TRUE);
+    }
 
     return source;
 }
