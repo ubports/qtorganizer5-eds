@@ -71,6 +71,7 @@ target_link_libraries(${QORGANIZER_BACKEND}
     ${GLIB_LIBRARIES}
     ${ECAL_LIBRARIES}
     ${EDATASERVER_LIBRARIES}
+    ${UEDS_LIBRARIES}
 )
 
 qt5_use_modules(${QORGANIZER_BACKEND}-lib Core Organizer)

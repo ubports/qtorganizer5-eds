@@ -206,17 +206,18 @@ void SaveCollectionRequestData::parseCollections()
             g_object_set_data(G_OBJECT(source), "is-default", GINT_TO_POINTER(isDefault));
 
             // Ubuntu extension
-            bool ok = false;
-            uint accountId = collection.extendedMetaData(COLLECTION_ACCOUNT_ID_METADATA).toUInt(&ok);
-            bool syncWritable = collection.extendedMetaData(COLLECTION_SYNC_READONLY_METADATA).toBool();
-            QString metadata = collection.extendedMetaData(COLLECTION_DATA_METADATA).toString();
-            if ((ok && (accountId > 0)) ||
-                syncWritable ||
-                !metadata.isEmpty()) {
+            QVariant accountId = collection.extendedMetaData(COLLECTION_ACCOUNT_ID_METADATA);
+            QVariant readOnly = collection.extendedMetaData(COLLECTION_SYNC_READONLY_METADATA);
+            QVariant metadata = collection.extendedMetaData(COLLECTION_DATA_METADATA);
+            if (accountId.isValid() ||
+                readOnly.isValid() ||
+                metadata.isValid()) {
+
                 ESourceUbuntu *extUbuntu = E_SOURCE_UBUNTU(e_source_get_extension(source, E_SOURCE_EXTENSION_UBUNTU));
-                e_source_ubuntu_set_writable(extUbuntu, syncWritable);
-                e_source_ubuntu_set_account_id(extUbuntu, accountId);
-                e_source_ubuntu_set_metadata(extUbuntu, metadata.toUtf8().constData());
+                e_source_ubuntu_set_writable(extUbuntu, readOnly.isValid() ? !readOnly.toBool() : true);
+                e_source_ubuntu_set_account_id(extUbuntu, accountId.toUInt());
+                e_source_ubuntu_set_metadata(extUbuntu, metadata.toString().toUtf8().constData());
+                e_source_ubuntu_set_autoremove(extUbuntu, TRUE);
             }
 
             m_sources.insert(index, source);
