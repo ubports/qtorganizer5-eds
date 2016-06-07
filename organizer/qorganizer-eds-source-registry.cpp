@@ -452,14 +452,16 @@ void SourceRegistry::updateCollection(QOrganizerCollection *collection,
 
     // Ubuntu Extension
     ESourceUbuntu *extUbuntu = E_SOURCE_UBUNTU(e_source_get_extension(source, E_SOURCE_EXTENSION_UBUNTU));
-    collection->setExtendedMetaData(COLLECTION_ACCOUNT_ID_METADATA, e_source_ubuntu_get_account_id(extUbuntu));
-    writable = e_source_ubuntu_get_writable(extUbuntu) == TRUE;
-    collection->setExtendedMetaData(COLLECTION_SYNC_READONLY_METADATA, !writable);
-    if (!writable) {
-        // Set account as read-only if not writable
-        collection->setExtendedMetaData(COLLECTION_READONLY_METADATA, true);
+    if (extUbuntu) {
+        collection->setExtendedMetaData(COLLECTION_ACCOUNT_ID_METADATA, e_source_ubuntu_get_account_id(extUbuntu));
+        writable = e_source_ubuntu_get_writable(extUbuntu) == TRUE;
+        collection->setExtendedMetaData(COLLECTION_SYNC_READONLY_METADATA, !writable);
+        if (!writable) {
+            // Set account as read-only if not writable
+            collection->setExtendedMetaData(COLLECTION_READONLY_METADATA, true);
+        }
+        const gchar *data = e_source_ubuntu_get_metadata(extUbuntu);
+        collection->setExtendedMetaData(COLLECTION_DATA_METADATA, data ? QString::fromUtf8(data) : QString());
     }
 
-    const gchar *data = e_source_ubuntu_get_metadata(extUbuntu);
-    collection->setExtendedMetaData(COLLECTION_DATA_METADATA, data ? QString::fromUtf8(data) : QString());
 }
