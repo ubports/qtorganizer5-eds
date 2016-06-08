@@ -21,6 +21,18 @@ QOrganizerParseEventThread::QOrganizerParseEventThread(QObject *source,
     connect(this, SIGNAL(finished()), SLOT(deleteLater()));
 }
 
+QOrganizerParseEventThread::~QOrganizerParseEventThread()
+{
+    Q_FOREACH(GSList *components ,m_events.values()) {
+        if (m_isIcalEvents) {
+            g_slist_free_full(components, (GDestroyNotify)icalcomponent_free);
+        } else {
+            g_slist_free_full(components, (GDestroyNotify)g_object_unref);
+        }
+    }
+    m_events.clear();
+}
+
 void QOrganizerParseEventThread::start(QMap<QOrganizerEDSCollectionEngineId *, GSList *> events,
                                        bool isIcalEvents,
                                        QList<QOrganizerItemDetail::DetailType> detailsHint)

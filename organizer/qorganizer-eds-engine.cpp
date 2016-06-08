@@ -1980,7 +1980,15 @@ void QOrganizerEDSEngine::parseEventsAsync(const QMap<QString, GSList *> &events
     QMap<QOrganizerEDSCollectionEngineId*, GSList*> request;
     Q_FOREACH(const QString &collectionId, events.keys()) {
         QOrganizerEDSCollectionEngineId *collection = d->m_sourceRegistry->collectionEngineId(collectionId);
-        request.insert(collection, events.value(collectionId));
+        if (isIcalEvents) {
+            request.insert(collection,
+                           g_slist_copy_deep(events.value(collectionId),
+                                             (GCopyFunc) icalcomponent_new_clone, NULL));
+        } else {
+            request.insert(collection,
+                           g_slist_copy_deep(events.value(collectionId),
+                                             (GCopyFunc) g_object_ref, NULL));
+        }
     }
 
     // the thread will destroy itself when done
