@@ -305,6 +305,78 @@ private Q_SLOTS:
         QCOMPARE(items[0].displayLabel(), QStringLiteral("Updated item 2"));
     }
 
+    void testModifyReccurenceEventsWithTimeZone()
+    {
+        // Create event
+        static QString displayLabelValue = QStringLiteral("Daily modify test");
+        static QString descriptionValue = QStringLiteral("Daily modify description");
+
+        QOrganizerEvent ev;
+        ev.setCollectionId(m_collection.id());
+        ev.setStartDateTime(QDateTime(QDate(2013, 12, 2), QTime(0,0,0), QTimeZone("America/Recife")));
+        ev.setEndDateTime(QDateTime(QDate(2013, 12, 2), QTime(0,30,0), QTimeZone("America/Recife")));
+        ev.setDisplayLabel(displayLabelValue);
+        ev.setDescription(descriptionValue);
+
+        QOrganizerRecurrenceRule rule;
+        rule.setFrequency(QOrganizerRecurrenceRule::Daily);
+        rule.setLimit(QDate(2013, 12, 4));
+        ev.setRecurrenceRule(rule);
+
+        QSignalSpy itemsAdded(m_engine, SIGNAL(itemsAdded(QList<QOrganizerItemId>)));
+        QtOrganizer::QOrganizerManager::Error error;
+        QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
+        QList<QOrganizerItem> items;
+        items << ev;
+        bool saveResult = m_engine->saveItems(&items,
+                                              QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
+                                              &errorMap,
+                                              &error);
+        QCOMPARE(saveResult, true);
+        QCOMPARE(errorMap.size(), 0);
+        QTRY_COMPARE(itemsAdded.count(), 1);
+
+        // query recent created item
+        QOrganizerItemCollectionFilter filter;
+        QOrganizerItemSortOrder sort;
+        QOrganizerItemFetchHint hint;
+        filter.setCollectionId(m_collection.id());
+        items = m_engine->items(filter,
+                                QDateTime(QDate(2013, 1, 1), QTime(0,0,0)),
+                                QDateTime(QDate(2015, 1, 1), QTime(0,0,0)),
+                                100,
+                                sort,
+                                hint,
+                                &error);
+        QCOMPARE(items.size(), 3);
+
+        // edit first item
+        QList<QOrganizerItem> updateItems;
+        QOrganizerItem updateItem = items[0];
+        QList<QtOrganizer::QOrganizerItemDetail::DetailType> mask;
+        updateItem.setDisplayLabel("Updated item 2");
+        updateItems << updateItem;
+
+        saveResult = m_engine->saveItems(&updateItems, mask, &errorMap, &error);
+        QCOMPARE(saveResult, true);
+        QCOMPARE(errorMap.size(), 0);
+        QCOMPARE(error, QOrganizerManager::NoError);
+
+        items = m_engine->items(filter,
+                                QDateTime(QDate(2013, 1, 1), QTime(0,0,0)),
+                                QDateTime(QDate(2015, 1, 1), QTime(0,0,0)),
+                                100,
+                                sort,
+                                hint,
+                                &error);
+
+        QCOMPARE(items.size(), 3);
+        QCOMPARE(items[0].displayLabel(), QStringLiteral("Updated item 2"));
+
+        QString vcard = getEventFromEvolution(items[0].id(), m_collection.id());
+        QVERIFY(vcard.contains("RECURRENCE-ID;TZID=/freeassociation.sourceforge.net/Tzfile/America/Recife:\r\n 20131202T000000\r\n"));
+    }
+
     void testQueryRecurrenceForAParentItem()
     {
          QOrganizerItem recurrenceEvent = createTestEvent();
@@ -527,17 +599,15 @@ private Q_SLOTS:
 
         QCOMPARE(items.count(), 5);
 //FIXME
-#if 0
-        Q_FOREACH(const QOrganizerItem &i, items) {
-            QOrganizerEventOccurrence event = static_cast<QOrganizerEventOccurrence>(i);
-            qDebug() << i.displayLabel() << event.startDateTime().time() << i.description();
-            //if (event.startDateTime().date() <= changeItemDate) {
-            //    QCOMPARE(i.displayLabel(), newDisplayLabel);
-            //} else {
-            //    QCOMPARE(i.displayLabel(), item.displayLabel());
-            //}
-        }
-#endif
+//        Q_FOREACH(const QOrganizerItem &i, items) {
+//            QOrganizerEventOccurrence event = static_cast<QOrganizerEventOccurrence>(i);
+//            qDebug() << i.displayLabel() << event.startDateTime().time() << i.description();
+//            //if (event.startDateTime().date() <= changeItemDate) {
+//            //    QCOMPARE(i.displayLabel(), newDisplayLabel);
+//            //} else {
+//            //    QCOMPARE(i.displayLabel(), item.displayLabel());
+//            //}
+//        }
     }
 
     void testCreateWeeklyEventWithoutEndDate()
