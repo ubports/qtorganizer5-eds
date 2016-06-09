@@ -1959,7 +1959,12 @@ void QOrganizerEDSEngine::parseReminders(ECalComponent *comp,
                 qWarning() << "QOrganizer does not support triggers after event start";
             }
         } else if (trigger.type != E_CAL_COMPONENT_ALARM_TRIGGER_NONE) {
-            qWarning() << "QOrganizer only supports triggers relative to event start.";
+            //WORKAROUND: Print warning only once, avoid flood application output
+            static bool warningPrinted = false;
+            if (!warningPrinted) {
+                qWarning() << "QOrganizer only supports triggers relative to event start.:" << trigger.type;
+                warningPrinted = true;
+            }
         }
         aDetail->setSecondsBeforeStart(relSecs);
 
