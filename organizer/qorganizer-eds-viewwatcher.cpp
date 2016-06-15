@@ -108,7 +108,12 @@ void ViewWatcher::clear()
     }
 
     if (m_eView) {
-        e_cal_client_view_stop(m_eView, 0);
+        GError *gErr = 0;
+        e_cal_client_view_stop(m_eView, &gErr);
+        if (gErr) {
+            qWarning() << "Fail to stop view" << gErr->message;
+            g_error_free(gErr);
+        }
         g_clear_object(&m_eView);
     }
 

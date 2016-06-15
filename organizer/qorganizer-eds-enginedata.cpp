@@ -37,7 +37,7 @@ QOrganizerEDSEngineData::~QOrganizerEDSEngineData()
     m_viewWatchers.clear();
 
     if (m_sourceRegistry) {
-        delete m_sourceRegistry;
+        m_sourceRegistry->deleteLater();
         m_sourceRegistry = 0;
     }
 }
