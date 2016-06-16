@@ -271,10 +271,12 @@ void QOrganizerEDSEngine::itemsAsyncListedAsComps(GObject *source,
     // check if request was destroyed by the caller
     if (data->isLive()) {
         QOrganizerItemFetchRequest *req = data->request<QOrganizerItemFetchRequest>();
-        data->appendResults(data->parent()->parseEvents(data->collection(),
-                                                        events,
-                                                        false,
-                                                        req->fetchHint().detailTypesHint()));
+        if (req) {
+            data->appendResults(data->parent()->parseEvents(data->collection(),
+                                                            events,
+                                                            false,
+                                                            req->fetchHint().detailTypesHint()));
+        }
         itemsAsyncStart(data);
     } else {
         releaseRequestData(data);
@@ -1952,13 +1954,22 @@ void QOrganizerEDSEngine::parseReminders(ECalComponent *comp,
         ECalComponentAlarmTrigger trigger;
         e_cal_component_alarm_get_trigger(alarm.data(), &trigger);
         int relSecs = 0;
+        bool fail = false;
         if (trigger.type == E_CAL_COMPONENT_ALARM_TRIGGER_RELATIVE_START) {
+
             relSecs = - icaldurationtype_as_int(trigger.u.rel_duration);
             if (relSecs < 0) {
+                //WORKAROUND: Print warning only once, avoid flood application output
+                static bool relativeStartwarningPrinted = false;
                 relSecs = 0;
-                qWarning() << "QOrganizer does not support triggers after event start";
+                if (!relativeStartwarningPrinted) {
+                    fail = true;
+                    relativeStartwarningPrinted = true;
+                    qWarning() << "QOrganizer does not support triggers after event start";
+                }
             }
         } else if (trigger.type != E_CAL_COMPONENT_ALARM_TRIGGER_NONE) {
+            fail = true;
             //WORKAROUND: Print warning only once, avoid flood application output
             static bool warningPrinted = false;
             if (!warningPrinted) {
@@ -1966,13 +1977,14 @@ void QOrganizerEDSEngine::parseReminders(ECalComponent *comp,
                 warningPrinted = true;
             }
         }
-        aDetail->setSecondsBeforeStart(relSecs);
 
-        ECalComponentAlarmRepeat aRepeat;
-        e_cal_component_alarm_get_repeat(alarm.data(), &aRepeat);
-        aDetail->setRepetition(aRepeat.repetitions, icaldurationtype_as_int(aRepeat.duration));
-
-        item->saveDetail(aDetail);
+        if (!fail) {
+            aDetail->setSecondsBeforeStart(relSecs);
+            ECalComponentAlarmRepeat aRepeat;
+            e_cal_component_alarm_get_repeat(alarm.data(), &aRepeat);
+            aDetail->setRepetition(aRepeat.repetitions, icaldurationtype_as_int(aRepeat.duration));
+            item->saveDetail(aDetail);
+        }
         delete aDetail;
     }
 }
