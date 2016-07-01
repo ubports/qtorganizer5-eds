@@ -1273,18 +1273,35 @@ int QOrganizerEDSEngine::runningRequestCount() const
 void QOrganizerEDSEngine::onSourceAdded(const QString &collectionId)
 {
     d->watch(collectionId);
-    Q_EMIT collectionsAdded(QList<QOrganizerCollectionId>() << QOrganizerCollectionId::fromString(collectionId));
+    QOrganizerCollectionId id = QOrganizerCollectionId::fromString(collectionId);
+
+    Q_EMIT collectionsAdded(QList<QOrganizerCollectionId>() << id);
+
+    QList<QPair<QOrganizerCollectionId, QOrganizerManager::Operation> > ops;
+    ops << qMakePair(id, QOrganizerManager::Add);
+    Q_EMIT collectionsModified(ops);
 }
 
 void QOrganizerEDSEngine::onSourceRemoved(const QString &collectionId)
 {
     d->unWatch(collectionId);
-    Q_EMIT collectionsRemoved(QList<QOrganizerCollectionId>() << QOrganizerCollectionId::fromString(collectionId));
+    QOrganizerCollectionId id = QOrganizerCollectionId::fromString(collectionId);
+
+    Q_EMIT collectionsRemoved(QList<QOrganizerCollectionId>() << id);
+
+    QList<QPair<QOrganizerCollectionId, QOrganizerManager::Operation> > ops;
+    ops << qMakePair(id, QOrganizerManager::Remove);
+    Q_EMIT collectionsModified(ops);
 }
 
 void QOrganizerEDSEngine::onSourceUpdated(const QString &collectionId)
 {
-    Q_EMIT collectionsChanged(QList<QOrganizerCollectionId>() << QOrganizerCollectionId::fromString(collectionId));
+    QOrganizerCollectionId id = QOrganizerCollectionId::fromString(collectionId);
+    Q_EMIT collectionsChanged(QList<QOrganizerCollectionId>() << id);
+
+    QList<QPair<QOrganizerCollectionId, QOrganizerManager::Operation> > ops;
+    ops << qMakePair(id, QOrganizerManager::Change);
+    Q_EMIT collectionsModified(ops);
 }
 
 void QOrganizerEDSEngine::onViewChanged(QOrganizerItemChangeSet *change)

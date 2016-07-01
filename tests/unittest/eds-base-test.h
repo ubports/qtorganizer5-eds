@@ -37,6 +37,8 @@ protected:
     virtual void cleanup();
 
 
+    void setCollectionMetadata(const QtOrganizer::QOrganizerCollectionId &collectionId,
+                               const QString &metaData);
     QString getEventFromEvolution(const QtOrganizer::QOrganizerItemId &id,
                                   const QtOrganizer::QOrganizerCollectionId &collectionId = QtOrganizer::QOrganizerCollectionId());
     QString uniqueCollectionName() const;
