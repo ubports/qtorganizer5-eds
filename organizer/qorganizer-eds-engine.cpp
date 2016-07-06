@@ -1403,6 +1403,7 @@ void QOrganizerEDSEngine::parseStartTime(ECalComponent *comp, QOrganizerItem *it
         item->saveDetail(&etr);
     }
     e_cal_component_free_datetime(dt);
+    g_free(dt);
 }
 
 void QOrganizerEDSEngine::parseTodoStartTime(ECalComponent *comp, QOrganizerItem *item)
@@ -1418,6 +1419,7 @@ void QOrganizerEDSEngine::parseTodoStartTime(ECalComponent *comp, QOrganizerItem
         item->saveDetail(&etr);
     }
     e_cal_component_free_datetime(dt);
+    g_free(dt);
 }
 
 void QOrganizerEDSEngine::parseEndTime(ECalComponent *comp, QOrganizerItem *item)
@@ -1433,6 +1435,7 @@ void QOrganizerEDSEngine::parseEndTime(ECalComponent *comp, QOrganizerItem *item
         item->saveDetail(&etr);
     }
     e_cal_component_free_datetime(dt);
+    g_free(dt);
 }
 
 void QOrganizerEDSEngine::parseWeekRecurrence(struct icalrecurrencetype *rule, QtOrganizer::QOrganizerRecurrenceRule *qRule)
@@ -2004,6 +2007,7 @@ void QOrganizerEDSEngine::parseReminders(ECalComponent *comp,
         }
         delete aDetail;
     }
+    cal_obj_uid_list_free(alarms);
 }
 
 void QOrganizerEDSEngine::parseEventsAsync(const QMap<QString, GSList *> &events,
@@ -2251,7 +2255,7 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
 {
     QOrganizerItemRecurrence rec = item.detail(QOrganizerItemDetail::TypeRecurrence);
     if (!rec.isEmpty()) {
-        GSList *periodList = 0;
+        GSList *periodList = NULL;
         Q_FOREACH(const QDate &dt, rec.recurrenceDates()) {
             ECalComponentPeriod *period = g_new0(ECalComponentPeriod, 1);
             period->start = icaltime_from_timet(QDateTime(dt).toTime_t(), FALSE);
@@ -2784,7 +2788,7 @@ void QOrganizerEDSEngine::parseId(const QOrganizerItem &item, ECalComponent *com
             // use component tz on recurrence id
             ECalComponentDateTime dt;
             e_cal_component_get_dtstart(comp, &dt);
-            dt.value = g_new(icaltimetype, 1);
+            dt.value = g_new0(icaltimetype, 1);
             *dt.value = icaltime_from_string(rId.toUtf8().data());
 
             recur_id.type = E_CAL_COMPONENT_RANGE_SINGLE;

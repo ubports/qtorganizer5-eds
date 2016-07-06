@@ -19,6 +19,7 @@
 #include "config.h"
 #include "eds-base-test.h"
 #include "qorganizer-eds-engine.h"
+#include "gscopedpointer.h"
 
 #include <QtCore>
 #include <QtTest>
@@ -29,25 +30,6 @@
 
 using namespace QtOrganizer;
 
-class GScopedPointerUnref
-{
-public:
-    static inline void cleanup(void *pointer)
-    {
-        if (pointer) {
-            g_clear_object(&pointer);
-        }
-    }
-};
-
-template<class KLASS>
-class GScopedPointer : public QScopedPointer<KLASS, GScopedPointerUnref>
-{
-public:
-    GScopedPointer(KLASS* obj = 0)
-        : QScopedPointer<KLASS, GScopedPointerUnref>(obj)
-    {}
-};
 
 EDSBaseTest::EDSBaseTest()
 {
