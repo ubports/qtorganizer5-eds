@@ -47,6 +47,8 @@ ViewWatcher::ViewWatcher(const QString &collectionId,
                           (GAsyncReadyCallback) ViewWatcher::viewReady,
                           this);
     wait();
+    m_dirty.setSingleShot(true);
+    connect(&m_dirty, SIGNAL(timeout()), SLOT(flush()));
 }
 
 ViewWatcher::~ViewWatcher()
@@ -153,15 +155,24 @@ QList<QOrganizerItemId> ViewWatcher::parseItemIds(GSList *objects)
     return result;
 }
 
+void ViewWatcher::notify()
+{
+    m_dirty.start(500);
+}
+
+void ViewWatcher::flush()
+{
+    m_engineData->emitSharedSignals(&m_changeSet);
+    m_changeSet.clearAll();
+}
+
 void ViewWatcher::onObjectsAdded(ECalClientView *view,
                                  GSList *objects,
                                  ViewWatcher *self)
 {
     Q_UNUSED(view);
-
-    QOrganizerItemChangeSet changeSet;
-    changeSet.insertAddedItems(self->parseItemIds(objects));
-    self->m_engineData->emitSharedSignals(&changeSet);
+    self->m_changeSet.insertAddedItems(self->parseItemIds(objects));
+    self->notify();
 }
 
 void ViewWatcher::onObjectsRemoved(ECalClientView *view,
@@ -169,16 +180,14 @@ void ViewWatcher::onObjectsRemoved(ECalClientView *view,
                                    ViewWatcher *self)
 {
     Q_UNUSED(view);
-    QOrganizerItemChangeSet changeSet;
 
     for (GSList *l = objects; l; l = l->next) {
         ECalComponentId *id = static_cast<ECalComponentId*>(l->data);
         QOrganizerEDSEngineId *itemId = new QOrganizerEDSEngineId(self->m_collectionId,
                                                                   QString::fromUtf8(id->uid));
-        changeSet.insertRemovedItem(QOrganizerItemId(itemId));
+        self->m_changeSet.insertRemovedItem(QOrganizerItemId(itemId));
     }
-
-    self->m_engineData->emitSharedSignals(&changeSet);
+    self->notify();
 }
 
 void ViewWatcher::onObjectsModified(ECalClientView *view,
@@ -187,8 +196,6 @@ void ViewWatcher::onObjectsModified(ECalClientView *view,
 {
     Q_UNUSED(view);
 
-    QOrganizerItemChangeSet changeSet;
-    changeSet.insertChangedItems(self->parseItemIds(objects));
-
-    self->m_engineData->emitSharedSignals(&changeSet);
+    self->m_changeSet.insertChangedItems(self->parseItemIds(objects));
+    self->notify();
 }
