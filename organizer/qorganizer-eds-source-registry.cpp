@@ -2,6 +2,7 @@
 #include "config.h"
 
 #include <QtCore/QDebug>
+#include <evolution-data-server-ubuntu/e-source-ubuntu.h>
 
 using namespace QtOrganizer;
 
@@ -310,9 +311,31 @@ QOrganizerCollection SourceRegistry::parseSource(ESource *source,
     QOrganizerCollectionId id(*edsId);
     QOrganizerCollection collection;
 
+    // id
     collection.setId(id);
+
     updateCollection(&collection, isDefault, source);
     return collection;
+}
+
+ESource *SourceRegistry::newSourceFromCollection(const QtOrganizer::QOrganizerCollection &collection)
+{
+    if (!collection.id().isNull()) {
+        qWarning() << "Fail to create source from collection: Collection already has id.";
+        return NULL;
+    }
+
+    GError *gError = 0;
+    ESource *source = e_source_new(NULL, NULL, &gError);
+
+    if (gError) {
+        qWarning() << "Fail to create source:" << gError->message;
+        g_error_free(gError);
+        return NULL;
+    }
+
+    e_source_set_parent(source, "local-stub");
+    return source;
 }
 
 QByteArray SourceRegistry::defaultCollectionId() const
@@ -426,4 +449,19 @@ void SourceRegistry::updateCollection(QOrganizerCollection *collection,
 
     // default
     collection->setExtendedMetaData(COLLECTION_DEFAULT_METADATA, isDefault);
+
+    // Ubuntu Extension
+    ESourceUbuntu *extUbuntu = E_SOURCE_UBUNTU(e_source_get_extension(source, E_SOURCE_EXTENSION_UBUNTU));
+    if (extUbuntu) {
+        collection->setExtendedMetaData(COLLECTION_ACCOUNT_ID_METADATA, e_source_ubuntu_get_account_id(extUbuntu));
+        writable = e_source_ubuntu_get_writable(extUbuntu) == TRUE;
+        collection->setExtendedMetaData(COLLECTION_SYNC_READONLY_METADATA, !writable);
+        if (!writable) {
+            // Set account as read-only if not writable
+            collection->setExtendedMetaData(COLLECTION_READONLY_METADATA, true);
+        }
+        const gchar *data = e_source_ubuntu_get_metadata(extUbuntu);
+        collection->setExtendedMetaData(COLLECTION_DATA_METADATA, data ? QString::fromUtf8(data) : QString());
+    }
+
 }

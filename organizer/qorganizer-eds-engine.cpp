@@ -271,10 +271,12 @@ void QOrganizerEDSEngine::itemsAsyncListedAsComps(GObject *source,
     // check if request was destroyed by the caller
     if (data->isLive()) {
         QOrganizerItemFetchRequest *req = data->request<QOrganizerItemFetchRequest>();
-        data->appendResults(data->parent()->parseEvents(data->collection(),
-                                                        events,
-                                                        false,
-                                                        req->fetchHint().detailTypesHint()));
+        if (req) {
+            data->appendResults(data->parent()->parseEvents(data->collection(),
+                                                            events,
+                                                            false,
+                                                            req->fetchHint().detailTypesHint()));
+        }
         itemsAsyncStart(data);
     } else {
         releaseRequestData(data);
@@ -814,6 +816,7 @@ void QOrganizerEDSEngine::removeItemsAsyncStart(RemoveRequestData *data)
     QOrganizerCollectionId collection = data->next();
     for(; !collection.isNull(); collection = data->next()) {
         EClient *client = data->parent()->d->m_sourceRegistry->client(collection.toString());
+        Q_ASSERT(client);
         data->setClient(client);
         g_object_unref(client);
         GSList *ids = data->compIds();
@@ -1270,18 +1273,35 @@ int QOrganizerEDSEngine::runningRequestCount() const
 void QOrganizerEDSEngine::onSourceAdded(const QString &collectionId)
 {
     d->watch(collectionId);
-    Q_EMIT collectionsAdded(QList<QOrganizerCollectionId>() << QOrganizerCollectionId::fromString(collectionId));
+    QOrganizerCollectionId id = QOrganizerCollectionId::fromString(collectionId);
+
+    Q_EMIT collectionsAdded(QList<QOrganizerCollectionId>() << id);
+
+    QList<QPair<QOrganizerCollectionId, QOrganizerManager::Operation> > ops;
+    ops << qMakePair(id, QOrganizerManager::Add);
+    Q_EMIT collectionsModified(ops);
 }
 
 void QOrganizerEDSEngine::onSourceRemoved(const QString &collectionId)
 {
     d->unWatch(collectionId);
-    Q_EMIT collectionsRemoved(QList<QOrganizerCollectionId>() << QOrganizerCollectionId::fromString(collectionId));
+    QOrganizerCollectionId id = QOrganizerCollectionId::fromString(collectionId);
+
+    Q_EMIT collectionsRemoved(QList<QOrganizerCollectionId>() << id);
+
+    QList<QPair<QOrganizerCollectionId, QOrganizerManager::Operation> > ops;
+    ops << qMakePair(id, QOrganizerManager::Remove);
+    Q_EMIT collectionsModified(ops);
 }
 
 void QOrganizerEDSEngine::onSourceUpdated(const QString &collectionId)
 {
-    Q_EMIT collectionsChanged(QList<QOrganizerCollectionId>() << QOrganizerCollectionId::fromString(collectionId));
+    QOrganizerCollectionId id = QOrganizerCollectionId::fromString(collectionId);
+    Q_EMIT collectionsChanged(QList<QOrganizerCollectionId>() << id);
+
+    QList<QPair<QOrganizerCollectionId, QOrganizerManager::Operation> > ops;
+    ops << qMakePair(id, QOrganizerManager::Change);
+    Q_EMIT collectionsModified(ops);
 }
 
 void QOrganizerEDSEngine::onViewChanged(QOrganizerItemChangeSet *change)
@@ -1383,6 +1403,7 @@ void QOrganizerEDSEngine::parseStartTime(ECalComponent *comp, QOrganizerItem *it
         item->saveDetail(&etr);
     }
     e_cal_component_free_datetime(dt);
+    g_free(dt);
 }
 
 void QOrganizerEDSEngine::parseTodoStartTime(ECalComponent *comp, QOrganizerItem *item)
@@ -1398,6 +1419,7 @@ void QOrganizerEDSEngine::parseTodoStartTime(ECalComponent *comp, QOrganizerItem
         item->saveDetail(&etr);
     }
     e_cal_component_free_datetime(dt);
+    g_free(dt);
 }
 
 void QOrganizerEDSEngine::parseEndTime(ECalComponent *comp, QOrganizerItem *item)
@@ -1413,6 +1435,7 @@ void QOrganizerEDSEngine::parseEndTime(ECalComponent *comp, QOrganizerItem *item
         item->saveDetail(&etr);
     }
     e_cal_component_free_datetime(dt);
+    g_free(dt);
 }
 
 void QOrganizerEDSEngine::parseWeekRecurrence(struct icalrecurrencetype *rule, QtOrganizer::QOrganizerRecurrenceRule *qRule)
@@ -1951,24 +1974,40 @@ void QOrganizerEDSEngine::parseReminders(ECalComponent *comp,
         ECalComponentAlarmTrigger trigger;
         e_cal_component_alarm_get_trigger(alarm.data(), &trigger);
         int relSecs = 0;
+        bool fail = false;
         if (trigger.type == E_CAL_COMPONENT_ALARM_TRIGGER_RELATIVE_START) {
+
             relSecs = - icaldurationtype_as_int(trigger.u.rel_duration);
             if (relSecs < 0) {
+                //WORKAROUND: Print warning only once, avoid flood application output
+                static bool relativeStartwarningPrinted = false;
                 relSecs = 0;
-                qWarning() << "QOrganizer does not support triggers after event start";
+                if (!relativeStartwarningPrinted) {
+                    fail = true;
+                    relativeStartwarningPrinted = true;
+                    qWarning() << "QOrganizer does not support triggers after event start";
+                }
             }
         } else if (trigger.type != E_CAL_COMPONENT_ALARM_TRIGGER_NONE) {
-            qWarning() << "QOrganizer only supports triggers relative to event start.";
+            fail = true;
+            //WORKAROUND: Print warning only once, avoid flood application output
+            static bool warningPrinted = false;
+            if (!warningPrinted) {
+                qWarning() << "QOrganizer only supports triggers relative to event start.:" << trigger.type;
+                warningPrinted = true;
+            }
         }
-        aDetail->setSecondsBeforeStart(relSecs);
 
-        ECalComponentAlarmRepeat aRepeat;
-        e_cal_component_alarm_get_repeat(alarm.data(), &aRepeat);
-        aDetail->setRepetition(aRepeat.repetitions, icaldurationtype_as_int(aRepeat.duration));
-
-        item->saveDetail(aDetail);
+        if (!fail) {
+            aDetail->setSecondsBeforeStart(relSecs);
+            ECalComponentAlarmRepeat aRepeat;
+            e_cal_component_alarm_get_repeat(alarm.data(), &aRepeat);
+            aDetail->setRepetition(aRepeat.repetitions, icaldurationtype_as_int(aRepeat.duration));
+            item->saveDetail(aDetail);
+        }
         delete aDetail;
     }
+    cal_obj_uid_list_free(alarms);
 }
 
 void QOrganizerEDSEngine::parseEventsAsync(const QMap<QString, GSList *> &events,
@@ -1980,7 +2019,15 @@ void QOrganizerEDSEngine::parseEventsAsync(const QMap<QString, GSList *> &events
     QMap<QOrganizerEDSCollectionEngineId*, GSList*> request;
     Q_FOREACH(const QString &collectionId, events.keys()) {
         QOrganizerEDSCollectionEngineId *collection = d->m_sourceRegistry->collectionEngineId(collectionId);
-        request.insert(collection, events.value(collectionId));
+        if (isIcalEvents) {
+            request.insert(collection,
+                           g_slist_copy_deep(events.value(collectionId),
+                                             (GCopyFunc) icalcomponent_new_clone, NULL));
+        } else {
+            request.insert(collection,
+                           g_slist_copy_deep(events.value(collectionId),
+                                             (GCopyFunc) g_object_ref, NULL));
+        }
     }
 
     // the thread will destroy itself when done
@@ -2208,7 +2255,7 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
 {
     QOrganizerItemRecurrence rec = item.detail(QOrganizerItemDetail::TypeRecurrence);
     if (!rec.isEmpty()) {
-        GSList *periodList = 0;
+        GSList *periodList = NULL;
         Q_FOREACH(const QDate &dt, rec.recurrenceDates()) {
             ECalComponentPeriod *period = g_new0(ECalComponentPeriod, 1);
             period->start = icaltime_from_timet(QDateTime(dt).toTime_t(), FALSE);
@@ -2741,7 +2788,7 @@ void QOrganizerEDSEngine::parseId(const QOrganizerItem &item, ECalComponent *com
             // use component tz on recurrence id
             ECalComponentDateTime dt;
             e_cal_component_get_dtstart(comp, &dt);
-            dt.value = g_new(icaltimetype, 1);
+            dt.value = g_new0(icaltimetype, 1);
             *dt.value = icaltime_from_string(rId.toUtf8().data());
 
             recur_id.type = E_CAL_COMPONENT_RANGE_SINGLE;

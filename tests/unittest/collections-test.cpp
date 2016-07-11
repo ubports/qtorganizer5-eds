@@ -218,6 +218,7 @@ private Q_SLOTS:
         QTRY_VERIFY(updateCollection.count() > 0);
         QList<QVariant> args = updateCollection.takeFirst();
         QCOMPARE(args.count(), 1);
+        QCOMPARE(args[0].value<QList<QOrganizerCollectionId> >().count(), 1);
         QCOMPARE(args[0].value<QList<QOrganizerCollectionId> >().at(0).toString(), collection.id().toString());
 
 
@@ -350,6 +351,118 @@ private Q_SLOTS:
 
         // wait collection to became the default one
         QTRY_COMPARE_WITH_TIMEOUT(m_engineRead->defaultCollection(0).id(), newCollection.id(), 5000);
+    }
+
+    void testSaveCollectionWithAccountId()
+    {
+        static QString newCollectionId = uniqueCollectionName();
+
+        // Create a collection
+        QOrganizerCollection collection;
+        QtOrganizer::QOrganizerManager::Error error;
+        collection.setMetaData(QOrganizerCollection::KeyName, newCollectionId);
+        collection.setExtendedMetaData(COLLECTION_ACCOUNT_ID_METADATA, 99);
+
+        QSignalSpy createCollection(m_engineRead, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
+        QVERIFY(m_engineWrite->saveCollection(&collection, &error));
+        QTRY_COMPARE(createCollection.count(), 1);
+
+        // check if collection contains the account id in the id
+        QCOMPARE(collection.extendedMetaData(COLLECTION_ACCOUNT_ID_METADATA).toInt(), 99);
+
+        // Query for collection
+        QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), 0);
+
+        // check account field
+        QCOMPARE(newCollection.extendedMetaData(COLLECTION_ACCOUNT_ID_METADATA).toInt(), 99);
+    }
+
+    void testSaveCollectionWithMetadata()
+    {
+        static QString newCollectionId = uniqueCollectionName();
+
+        // Create a collection
+        QOrganizerCollection collection;
+        QtOrganizer::QOrganizerManager::Error error;
+        collection.setMetaData(QOrganizerCollection::KeyName, newCollectionId);
+        collection.setExtendedMetaData(COLLECTION_DATA_METADATA, QStringLiteral("string metadata"));
+
+        QSignalSpy createCollection(m_engineRead, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
+        QVERIFY(m_engineWrite->saveCollection(&collection, &error));
+        QTRY_COMPARE(createCollection.count(), 1);
+
+        // check if collection contains the metadata
+        QCOMPARE(collection.extendedMetaData(COLLECTION_DATA_METADATA).toString(), QStringLiteral("string metadata"));
+
+        // Query for collection
+        QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), 0);
+
+        // check account field
+        QCOMPARE(newCollection.extendedMetaData(COLLECTION_DATA_METADATA).toString(), QStringLiteral("string metadata"));
+    }
+
+    void testSaveCollectionWithSyncWritable()
+    {
+        static QString newCollectionId = uniqueCollectionName();
+
+        // Create a collection
+        QOrganizerCollection collection;
+        QtOrganizer::QOrganizerManager::Error error;
+        collection.setMetaData(QOrganizerCollection::KeyName, newCollectionId);
+        collection.setExtendedMetaData(COLLECTION_SYNC_READONLY_METADATA, true);
+        QCOMPARE(collection.extendedMetaData(COLLECTION_SYNC_READONLY_METADATA).toBool(), true);
+
+        QSignalSpy createCollection(m_engineRead, SIGNAL(collectionsAdded(QList<QOrganizerCollectionId>)));
+        QVERIFY(m_engineWrite->saveCollection(&collection, &error));
+        QTRY_COMPARE(createCollection.count(), 1);
+
+        // check if collection was marked as read-only
+        QCOMPARE(collection.extendedMetaData(COLLECTION_SYNC_READONLY_METADATA).toBool(), true);
+        QCOMPARE(collection.extendedMetaData(COLLECTION_READONLY_METADATA).toBool(), true);
+
+        // Query for collection
+        QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), 0);
+
+        // check if collection was marked as read-only
+        QCOMPARE(newCollection.extendedMetaData(COLLECTION_SYNC_READONLY_METADATA).toBool(), true);
+        QCOMPARE(newCollection.extendedMetaData(COLLECTION_READONLY_METADATA).toBool(), true);
+    }
+
+    void testModifyMetaDataUpdateCollection()
+    {
+        static QString newCollectionId = uniqueCollectionName();
+
+        // Create a collection
+        QOrganizerCollection collection;
+        QtOrganizer::QOrganizerManager::Error error;
+        collection.setMetaData(QOrganizerCollection::KeyName, newCollectionId);
+        collection.setExtendedMetaData(COLLECTION_SYNC_READONLY_METADATA, true);
+        QCOMPARE(collection.extendedMetaData(COLLECTION_SYNC_READONLY_METADATA).toBool(), true);
+
+        QSignalSpy createCollection(m_engineRead, &QOrganizerManagerEngine::collectionsAdded);
+        QVERIFY(m_engineWrite->saveCollection(&collection, &error));
+        QTRY_COMPARE(createCollection.count(), 1);
+        QTest::qWait(1000);
+
+        // check if collection update signal is fired
+        QSignalSpy collectionsModified(m_engineRead, &QOrganizerManagerEngine::collectionsModified);
+        QSignalSpy collectionsChanged(m_engineRead, &QOrganizerManagerEngine::collectionsChanged);
+
+        // Modify collection on EDS
+        const QString metadataValue = QStringLiteral("new metadata");
+        QTRY_COMPARE(collectionsChanged.count(), 0);
+        qDebug() << "WIll update metadata";
+        setCollectionMetadata(collection.id(), metadataValue);
+
+        // it will fire two signals
+        //  1- Property change
+        //  2- Source write
+        QTRY_COMPARE(collectionsChanged.count(), 2);
+        QTRY_COMPARE(collectionsModified.count(), 2);
+
+        // check if the metadata was changed
+        QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), 0);
+        QCOMPARE(newCollection.extendedMetaData(COLLECTION_DATA_METADATA).toString(), metadataValue);
     }
 };
 

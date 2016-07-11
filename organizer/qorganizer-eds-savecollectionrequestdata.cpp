@@ -26,6 +26,8 @@
 #include <QtOrganizer/QOrganizerCollectionSaveRequest>
 #include <QtOrganizer/QOrganizerCollectionChangeSet>
 
+#include <evolution-data-server-ubuntu/e-source-ubuntu.h>
+
 using namespace QtOrganizer;
 
 SaveCollectionRequestData::SaveCollectionRequestData(QOrganizerEDSEngine *engine,
@@ -160,20 +162,11 @@ void SaveCollectionRequestData::parseCollections()
     int index = 0;
     Q_FOREACH(const QOrganizerCollection &collection, request<QOrganizerCollectionSaveRequest>()->collections()) {
         ESource *source = 0;
-        bool isNew = true;
-        if (collection.id().isNull()) {
-            GError *gError = 0;
-            source = e_source_new(0, 0, &gError);
-            if (gError) {
-                m_errorMap.insert(index, QOrganizerManager::UnspecifiedError);
-                qWarning() << "Fail to create source:" << gError->message;
-                g_error_free(gError);
-                Q_ASSERT(false);
-            }
-            e_source_set_parent(source, "local-stub");
+        bool isNew = collection.id().isNull();
+        if (isNew) {
+            source = SourceRegistry::newSourceFromCollection(collection);
         } else {
             source = m_parent->d->m_sourceRegistry->source(collection.id().toString());
-            isNew = false;
         }
 
         QVariant callendarType = collection.extendedMetaData(COLLECTION_CALLENDAR_TYPE_METADATA);
@@ -186,7 +179,6 @@ void SaveCollectionRequestData::parseCollections()
         } else {
             extCalendar = E_SOURCE_BACKEND(e_source_get_extension(source, E_SOURCE_EXTENSION_CALENDAR));
         }
-
 
         if (source) {
             if (isNew) {
@@ -213,6 +205,21 @@ void SaveCollectionRequestData::parseCollections()
             bool isDefault = collection.extendedMetaData(COLLECTION_DEFAULT_METADATA).toBool();
             g_object_set_data(G_OBJECT(source), "is-default", GINT_TO_POINTER(isDefault));
 
+            // Ubuntu extension
+            QVariant accountId = collection.extendedMetaData(COLLECTION_ACCOUNT_ID_METADATA);
+            QVariant readOnly = collection.extendedMetaData(COLLECTION_SYNC_READONLY_METADATA);
+            QVariant metadata = collection.extendedMetaData(COLLECTION_DATA_METADATA);
+            if (accountId.isValid() ||
+                readOnly.isValid() ||
+                metadata.isValid()) {
+
+                ESourceUbuntu *extUbuntu = E_SOURCE_UBUNTU(e_source_get_extension(source, E_SOURCE_EXTENSION_UBUNTU));
+                e_source_ubuntu_set_writable(extUbuntu, readOnly.isValid() ? !readOnly.toBool() : true);
+                e_source_ubuntu_set_account_id(extUbuntu, accountId.toUInt());
+                e_source_ubuntu_set_metadata(extUbuntu, metadata.toString().toUtf8().constData());
+                e_source_ubuntu_set_autoremove(extUbuntu, TRUE);
+            }
+
             m_sources.insert(index, source);
             if (isNew) {
                 m_sourcesToCreate.insert(index, source);
@@ -223,4 +230,3 @@ void SaveCollectionRequestData::parseCollections()
         }
     }
 }
-

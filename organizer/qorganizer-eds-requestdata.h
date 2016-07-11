@@ -47,7 +47,11 @@ public:
 
     template<class T>
     T* request() const {
-        return qobject_cast<T*>(m_req.data());
+        if (m_req) {
+            return qobject_cast<T*>(m_req.data());
+        } else {
+            return 0;
+        }
     }
 
     template<class T>

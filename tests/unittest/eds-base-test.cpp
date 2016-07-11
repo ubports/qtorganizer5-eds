@@ -19,33 +19,17 @@
 #include "config.h"
 #include "eds-base-test.h"
 #include "qorganizer-eds-engine.h"
+#include "gscopedpointer.h"
 
 #include <QtCore>
 #include <QtTest>
 
 #include <libecal/libecal.h>
 
+#include <evolution-data-server-ubuntu/e-source-ubuntu.h>
+
 using namespace QtOrganizer;
 
-class GScopedPointerUnref
-{
-public:
-    static inline void cleanup(void *pointer)
-    {
-        if (pointer) {
-            g_clear_object(&pointer);
-        }
-    }
-};
-
-template<class KLASS>
-class GScopedPointer : public QScopedPointer<KLASS, GScopedPointerUnref>
-{
-public:
-    GScopedPointer(KLASS* obj = 0)
-        : QScopedPointer<KLASS, GScopedPointerUnref>(obj)
-    {}
-};
 
 EDSBaseTest::EDSBaseTest()
 {
@@ -72,6 +56,22 @@ void EDSBaseTest::init()
 void EDSBaseTest::cleanup()
 {
     QTest::qWait(1000);
+}
+
+void EDSBaseTest::setCollectionMetadata(const QOrganizerCollectionId &collectionId, const QString &metaData)
+{
+    GError *error = NULL;
+    GScopedPointer<ESourceRegistry> sourceRegistry(e_source_registry_new_sync(NULL, &error));
+    if (error) {
+        qWarning() << "Fail to create source registry" << error->message;
+        g_error_free(error);
+        return;
+    }
+    GScopedPointer<ESource> calendar(e_source_registry_ref_source(sourceRegistry.data(),
+                                                                  collectionId.toString().split(":").last().toUtf8().data()));
+    ESourceUbuntu *ubuntu = E_SOURCE_UBUNTU(e_source_get_extension(calendar.data(), E_SOURCE_EXTENSION_UBUNTU));
+    e_source_ubuntu_set_metadata(ubuntu, metaData.toUtf8().constData());
+    e_source_write_sync(calendar.data(), NULL, NULL);
 }
 
 QString EDSBaseTest::getEventFromEvolution(const QOrganizerItemId &id,

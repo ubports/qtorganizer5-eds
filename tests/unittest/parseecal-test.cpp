@@ -21,6 +21,8 @@
 #include "qorganizer-eds-engine.h"
 #undef private
 
+#include "gscopedpointer.h"
+
 #include <QObject>
 #include <QtTest>
 #include <QDebug>
@@ -56,25 +58,25 @@ private Q_SLOTS:
         QDateTime endTime(startTime);
         endTime = endTime.addDays(2);
 
-        ECalComponent *comp = e_cal_component_new();
-        e_cal_component_set_new_vtype(comp, E_CAL_COMPONENT_EVENT);
+        GScopedPointer<ECalComponent> comp(e_cal_component_new());
+        e_cal_component_set_new_vtype(comp.data(), E_CAL_COMPONENT_EVENT);
 
         ECalComponentDateTime dt;
 
         struct icaltimetype itt = icaltime_from_timet(startTime.toTime_t(), FALSE);
         dt.value = &itt;
         dt.tzid = "";
-        e_cal_component_set_dtstart(comp, &dt);
+        e_cal_component_set_dtstart(comp.data(), &dt);
 
         QOrganizerEvent item;
-        QOrganizerEDSEngine::parseStartTime(comp, &item);
+        QOrganizerEDSEngine::parseStartTime(comp.data(), &item);
         QCOMPARE(item.startDateTime().toTime_t(), startTime.toTime_t());
 
         itt = icaltime_from_timet(endTime.toTime_t(), FALSE);
         dt.value = &itt;
-        e_cal_component_set_dtend(comp, &dt);
+        e_cal_component_set_dtend(comp.data(), &dt);
 
-        QOrganizerEDSEngine::parseEndTime(comp, &item);
+        QOrganizerEDSEngine::parseEndTime(comp.data(), &item);
         QCOMPARE(item.endDateTime().toTime_t(), endTime.toTime_t());
     }
 
@@ -89,15 +91,15 @@ private Q_SLOTS:
         QCOMPARE(aReminder.secondsBeforeStart(), 10);
         event.saveDetail(&aReminder);
 
-        ECalComponent *comp = e_cal_component_new();
-        e_cal_component_set_new_vtype(comp, E_CAL_COMPONENT_EVENT);
+        GScopedPointer<ECalComponent> comp(e_cal_component_new());
+        e_cal_component_set_new_vtype(comp.data(), E_CAL_COMPONENT_EVENT);
 
-        QOrganizerEDSEngine::parseReminders(event, comp);
+        QOrganizerEDSEngine::parseReminders(event, comp.data());
 
-        GList *aIds = e_cal_component_get_alarm_uids(comp);
+        GList *aIds = e_cal_component_get_alarm_uids(comp.data());
         QCOMPARE(g_list_length(aIds), (guint) 1);
 
-        ECalComponentAlarm *alarm = e_cal_component_get_alarm(comp, (const gchar*)aIds->data);
+        ECalComponentAlarm *alarm = e_cal_component_get_alarm(comp.data(), (const gchar*)aIds->data);
         QVERIFY(alarm);
 
         ECalComponentAlarmAction aAction;
@@ -114,13 +116,14 @@ private Q_SLOTS:
         QCOMPARE(aRepeat.repetitions, aReminder.repetitionCount());
         QCOMPARE(icaldurationtype_as_int(aRepeat.duration), aReminder.repetitionDelay());
 
-        g_object_unref(comp);
+         e_cal_component_alarm_free(alarm);
+         cal_obj_uid_list_free(aIds);
     }
 
     void testParseRemindersECalComponent2QOrganizerEvent()
     {
-        ECalComponent *comp = e_cal_component_new();
-        e_cal_component_set_new_vtype(comp, E_CAL_COMPONENT_EVENT);
+        GScopedPointer<ECalComponent> comp(e_cal_component_new());
+        e_cal_component_set_new_vtype(comp.data(), E_CAL_COMPONENT_EVENT);
 
         ECalComponentAlarm *alarm = e_cal_component_alarm_new();
         e_cal_component_alarm_set_action(alarm, E_CAL_COMPONENT_ALARM_DISPLAY);
@@ -135,18 +138,16 @@ private Q_SLOTS:
         aRepeat.duration = icaldurationtype_from_int(100);
         e_cal_component_alarm_set_repeat(alarm, aRepeat);
 
-        e_cal_component_add_alarm(comp, alarm);
+        e_cal_component_add_alarm(comp.data(), alarm);
         e_cal_component_alarm_free(alarm);
 
         QOrganizerItem alarmItem;
-        QOrganizerEDSEngine::parseReminders(comp, &alarmItem);
+        QOrganizerEDSEngine::parseReminders(comp.data(), &alarmItem);
 
         QOrganizerItemVisualReminder vReminder = alarmItem.detail(QOrganizerItemDetail::TypeVisualReminder);
         QCOMPARE(vReminder.repetitionCount(), 5);
         QCOMPARE(vReminder.repetitionDelay(), 100);
         QCOMPARE(vReminder.secondsBeforeStart(), 10);
-
-        g_object_unref(comp);
     }
 
     void testParseRecurenceQOrganizerEvent2ECalComponent()
@@ -323,6 +324,8 @@ private Q_SLOTS:
             }
         }
 
+        e_cal_component_free_recur_list(recurList);
+
         // invert
         QOrganizerEvent event2;
         QOrganizerEDSEngine::parseRecurrence(comp, &event2);
@@ -384,7 +387,7 @@ private Q_SLOTS:
         QVERIFY(icalcomponent_is_valid(ical));
 
         QList<QOrganizerItemDetail::DetailType> detailsHint;
-        GSList *events = g_slist_append(0, ical);
+        GSList *events = g_slist_append(events, ical);
         QMap<QString, GSList*> eventMap;
         eventMap.insert(engine->defaultCollection(0).id().toString(), events);
         engine->parseEventsAsync(eventMap, true, detailsHint, this, SLOT(onEventAsyncParsed(QList<QOrganizerItem>)));
@@ -412,6 +415,7 @@ private Q_SLOTS:
         QCOMPARE(vreminder.message(), QStringLiteral("alarm to parse"));
 
         g_slist_free_full(events, (GDestroyNotify)icalcomponent_free);
+        icalcomponent_free(ical);
         delete engine;
     }
 };

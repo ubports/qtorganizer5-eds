@@ -221,6 +221,9 @@ int FetchRequestData::appendResults(QList<QOrganizerItem> results)
 {
     int count = 0;
     QOrganizerItemFetchRequest *req = request<QOrganizerItemFetchRequest>();
+    if (!req) {
+        return 0;
+    }
     QOrganizerItemFilter filter = req->filter();
     QList<QOrganizerItemSortOrder> sorting = req->sorting();
 

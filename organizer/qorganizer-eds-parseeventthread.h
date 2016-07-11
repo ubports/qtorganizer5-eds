@@ -40,6 +40,7 @@ public:
     QOrganizerParseEventThread(QObject *source,
                                const QByteArray &slot,
                                QObject *parent = 0);
+    ~QOrganizerParseEventThread();
 
     void start(QMap<QOrganizerEDSCollectionEngineId *, GSList *> events,
                bool isIcalEvents,
@@ -48,6 +49,7 @@ public:
 private:
     QPointer<QObject> m_source;
     QMetaMethod m_slot;
+    bool m_abort;
 
     // parse data
     QMap<QOrganizerEDSCollectionEngineId *, GSList *> m_events;

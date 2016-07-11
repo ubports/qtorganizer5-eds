@@ -3,6 +3,7 @@ macro(declare_test TESTNAME)
                     ${TESTNAME}.cpp
                     eds-base-test.cpp
                     eds-base-test.h
+                    gscopedpointer.h
     )
     qt5_use_modules(${TESTNAME} Core Organizer Test)
 
