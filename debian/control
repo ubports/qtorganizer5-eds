@@ -13,7 +13,7 @@ Build-Depends: cmake (>= 2.8.9),
                evolution-data-server,
                dbus-test-runner,
                gvfs-daemons,
-               evolution-data-server-ubuntu-dev
+               evolution-data-server-utouch-dev
 Standards-Version: 3.9.4
 Homepage: https://launchpad.net/qtorganizer5-eds
 # If you aren't a member of ~phablet-team but need to upload packaging changes,
