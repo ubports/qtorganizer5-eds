@@ -1,3 +1,9 @@
+qtorganizer5-eds (0.1.1+16.10.20160721.1-0ubuntu1) yakkety; urgency=medium
+
+  * Update dep package name.
+
+ -- Renato Araujo Oliveira Filho <renato.filho@canonical.com>  Thu, 21 Jul 2016 14:38:25 +0000
+
 qtorganizer5-eds (0.1.1+16.10.20160711-0ubuntu1) yakkety; urgency=medium
 
   * Create a "collection-account-id" meta data property to store the
