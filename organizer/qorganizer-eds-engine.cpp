@@ -2301,7 +2301,11 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
             switch (qRule.limitType()) {
             case QOrganizerRecurrenceRule::DateLimit:
                 if (qRule.limitDate().isValid()) {
-                    rule->until = icaltime_from_timet(QDateTime(qRule.limitDate()).toTime_t(), TRUE);
+                    rule->until = icaltime_null_time();
+                    rule->until.year = qRule.limitDate().year();
+                    rule->until.month = qRule.limitDate().month();
+                    rule->until.day = qRule.limitDate().day();
+                    rule->until.is_date = 1;
                 }
                 break;
             case QOrganizerRecurrenceRule::CountLimit:
