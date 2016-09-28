@@ -1,3 +1,9 @@
+qtorganizer5-eds (0.1.1+16.10.20160928-0ubuntu1) yakkety; urgency=medium
+
+  * Fix recurrence date. (LP: #1616040)
+
+ -- Renato Araujo Oliveira Filho <renato.filho@canonical.com>  Wed, 28 Sep 2016 14:56:01 +0000
+
 qtorganizer5-eds (0.1.1+16.10.20160820-0ubuntu1) yakkety; urgency=medium
 
   * Rebuild against latest evolution-data-server
