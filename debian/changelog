@@ -1,3 +1,9 @@
+qtorganizer5-eds (0.1.2+ubports) xenial; urgency=medium
+
+  * Imported to UBports
+
+ -- UBports auto importer <infra@ubports.com>  Sat, 30 Jun 2018 10:56:42 +0200
+
 qtorganizer5-eds (0.1.1+16.10.20160928-0ubuntu1) yakkety; urgency=medium
 
   * Fix recurrence date. (LP: #1616040)
