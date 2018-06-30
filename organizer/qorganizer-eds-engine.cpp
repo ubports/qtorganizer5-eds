@@ -1336,10 +1336,14 @@ QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const cha
         tmTime = icaltime_as_timet(value);
         QDateTime t = QDateTime::fromTime_t(tmTime, Qt::UTC);
         // all day events will set as local time
-        // floating time events will be set with invalid time zone
-        return QDateTime(t.date(),
-                         (allDayEvent ? QTime(0,0,0) : t.time()),
-                         (allDayEvent ? QTimeZone(QTimeZone::systemTimeZoneId()) : QTimeZone()));
+        // floating time events will be set as UTC
+        QDateTime tt;
+        if (allDayEvent)
+          tt = QDateTime(t.date(), QTime(0,0,0),
+                         QTimeZone(QTimeZone::systemTimeZoneId()));
+        else
+          tt = QDateTime(t.date(), t.time(), Qt::UTC);
+        return tt;
     }
 }
 
@@ -1396,7 +1400,9 @@ void QOrganizerEDSEngine::parseStartTime(ECalComponent *comp, QOrganizerItem *it
     e_cal_component_get_dtstart(comp, dt);
     if (dt->value) {
         QOrganizerEventTime etr = item->detail(QOrganizerItemDetail::TypeEventTime);
-        etr.setStartDateTime(fromIcalTime(*dt->value, dt->tzid));
+        QDateTime qdtime = fromIcalTime(*dt->value, dt->tzid);
+        if (qdtime.isValid())
+            etr.setStartDateTime(qdtime);
         if (icaltime_is_date(*dt->value) != etr.isAllDay()) {
             etr.setAllDay(icaltime_is_date(*dt->value));
         }
@@ -1412,7 +1418,9 @@ void QOrganizerEDSEngine::parseTodoStartTime(ECalComponent *comp, QOrganizerItem
     e_cal_component_get_dtstart(comp, dt);
     if (dt->value) {
         QOrganizerTodoTime etr = item->detail(QOrganizerItemDetail::TypeTodoTime);
-        etr.setStartDateTime(fromIcalTime(*dt->value, dt->tzid));
+        QDateTime qdtime = fromIcalTime(*dt->value, dt->tzid);
+        if (qdtime.isValid())
+            etr.setStartDateTime(qdtime);
         if (icaltime_is_date(*dt->value) != etr.isAllDay()) {
             etr.setAllDay(icaltime_is_date(*dt->value));
         }
@@ -1428,7 +1436,9 @@ void QOrganizerEDSEngine::parseEndTime(ECalComponent *comp, QOrganizerItem *item
     e_cal_component_get_dtend(comp, dt);
     if (dt->value) {
         QOrganizerEventTime etr = item->detail(QOrganizerItemDetail::TypeEventTime);
-        etr.setEndDateTime(fromIcalTime(*dt->value, dt->tzid));
+        QDateTime qdtime = fromIcalTime(*dt->value, dt->tzid);
+        if (qdtime.isValid())
+            etr.setEndDateTime(qdtime);
         if (icaltime_is_date(*dt->value) != etr.isAllDay()) {
             etr.setAllDay(icaltime_is_date(*dt->value));
         }
@@ -1512,7 +1522,8 @@ void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *i
             ECalComponentPeriod *period = (ECalComponentPeriod*) i->data;
             //TODO: get timezone info
             QDateTime dt = fromIcalTime(period->start, 0);
-            dates.insert(dt.date());
+            if (dt.isValid())
+                dates.insert(dt.date());
             //TODO: period.end, period.duration
         }
         e_cal_component_free_period_list(periodList);
@@ -1530,7 +1541,8 @@ void QOrganizerEDSEngine::parseRecurrence(ECalComponent *comp, QOrganizerItem *i
         for(GSList *i = exdateList; i != 0; i = i->next) {
             ECalComponentDateTime* dateTime = (ECalComponentDateTime*) i->data;
             QDateTime dt = fromIcalTime(*dateTime->value, dateTime->tzid);
-            dates.insert(dt.date());
+            if (dt.isValid())
+                dates.insert(dt.date());
         }
         e_cal_component_free_exdate_list(exdateList);
 
@@ -1638,7 +1650,9 @@ void QOrganizerEDSEngine::parseDueDate(ECalComponent *comp, QOrganizerItem *item
     e_cal_component_get_due(comp, &due);
     if (due.value) {
         QOrganizerTodoTime ttr = item->detail(QOrganizerItemDetail::TypeTodoTime);
-        ttr.setDueDateTime(fromIcalTime(*due.value, due.tzid));
+        QDateTime qdtime = fromIcalTime(*due.value, due.tzid);
+        if (qdtime.isValid())
+            ttr.setDueDateTime(qdtime);
         if (icaltime_is_date(*due.value) != ttr.isAllDay()) {
             ttr.setAllDay(icaltime_is_date(*due.value));
         }
@@ -1834,9 +1848,12 @@ QOrganizerItem *QOrganizerEDSEngine::parseJournal(ECalComponent *comp,
         ECalComponentDateTime dt;
         e_cal_component_get_dtstart(comp, &dt);
         if (dt.value) {
-            QOrganizerJournalTime jtime;
-            jtime.setEntryDateTime(fromIcalTime(*dt.value, dt.tzid));
-            journal->saveDetail(&jtime);
+            QDateTime qdtime = fromIcalTime(*dt.value, dt.tzid);
+            if (qdtime.isValid()) {
+              QOrganizerJournalTime jtime;
+              jtime.setEntryDateTime(qdtime);
+              journal->saveDetail(&jtime);
+            }
         }
         e_cal_component_free_datetime(&dt);
     }
