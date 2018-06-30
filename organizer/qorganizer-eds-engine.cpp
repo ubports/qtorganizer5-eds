@@ -1338,11 +1338,14 @@ QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const cha
         tmTime = icaltime_as_timet(value);
         QDateTime t = QDateTime::fromTime_t(tmTime, Qt::UTC);
         qCritical() << "UTC" << allDayEvent << t;
+        qCritical() << "Is t valid: " << t.isValid();
         // all day events will set as local time
         // floating time events will be set with invalid time zone
-        return QDateTime(t.date(),
+        QDateTime tt = QDateTime(t.date(),
                          (allDayEvent ? QTime(0,0,0) : t.time()),
                          (allDayEvent ? QTimeZone(QTimeZone::systemTimeZoneId()) : QTimeZone()));
+        qCritical() << "Is tt valid: " << tt.isValid();
+        return tt
     }
 }
 
