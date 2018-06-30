@@ -1343,7 +1343,7 @@ QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const cha
         // floating time events will be set with invalid time zone
         QDateTime tt = QDateTime(t.date(),
                          (allDayEvent ? QTime(0,0,0) : t.time()),
-                         (allDayEvent ? QTimeZone(QTimeZone::systemTimeZoneId()) : QTimeZone()));
+                         (allDayEvent ? QTimeZone(QTimeZone::systemTimeZoneId()) : Qt::UTC));
         qCritical() << "Is tt valid: " << tt.isValid();
         return tt
     }
