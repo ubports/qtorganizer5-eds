@@ -1331,10 +1331,13 @@ QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const cha
 
         tmTime = icaltime_as_timet_with_zone(value, timezone);
         QTimeZone qTz(tzLocationName);
-        return QDateTime::fromTime_t(tmTime, qTz);
+        QDateTime t = QDateTime::fromTime_t(tmTime, qTz);
+        qCritical() << "localTime" << t;
+        return t;
     } else {
         tmTime = icaltime_as_timet(value);
         QDateTime t = QDateTime::fromTime_t(tmTime, Qt::UTC);
+        qCritical() << "UTC" << allDayEvent << t;
         // all day events will set as local time
         // floating time events will be set with invalid time zone
         return QDateTime(t.date(),
@@ -1378,6 +1381,7 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
         icaltimezone *timezone = 0;
         timezone = icaltimezone_get_builtin_timezone(tz.id().constData());
         *tzId = QByteArray(icaltimezone_get_tzid(timezone));
+        qCritical() << "tzvalid" << finalDate;
         return icaltime_from_timet_with_zone(finalDate.toTime_t(), allDay, timezone);
     } else {
         bool invalidTime = allDay || !finalDate.time().isValid();
@@ -1386,6 +1390,7 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
                               Qt::UTC);
 
         *tzId = "";
+        qCritical() << "NOT tzvalid" << finalDate;
         return icaltime_from_timet(finalDate.toTime_t(), allDay);
     }
 }
