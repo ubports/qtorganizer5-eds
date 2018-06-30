@@ -1336,10 +1336,14 @@ QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const cha
         tmTime = icaltime_as_timet(value);
         QDateTime t = QDateTime::fromTime_t(tmTime, Qt::UTC);
         // all day events will set as local time
-        // floating time events will be set with invalid time zone
-        return QDateTime(t.date(),
-                         (allDayEvent ? QTime(0,0,0) : t.time()),
-                         (allDayEvent ? QTimeZone(QTimeZone::systemTimeZoneId()) : QTimeZone()));
+        // floating time events will be set as UTC
+        QDateTime tt;
+        if (allDayEvent)
+          tt = QDateTime(t.date(), QTime(0,0,0),
+                         QTimeZone(QTimeZone::systemTimeZoneId()));
+        else
+          tt = QDateTime(t.date(), t.time(), Qt::UTC);
+        return tt;
     }
 }
 
