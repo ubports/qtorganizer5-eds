@@ -1377,6 +1377,8 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
         }
     }
 
+    qCritical() << "before check tzvalid" << finalDate;
+
     if (tz.isValid()) {
         icaltimezone *timezone = 0;
         timezone = icaltimezone_get_builtin_timezone(tz.id().constData());
