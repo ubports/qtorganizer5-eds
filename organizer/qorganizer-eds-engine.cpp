@@ -1345,7 +1345,7 @@ QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const cha
                          (allDayEvent ? QTime(0,0,0) : t.time()),
                          (allDayEvent ? QTimeZone(QTimeZone::systemTimeZoneId()) : Qt::UTC));
         qCritical() << "Is tt valid: " << tt.isValid();
-        return tt
+        return tt;
     }
 }
 
