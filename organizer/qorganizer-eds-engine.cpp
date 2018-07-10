@@ -1324,6 +1324,10 @@ QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const cha
         } else {
             // fallback: sometimes the tzId contains the location name
             if (!timezone) {
+                static const char prefix[] = "/freeassociation.sourceforge.net/Tzfile/";
+                if (strncmp(tzId, prefix, sizeof(prefix) - 1) == 0) {
+                    tzId += sizeof(prefix) - 1;
+                }
                 timezone = icaltimezone_get_builtin_timezone(tzId);
             }
             tzLocationName = QByteArray(icaltimezone_get_location(timezone));
