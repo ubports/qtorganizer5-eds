@@ -42,13 +42,15 @@ ESourceRegistry *SourceRegistry::object() const
     return m_sourceRegistry;
 }
 
-void SourceRegistry::load()
+void SourceRegistry::load(const QString &managerUri)
 {
     if (m_sourceRegistry) {
+        Q_ASSERT(managerUri == m_managerUri);
         return;
     }
 
     clear();
+    m_managerUri = managerUri;
 
     GError *error = 0;
     m_sourceRegistry = e_source_registry_new_sync(0, &error);
@@ -116,7 +118,7 @@ void SourceRegistry::setDefaultCollection(QtOrganizer::QOrganizerCollection &col
         return;
 
     updateDefaultCollection(&collection);
-    QString edsId = m_defaultCollection.id().toString().split(":").last();
+    QString edsId = QString::fromUtf8(m_defaultCollection.id().localId());
     m_settings.setValue(DEFAULT_COLLECTION_SETTINGS, edsId);
 }
 
@@ -135,19 +137,14 @@ QStringList SourceRegistry::collectionsIds() const
     return m_collections.keys();
 }
 
-QList<QOrganizerEDSCollectionEngineId *> SourceRegistry::collectionsEngineIds() const
-{
-    return m_collectionsMap.values();
-}
-
-QOrganizerEDSCollectionEngineId *SourceRegistry::collectionEngineId(const QString &collectionId) const
-{
-    return m_collectionsMap.value(collectionId, 0);
-}
-
 ESource *SourceRegistry::source(const QString &collectionId) const
 {
     return m_sources[collectionId];
+}
+
+QOrganizerCollectionId SourceRegistry::collectionId(const QString &cid) const
+{
+    return collection(cid).id();
 }
 
 QOrganizerCollection SourceRegistry::collection(ESource *source) const
@@ -176,7 +173,6 @@ void SourceRegistry::remove(const QString &collectionId)
     QOrganizerCollection collection = m_collections.take(collectionId);
     if (!collection.id().isNull()) {
         Q_EMIT sourceRemoved(collectionId);
-        m_collectionsMap.remove(collectionId);
         g_object_unref(m_sources.take(collectionId));
         EClient *client = m_clients.take(collectionId);
         if (client) {
@@ -199,11 +195,23 @@ EClient* SourceRegistry::client(const QString &collectionId)
 
     EClient *client = m_clients.value(collectionId, 0);
     if (!client) {
-        QOrganizerEDSCollectionEngineId *eid = m_collectionsMap[collectionId];
-        if (eid) {
+        ESource *source = m_sources[collectionId];
+        if (source) {
             GError *gError = 0;
 
-            client = E_CAL_CLIENT_CONNECT_SYNC(eid->m_esource, eid->m_sourceType, 0, &gError);
+            ECalClientSourceType sourceType;
+            if (e_source_has_extension(source, E_SOURCE_EXTENSION_CALENDAR)) {
+                sourceType = E_CAL_CLIENT_SOURCE_TYPE_EVENTS;
+            } else if (e_source_has_extension(source, E_SOURCE_EXTENSION_TASK_LIST)) {
+                sourceType = E_CAL_CLIENT_SOURCE_TYPE_TASKS;
+            } else if (e_source_has_extension(source, E_SOURCE_EXTENSION_MEMO_LIST)) {
+                sourceType = E_CAL_CLIENT_SOURCE_TYPE_MEMOS;
+            } else {
+                qWarning() << "Source extension not supported";
+                Q_ASSERT(false);
+            }
+
+            client = E_CAL_CLIENT_CONNECT_SYNC(source, sourceType, 0, &gError);
             if (gError) {
                 qWarning() << "Fail to connect with client" << gError->message;
                 g_error_free(gError);
@@ -236,7 +244,6 @@ void SourceRegistry::clear()
 
     m_sources.clear();
     m_collections.clear();
-    m_collectionsMap.clear();
     m_clients.clear();
 }
 
@@ -263,13 +270,11 @@ QOrganizerCollection SourceRegistry::registerSource(ESource *source, bool isDefa
         bool isAlarms = e_source_has_extension(source, E_SOURCE_EXTENSION_ALARMS);
 
         if ( isEnabled && (isCalendar || isTaskList || isMemoList || isAlarms)) {
-            QOrganizerEDSCollectionEngineId *edsId = 0;
-            QOrganizerCollection collection = parseSource(source, isDefault, &edsId);
+            QOrganizerCollection collection = parseSource(m_managerUri, source, isDefault);
             QString collectionId = collection.id().toString();
 
-            if (!m_collectionsMap.contains(collectionId)) {
+            if (!m_sources.contains(collectionId)) {
                 m_collections.insert(collectionId, collection);
-                m_collectionsMap.insert(collectionId, edsId);
                 m_sources.insert(collectionId, source);
                 g_object_ref(source);
 
@@ -303,12 +308,12 @@ void SourceRegistry::updateDefaultCollection(QOrganizerCollection *collection)
     }
 }
 
-QOrganizerCollection SourceRegistry::parseSource(ESource *source,
-                                                 bool isDefault,
-                                                 QOrganizerEDSCollectionEngineId **edsId)
+QOrganizerCollection SourceRegistry::parseSource(const QString &managerUri,
+                                                 ESource *source,
+                                                 bool isDefault)
 {
-    *edsId = new QOrganizerEDSCollectionEngineId(source);
-    QOrganizerCollectionId id(*edsId);
+    QByteArray collectionId(e_source_get_uid(source));
+    QOrganizerCollectionId id(managerUri, collectionId);
     QOrganizerCollection collection;
 
     // id

@@ -40,7 +40,6 @@ include_directories(
 
 add_definitions(-DTEST_SUITE)
 
-declare_test(itemid-test)
 declare_test(parseecal-test)
 declare_test(collections-test)
 declare_test(event-test)

@@ -1,3 +1,9 @@
+qtorganizer5-eds (0.1.2+ubports1) xenial; urgency=medium
+
+  * No change rebuild against latest QtPim
+
+ -- Alberto Mardegan <mardy@users.sourceforge.net>  Tue, 24 Jul 2018 21:55:38 +0300
+
 qtorganizer5-eds (0.1.2+ubports) xenial; urgency=medium
 
   * Imported to UBports

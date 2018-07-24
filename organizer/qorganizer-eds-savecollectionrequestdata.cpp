@@ -93,9 +93,9 @@ void SaveCollectionRequestData::commitSourceUpdated(ESource *source,
     m_sourcesToUpdate.remove(index);
 
     if (error == QOrganizerManager::NoError) {
-        QOrganizerEDSCollectionEngineId *id;
         bool isDefault = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(source), "is-default"));
-        QOrganizerCollection collection = SourceRegistry::parseSource(source, isDefault, &id);
+        QOrganizerCollection collection = SourceRegistry::parseSource(parent()->managerUri(),
+                                                                      source, isDefault);
         m_results.insert(index, collection);
 
         if (isDefault) {

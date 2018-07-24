@@ -17,7 +17,6 @@
  */
 
 #include "qorganizer-eds-fetchrequestdata.h"
-#include "qorganizer-eds-engineid.h"
 
 #include <QtCore/QDebug>
 
@@ -199,6 +198,9 @@ void FetchRequestData::appendDeatachedResult(icalcomponent *comp)
     uid = icalcomponent_get_uid(comp);
     rid = icalcomponent_get_recurrenceid(comp);
 
+    QString collectionIdString =
+        QString::fromUtf8(QOrganizerCollectionId::fromString(m_current).localId().toHex());
+
     for(GSList *e=m_currentComponents; e != NULL; e = e->next) {
         icalcomponent *ical = static_cast<icalcomponent *>(e->data);
         if ((g_strcmp0(uid, icalcomponent_get_uid(ical)) == 0) &&
@@ -208,7 +210,7 @@ void FetchRequestData::appendDeatachedResult(icalcomponent *comp)
             icalcomponent_free (ical);
             e->data = icalcomponent_new_clone(comp);
             QString itemId = QString("%1/%2#%3")
-                    .arg(QString(m_current).replace(QOrganizerEDSEngineId::managerUriStatic() + ":", ""))
+                    .arg(collectionIdString)
                     .arg(QString::fromUtf8(uid))
                     .arg(QString::fromUtf8(icaltime_as_ical_string(rid)));
             m_deatachedIds.append(itemId);

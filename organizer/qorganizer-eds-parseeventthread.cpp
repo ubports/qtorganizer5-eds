@@ -1,5 +1,4 @@
 #include "qorganizer-eds-parseeventthread.h"
-#include "qorganizer-eds-collection-engineid.h"
 #include "qorganizer-eds-engine.h"
 
 #include <QDebug>
@@ -33,7 +32,7 @@ QOrganizerParseEventThread::~QOrganizerParseEventThread()
     m_events.clear();
 }
 
-void QOrganizerParseEventThread::start(QMap<QOrganizerEDSCollectionEngineId *, GSList *> events,
+void QOrganizerParseEventThread::start(QMap<QOrganizerCollectionId, GSList *> events,
                                        bool isIcalEvents,
                                        QList<QOrganizerItemDetail::DetailType> detailsHint)
 {
@@ -47,7 +46,7 @@ void QOrganizerParseEventThread::run()
 {
     QList<QOrganizerItem> result;
 
-    Q_FOREACH(QOrganizerEDSCollectionEngineId *id, m_events.keys()) {
+    Q_FOREACH(const QOrganizerCollectionId &id, m_events.keys()) {
         if (!m_source) {
             break;
         }

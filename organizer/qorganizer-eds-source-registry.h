@@ -22,12 +22,9 @@
 #include <QtCore/QObject>
 #include <QtCore/QSettings>
 
-#include <QtOrganizer/QOrganizerCollectionId>
 #include <QtOrganizer/QOrganizerCollection>
 
 #include <libecal/libecal.h>
-
-#include "qorganizer-eds-collection-engineid.h"
 
 #define COLLECTION_CALLENDAR_TYPE_METADATA  "collection-type"
 #define COLLECTION_SELECTED_METADATA        "collection-selected"
@@ -45,15 +42,14 @@ public:
     ~SourceRegistry();
 
     ESourceRegistry *object() const;
-    void load();
+    void load(const QString &managerUri);
     QtOrganizer::QOrganizerCollection defaultCollection() const;
     void setDefaultCollection(QtOrganizer::QOrganizerCollection &collection);
     QtOrganizer::QOrganizerCollection collection(const QString &collectionId) const;
     QList<QtOrganizer::QOrganizerCollection> collections() const;
     QStringList collectionsIds() const;
-    QList<QOrganizerEDSCollectionEngineId*> collectionsEngineIds() const;
     ESource *source(const QString &collectionId) const;
-    QOrganizerEDSCollectionEngineId* collectionEngineId(const QString &collectionId) const;
+    QtOrganizer::QOrganizerCollectionId collectionId(const QString &cid) const;
     QtOrganizer::QOrganizerCollection collection(ESource *source) const;
     QtOrganizer::QOrganizerCollection insert(ESource *source);
     void remove(ESource *source);
@@ -61,9 +57,9 @@ public:
     EClient *client(const QString &collectionId);
     void clear();
 
-    static QtOrganizer::QOrganizerCollection parseSource(ESource *source,
-                                                         bool isDefault,
-                                                         QOrganizerEDSCollectionEngineId **edsId);
+    static QtOrganizer::QOrganizerCollection parseSource(const QString &managerUri,
+                                                         ESource *source,
+                                                         bool isDefault);
     static ESource *newSourceFromCollection(const QtOrganizer::QOrganizerCollection &collection);
 
 Q_SIGNALS:
@@ -73,12 +69,12 @@ Q_SIGNALS:
 
 private:
     QSettings m_settings;
+    QString m_managerUri;
     ESourceRegistry *m_sourceRegistry;
     QtOrganizer::QOrganizerCollection m_defaultCollection;
     QMap<QString, EClient*> m_clients;
     QMap<QString, ESource*> m_sources;
     QMap<QString, QtOrganizer::QOrganizerCollection> m_collections;
-    QMap<QString, QOrganizerEDSCollectionEngineId*> m_collectionsMap;
 
     // handler id
     int m_sourceAddedId;

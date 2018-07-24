@@ -470,8 +470,7 @@ private Q_SLOTS:
 
         // This item will cause error, because the collection ID is invalid
         QOrganizerEvent ev;
-        QOrganizerEDSCollectionEngineId *edsCollectionId = new QOrganizerEDSCollectionEngineId("XXXXXX");
-        QOrganizerCollectionId cid(edsCollectionId);
+        QOrganizerCollectionId cid(m_engine->managerUri(), "XXXXXX");
         QVERIFY(!cid.isNull());
         QCOMPARE(cid.toString(), QStringLiteral("qtorganizer:eds::XXXXXX"));
         ev.setCollectionId(cid);
