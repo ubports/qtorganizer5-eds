@@ -73,10 +73,6 @@ target_link_libraries(${QORGANIZER_BACKEND}
 qt5_use_modules(${QORGANIZER_BACKEND}-lib Core Organizer)
 qt5_use_modules(${QORGANIZER_BACKEND} Core Organizer)
 
-execute_process(
-    COMMAND qmake -query QT_INSTALL_PLUGINS
-    OUTPUT_VARIABLE QT_INSTALL_PLUGINS
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+set(QT_INSTALL_PLUGINS "${CMAKE_INSTALL_LIBDIR}/qt5/plugins")
 
 install(TARGETS ${QORGANIZER_BACKEND} LIBRARY DESTINATION ${QT_INSTALL_PLUGINS}/organizer)
