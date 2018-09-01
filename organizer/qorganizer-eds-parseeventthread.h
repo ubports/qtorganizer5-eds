@@ -26,12 +26,11 @@
 #include <QByteArray>
 #include <QMetaMethod>
 
+#include <QtOrganizer/QOrganizerCollectionId>
 #include <QtOrganizer/QOrganizerItemDetail>
 #include <QtOrganizer/QOrganizerItem>
 
 #include <glib.h>
-
-class QOrganizerEDSCollectionEngineId;
 
 class QOrganizerParseEventThread : public QThread
 {
@@ -42,7 +41,7 @@ public:
                                QObject *parent = 0);
     ~QOrganizerParseEventThread();
 
-    void start(QMap<QOrganizerEDSCollectionEngineId *, GSList *> events,
+    void start(QMap<QtOrganizer::QOrganizerCollectionId, GSList *> events,
                bool isIcalEvents,
                QList<QtOrganizer::QOrganizerItemDetail::DetailType> detailsHint);
 
@@ -52,7 +51,7 @@ private:
     bool m_abort;
 
     // parse data
-    QMap<QOrganizerEDSCollectionEngineId *, GSList *> m_events;
+    QMap<QtOrganizer::QOrganizerCollectionId, GSList *> m_events;
     bool m_isIcalEvents;
     QList<QtOrganizer::QOrganizerItemDetail::DetailType> m_detailsHint;
 

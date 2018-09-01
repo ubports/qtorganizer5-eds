@@ -3,13 +3,11 @@ project(qorganizer-eds-src)
 set(QORGANIZER_BACKEND qtorganizer_eds)
 
 set(QORGANIZER_BACKEND_SRCS
-    qorganizer-eds-collection-engineid.cpp
     qorganizer-eds-fetchrequestdata.cpp
     qorganizer-eds-fetchbyidrequestdata.cpp
     qorganizer-eds-fetchocurrencedata.cpp
     qorganizer-eds-engine.cpp
     qorganizer-eds-enginedata.cpp
-    qorganizer-eds-engineid.cpp
     qorganizer-eds-parseeventthread.cpp
     qorganizer-eds-removecollectionrequestdata.cpp
     qorganizer-eds-removerequestdata.cpp
@@ -22,13 +20,11 @@ set(QORGANIZER_BACKEND_SRCS
 )
 
 set(QORGANIZER_BACKEND_HDRS
-    qorganizer-eds-collection-engineid.h
     qorganizer-eds-fetchrequestdata.h
     qorganizer-eds-fetchbyidrequestdata.h
     qorganizer-eds-fetchocurrencedata.h
     qorganizer-eds-engine.h
     qorganizer-eds-enginedata.h
-    qorganizer-eds-engineid.h
     qorganizer-eds-parseeventthread.h
     qorganizer-eds-removecollectionrequestdata.h
     qorganizer-eds-removerequestdata.h
@@ -77,10 +73,6 @@ target_link_libraries(${QORGANIZER_BACKEND}
 qt5_use_modules(${QORGANIZER_BACKEND}-lib Core Organizer)
 qt5_use_modules(${QORGANIZER_BACKEND} Core Organizer)
 
-execute_process(
-    COMMAND qmake -query QT_INSTALL_PLUGINS
-    OUTPUT_VARIABLE QT_INSTALL_PLUGINS
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+set(QT_INSTALL_PLUGINS "${CMAKE_INSTALL_LIBDIR}/qt5/plugins")
 
 install(TARGETS ${QORGANIZER_BACKEND} LIBRARY DESTINATION ${QT_INSTALL_PLUGINS}/organizer)

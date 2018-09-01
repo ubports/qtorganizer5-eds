@@ -19,7 +19,6 @@
 #include "qorganizer-eds-enginedata.h"
 #include "qorganizer-eds-viewwatcher.h"
 #include "qorganizer-eds-fetchrequestdata.h"
-#include "qorganizer-eds-engineid.h"
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDebug>
@@ -148,9 +147,10 @@ QList<QOrganizerItemId> ViewWatcher::parseItemIds(GSList *objects)
             qWarning() << "Fail to parse component ID";
         }
 
-        QOrganizerEDSEngineId *itemId = new QOrganizerEDSEngineId(m_collectionId,
-                                                                  QString::fromUtf8(uid));
-        result << QOrganizerItemId(itemId);
+        QOrganizerCollectionId collectionId =
+            QOrganizerCollectionId::fromString(m_collectionId);
+        QOrganizerItemId itemId(collectionId.managerUri(), uid);
+        result << itemId;
     }
     return result;
 }
@@ -183,9 +183,10 @@ void ViewWatcher::onObjectsRemoved(ECalClientView *view,
 
     for (GSList *l = objects; l; l = l->next) {
         ECalComponentId *id = static_cast<ECalComponentId*>(l->data);
-        QOrganizerEDSEngineId *itemId = new QOrganizerEDSEngineId(self->m_collectionId,
-                                                                  QString::fromUtf8(id->uid));
-        self->m_changeSet.insertRemovedItem(QOrganizerItemId(itemId));
+        QOrganizerCollectionId collectionId =
+            QOrganizerCollectionId::fromString(self->m_collectionId);
+        QOrganizerItemId itemId(collectionId.managerUri(), id->uid);
+        self->m_changeSet.insertRemovedItem(itemId);
     }
     self->notify();
 }
@@ -196,6 +197,7 @@ void ViewWatcher::onObjectsModified(ECalClientView *view,
 {
     Q_UNUSED(view);
 
-    self->m_changeSet.insertChangedItems(self->parseItemIds(objects));
+    self->m_changeSet.insertChangedItems(self->parseItemIds(objects),
+                                         QList<QOrganizerItemDetail::DetailType>());
     self->notify();
 }

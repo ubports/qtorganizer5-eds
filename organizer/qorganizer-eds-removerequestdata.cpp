@@ -17,7 +17,6 @@
  */
 
 #include "qorganizer-eds-removerequestdata.h"
-#include "qorganizer-eds-engineid.h"
 #include "qorganizer-eds-enginedata.h"
 
 #include <QtOrganizer/QOrganizerManagerEngine>
@@ -54,7 +53,7 @@ GSList *RemoveRequestData::takeItemsIds(QOrganizerCollectionId collectionId)
         if (item.collectionId() == collectionId) {
             m_currentIds.append(item.id());
 
-            ECalComponentId *id = QOrganizerEDSEngineId::toComponentIdObject(item.id());
+            ECalComponentId *id = QOrganizerEDSEngine::ecalComponentId(item.id());
             if (id) {
                 ids = g_slist_append(ids, id);
             }

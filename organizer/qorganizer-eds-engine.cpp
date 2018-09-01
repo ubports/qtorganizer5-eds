@@ -18,8 +18,6 @@
 
 
 #include "qorganizer-eds-engine.h"
-#include "qorganizer-eds-engineid.h"
-#include "qorganizer-eds-collection-engineid.h"
 #include "qorganizer-eds-fetchrequestdata.h"
 #include "qorganizer-eds-fetchbyidrequestdata.h"
 #include "qorganizer-eds-fetchocurrencedata.h"
@@ -92,7 +90,7 @@ QOrganizerEDSEngine::QOrganizerEDSEngine(QOrganizerEDSEngineData *data)
     connect(d->m_sourceRegistry, SIGNAL(sourceAdded(QString)), SLOT(onSourceAdded(QString)));
     connect(d->m_sourceRegistry, SIGNAL(sourceRemoved(QString)), SLOT(onSourceRemoved(QString)));
     connect(d->m_sourceRegistry, SIGNAL(sourceUpdated(QString)), SLOT(onSourceUpdated(QString)));
-    d->m_sourceRegistry->load();
+    d->m_sourceRegistry->load(managerUri());
 }
 
 QOrganizerEDSEngine::~QOrganizerEDSEngine()
@@ -112,15 +110,7 @@ QOrganizerEDSEngine::~QOrganizerEDSEngine()
 
 QString QOrganizerEDSEngine::managerName() const
 {
-    return QOrganizerEDSEngineId::managerNameStatic();
-}
-
-/*! \reimp
-*/
-QMap<QString, QString> QOrganizerEDSEngine::managerParameters() const
-{
-    QMap<QString, QString> params;
-    return params;
+    return QStringLiteral("qtorganizer:eds:");
 }
 
 void QOrganizerEDSEngine::itemsAsync(QOrganizerItemFetchRequest *req)
@@ -304,7 +294,7 @@ void QOrganizerEDSEngine::itemsByIdAsyncStart(FetchByIdRequestData *data)
             Q_ASSERT(ids.length() == 2);
             QString collectionId = ids[0];
             QString rId;
-            QString itemId = QOrganizerEDSEngineId::toComponentId(ids[1], &rId);
+            QString itemId = toComponentId(ids[1], &rId);
 
             EClient *client = data->parent()->d->m_sourceRegistry->client(collectionId);
             if (client) {
@@ -366,7 +356,7 @@ void QOrganizerEDSEngine::itemOcurrenceAsync(QOrganizerItemOccurrenceFetchReques
     FetchOcurrenceData *data = new FetchOcurrenceData(this, req);
 
     QString rId;
-    QString cId = QOrganizerEDSEngineId::toComponentId(req->parentItem().id(), &rId);
+    QString cId = toComponentId(req->parentItem().id().toString(), &rId);
 
     EClient *client = data->parent()->d->m_sourceRegistry->client(req->parentItem().collectionId().toString());
     if (client) {
@@ -707,17 +697,19 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
         QList<QOrganizerItem> items = data->workingItems();
         for(uint i=0, iMax=g_slist_length(uids); i < iMax; i++) {
             QOrganizerItem &item = items[i];
-            const gchar *uid = static_cast<const gchar*>(g_slist_nth_data(uids, i));
+            QByteArray uid(static_cast<const gchar*>(g_slist_nth_data(uids, i)));
 
-            QOrganizerEDSEngineId *eid = new QOrganizerEDSEngineId(currentCollectionId,
-                                                                   QString::fromUtf8(uid));
-            item.setId(QOrganizerItemId(eid));
+            QOrganizerCollectionId collectionId =
+                QOrganizerCollectionId::fromString(currentCollectionId);
+
+            QString itemGuid =
+                uid.contains(':') ? uid.mid(uid.lastIndexOf(':') + 1) : uid;
+            item.setId(QOrganizerItemId(collectionId.managerUri(), uid));
             item.setGuid(QString("%1/%2")
-                         .arg(eid->m_collectionId)
-                         .arg(eid->m_itemId));
+                         .arg(QString::fromUtf8(collectionId.localId()))
+                         .arg(itemGuid));
 
-            QOrganizerEDSCollectionEngineId *edsCollectionId = new QOrganizerEDSCollectionEngineId(currentCollectionId);
-            item.setCollectionId(QOrganizerCollectionId(edsCollectionId));
+            item.setCollectionId(collectionId);
         }
         g_slist_free_full(uids, g_free);
         data->appendResults(items);
@@ -1865,6 +1857,34 @@ QOrganizerItem *QOrganizerEDSEngine::parseJournal(ECalComponent *comp,
     return journal;
 }
 
+QString QOrganizerEDSEngine::toComponentId(const QString &itemId, QString *rid)
+{
+    QStringList ids = itemId.split("/").last().split("#");
+    if (ids.size() == 2) {
+        *rid = ids[1];
+    }
+    return ids[0];
+}
+
+ECalComponentId *QOrganizerEDSEngine::ecalComponentId(const QOrganizerItemId &itemId)
+{
+    QStringList ids = itemId.toString().split("/").last().split("#");
+
+    QString cId = ids[0];
+    QString rId = (ids.size() == 2) ? ids[1] : QString();
+
+
+    ECalComponentId *id = g_new0(ECalComponentId, 1);
+    id->uid = g_strdup(cId.toUtf8().data());
+    if (rId.isEmpty()) {
+        id->rid = NULL;
+    } else {
+        id->rid = g_strdup(rId.toUtf8().data());
+    }
+
+    return id;
+}
+
 void QOrganizerEDSEngine::parseSummary(ECalComponent *comp, QtOrganizer::QOrganizerItem *item)
 {
     ECalComponentText summary;
@@ -2037,9 +2057,9 @@ void QOrganizerEDSEngine::parseEventsAsync(const QMap<QString, GSList *> &events
                                            QObject *source,
                                            const QByteArray &slot)
 {
-    QMap<QOrganizerEDSCollectionEngineId*, GSList*> request;
+    QMap<QOrganizerCollectionId, GSList*> request;
     Q_FOREACH(const QString &collectionId, events.keys()) {
-        QOrganizerEDSCollectionEngineId *collection = d->m_sourceRegistry->collectionEngineId(collectionId);
+        QOrganizerCollectionId collection = d->m_sourceRegistry->collectionId(collectionId);
         if (isIcalEvents) {
             request.insert(collection,
                            g_slist_copy_deep(events.value(collectionId),
@@ -2056,7 +2076,7 @@ void QOrganizerEDSEngine::parseEventsAsync(const QMap<QString, GSList *> &events
     thread->start(request, isIcalEvents, detailsHint);
 }
 
-QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(QOrganizerEDSCollectionEngineId *collectionId, GSList *events, bool isIcalEvents, QList<QOrganizerItemDetail::DetailType> detailsHint)
+QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(const QOrganizerCollectionId &collectionId, GSList *events, bool isIcalEvents, QList<QOrganizerItemDetail::DetailType> detailsHint)
 {
     QList<QOrganizerItem> items;
     for (GSList *l = events; l; l = l->next) {
@@ -2150,7 +2170,7 @@ QList<QOrganizerItem> QOrganizerEDSEngine::parseEvents(const QString &collection
                                                        bool isIcalEvents,
                                                        QList<QOrganizerItemDetail::DetailType> detailsHint)
 {
-    QOrganizerEDSCollectionEngineId *collection = d->m_sourceRegistry->collectionEngineId(collectionId);
+    QOrganizerCollectionId collection(managerUri(), collectionId.toUtf8());
     return parseEvents(collection, events, isIcalEvents, detailsHint);
 }
 
@@ -2514,31 +2534,35 @@ bool QOrganizerEDSEngine::hasRecurrence(ECalComponent *comp)
 
 void QOrganizerEDSEngine::parseId(ECalComponent *comp,
                                   QOrganizerItem *item,
-                                  QOrganizerEDSCollectionEngineId *edsCollectionId)
+                                  const QOrganizerCollectionId &collectionId)
 {
     ECalComponentId *id = e_cal_component_get_id(comp);
-    QOrganizerEDSEngineId *edsParentId = 0;
-    QOrganizerEDSEngineId *edsId;
 
-    if (!edsCollectionId) {
+    if (collectionId.isNull()) {
         qWarning() << "Parse Id with null collection";
         return;
     }
 
-    edsId = QOrganizerEDSEngineId::fromComponentId(edsCollectionId->m_collectionId, id, &edsParentId);
-    item->setId(QOrganizerItemId(edsId));
-    item->setGuid(QString("%1/%2")
-                    .arg(edsCollectionId->m_collectionId)
-                    .arg(edsId->m_itemId));
+    QByteArray iId(id->uid);
+    QByteArray rId(id->rid);
+    if (!rId.isEmpty()) {
+        iId += "#" + rId;
+    }
 
-    if (edsParentId) {
+    QString itemGuid =
+        iId.contains(':') ? iId.mid(iId.lastIndexOf(':') + 1) : iId;
+    item->setId(QOrganizerItemId(collectionId.managerUri(), iId));
+    item->setGuid(QString("%1/%2")
+                  .arg(QString::fromUtf8(collectionId.localId()))
+                  .arg(itemGuid));
+
+    if (!rId.isEmpty()) {
         QOrganizerItemParent itemParent = item->detail(QOrganizerItemDetail::TypeParent);
-        itemParent.setParentId(QOrganizerItemId(edsParentId));
+        itemParent.setParentId(QOrganizerItemId(collectionId.managerUri(), rId));
         item->saveDetail(&itemParent);
     }
 
-    QOrganizerCollectionId cId = QOrganizerCollectionId(edsCollectionId);
-    item->setCollectionId(cId);
+    item->setCollectionId(collectionId);
     e_cal_component_free_id(id);
 }
 
@@ -2803,7 +2827,7 @@ void QOrganizerEDSEngine::parseId(const QOrganizerItem &item, ECalComponent *com
     QOrganizerItemId itemId = item.id();
     if (!itemId.isNull()) {
         QString rId;
-        QString cId = QOrganizerEDSEngineId::toComponentId(itemId, &rId);
+        QString cId = toComponentId(itemId.toString(), &rId);
 
         e_cal_component_set_uid(comp, cId.toUtf8().data());
 

@@ -19,10 +19,9 @@
 #ifndef QORGANIZER_EDS_ENGINE_H
 #define QORGANIZER_EDS_ENGINE_H
 
-#include "qorganizer-eds-collection-engineid.h"
-
 #include <QExplicitlySharedDataPointer>
 
+#include <QtOrganizer/QOrganizerCollectionId>
 #include <QtOrganizer/QOrganizerItemId>
 #include <QtOrganizer/QOrganizerItemFetchHint>
 #include <QtOrganizer/QOrganizerManager>
@@ -47,7 +46,6 @@ class SaveCollectionRequestData;
 class RemoveCollectionRequestData;
 class ViewWatcher;
 class QOrganizerEDSEngineData;
-class QOrganizerEDSCollectionEngineId;
 
 class QOrganizerEDSEngine : public QtOrganizer::QOrganizerManagerEngine
 {
@@ -59,8 +57,7 @@ public:
     ~QOrganizerEDSEngine();
 
     // URI reporting
-    QString managerName() const;
-    QMap<QString, QString> managerParameters() const;
+    QString managerName() const override;
 
     // items
     QList<QtOrganizer::QOrganizerItem> items(const QList<QtOrganizer::QOrganizerItemId> &itemIds,
@@ -148,7 +145,7 @@ private:
                           QList<QtOrganizer::QOrganizerItemDetail::DetailType> detailsHint,
                           QObject *source,
                           const QByteArray &slot);
-    static QList<QtOrganizer::QOrganizerItem> parseEvents(QOrganizerEDSCollectionEngineId *collectionId, GSList *events, bool isIcalEvents, QList<QtOrganizer::QOrganizerItemDetail::DetailType> detailsHint);
+    static QList<QtOrganizer::QOrganizerItem> parseEvents(const QtOrganizer::QOrganizerCollectionId &collectionId, GSList *events, bool isIcalEvents, QList<QtOrganizer::QOrganizerItemDetail::DetailType> detailsHint);
     static GSList *parseItems(ECalClient *client, QList<QtOrganizer::QOrganizerItem> items, bool *hasRecurrence);
 
     // QOrganizerItem -> ECalComponent
@@ -178,7 +175,7 @@ private:
 
     // ECalComponent -> QOrganizerItem
     static bool hasRecurrence(ECalComponent *comp);
-    static void parseId(ECalComponent *comp, QtOrganizer::QOrganizerItem *item, QOrganizerEDSCollectionEngineId *edsCollectionId);
+    static void parseId(ECalComponent *comp, QtOrganizer::QOrganizerItem *item, const QtOrganizer::QOrganizerCollectionId &edsCollectionId);
     static void parseSummary(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseDescription(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
     static void parseComments(ECalComponent *comp, QtOrganizer::QOrganizerItem *item);
@@ -213,6 +210,8 @@ private:
     static ECalComponent *parseEventItem(ECalClient *client, const QtOrganizer::QOrganizerItem &item);
     static ECalComponent *parseTodoItem(ECalClient *client, const QtOrganizer::QOrganizerItem &item);
     static ECalComponent *parseJournalItem(ECalClient *client, const QtOrganizer::QOrganizerItem &item);
+    static QString toComponentId(const QString &itemId, QString *rid);
+    static ECalComponentId *ecalComponentId(const QtOrganizer::QOrganizerItemId &itemId);
 
     // glib callback
     void itemsAsync(QtOrganizer::QOrganizerItemFetchRequest *req);
@@ -260,6 +259,8 @@ private:
     friend class FetchRequestData;
     friend class FetchOcurrenceData;
     friend class QOrganizerParseEventThread;
+    friend class RemoveByIdRequestData;
+    friend class RemoveRequestData;
 };
 
 //FIXME: Do we really need this, this looks wrong

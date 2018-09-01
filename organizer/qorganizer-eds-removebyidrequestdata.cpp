@@ -17,7 +17,6 @@
  */
 
 #include "qorganizer-eds-removebyidrequestdata.h"
-#include "qorganizer-eds-engineid.h"
 #include "qorganizer-eds-enginedata.h"
 
 #include <QtOrganizer/QOrganizerManagerEngine>
@@ -79,7 +78,7 @@ GSList *RemoveByIdRequestData::parseIds(QSet<QOrganizerItemId> iids)
 {
     GSList *ids = 0;
     Q_FOREACH(const QOrganizerItemId &iid, iids) {
-        ECalComponentId *id = QOrganizerEDSEngineId::toComponentIdObject(iid);
+        ECalComponentId *id = QOrganizerEDSEngine::ecalComponentId(iid);
         if (id) {
             ids = g_slist_append(ids, id);
         }
