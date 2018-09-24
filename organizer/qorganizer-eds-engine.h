@@ -122,13 +122,22 @@ public:
     virtual QList<QtOrganizer::QOrganizerItemDetail::DetailType> supportedItemDetails(QtOrganizer::QOrganizerItemType::ItemType itemType) const;
     virtual QList<QtOrganizer::QOrganizerItemType::ItemType> supportedItemTypes() const;
 
+    /* Map between EDS items (source + uid) and QtOrganizer items
+     * (QOrganizerCollectionId + QOrganizerItemId):
+     */
+    static QtOrganizer::QOrganizerItemId
+        idFromEds(const QtOrganizer::QOrganizerCollectionId &collectionId,
+                  const gchar *uid);
+    static QByteArray idToEds(const QtOrganizer::QOrganizerItemId &itemId,
+                              QByteArray *sourceId = nullptr);
+
     // debug
     int runningRequestCount() const;
 
 protected Q_SLOTS:
-    void onSourceAdded(const QString &collectionId);
-    void onSourceRemoved(const QString &collectionId);
-    void onSourceUpdated(const QString &collectionId);
+    void onSourceAdded(const QByteArray &sourceId);
+    void onSourceRemoved(const QByteArray &sourceId);
+    void onSourceUpdated(const QByteArray &sourceId);
     void onViewChanged(QtOrganizer::QOrganizerItemChangeSet *change);
 
 protected:
@@ -139,8 +148,8 @@ private:
     QOrganizerEDSEngineData *d;
     QMap<QtOrganizer::QOrganizerAbstractRequest*, RequestData*> m_runningRequests;
 
-    QList<QtOrganizer::QOrganizerItem> parseEvents(const QString &collectionId, GSList *events, bool isIcalEvents, QList<QtOrganizer::QOrganizerItemDetail::DetailType> detailsHint);
-    void parseEventsAsync(const QMap<QString, GSList *> &events,
+    QList<QtOrganizer::QOrganizerItem> parseEvents(const QByteArray &sourceId, GSList *events, bool isIcalEvents, QList<QtOrganizer::QOrganizerItemDetail::DetailType> detailsHint);
+    void parseEventsAsync(const QMap<QByteArray, GSList *> &events,
                           bool isIcalEvents,
                           QList<QtOrganizer::QOrganizerItemDetail::DetailType> detailsHint,
                           QObject *source,
@@ -210,7 +219,7 @@ private:
     static ECalComponent *parseEventItem(ECalClient *client, const QtOrganizer::QOrganizerItem &item);
     static ECalComponent *parseTodoItem(ECalClient *client, const QtOrganizer::QOrganizerItem &item);
     static ECalComponent *parseJournalItem(ECalClient *client, const QtOrganizer::QOrganizerItem &item);
-    static QString toComponentId(const QString &itemId, QString *rid);
+    static QByteArray toComponentId(const QByteArray &itemId, QByteArray *rid);
     static ECalComponentId *ecalComponentId(const QtOrganizer::QOrganizerItemId &itemId);
 
     // glib callback

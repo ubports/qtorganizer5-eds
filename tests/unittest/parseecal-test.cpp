@@ -388,8 +388,8 @@ private Q_SLOTS:
 
         QList<QOrganizerItemDetail::DetailType> detailsHint;
         GSList *events = g_slist_append(events, ical);
-        QMap<QString, GSList*> eventMap;
-        eventMap.insert(engine->defaultCollection(0).id().toString(), events);
+        QMap<QByteArray, GSList*> eventMap;
+        eventMap.insert(engine->defaultCollection(0).id().localId(), events);
         engine->parseEventsAsync(eventMap, true, detailsHint, this, SLOT(onEventAsyncParsed(QList<QOrganizerItem>)));
 
         QTRY_COMPARE(m_itemsParsed.size(), 1);

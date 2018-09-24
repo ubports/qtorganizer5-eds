@@ -33,8 +33,8 @@ public:
                 QtOrganizer::QOrganizerAbstractRequest::State state = QtOrganizer::QOrganizerAbstractRequest::FinishedState);
 
 
-    QString nextCollection();
-    QString currentCollection() const;
+    QByteArray nextSourceId();
+    QByteArray currentSourceId() const;
     QList<QtOrganizer::QOrganizerItem> takeItemsToCreate();
     QList<QtOrganizer::QOrganizerItem> takeItemsToUpdate();
     bool end() const;
@@ -47,10 +47,10 @@ public:
 private:
     QList<QtOrganizer::QOrganizerItem> m_result;
     QMap<int, QtOrganizer::QOrganizerManager::Error> m_erros;
-    QMap<QString, QList<QtOrganizer::QOrganizerItem> > m_items;
+    QMap<QByteArray, QList<QtOrganizer::QOrganizerItem> > m_items;
     QList<QtOrganizer::QOrganizerItem> m_currentItems;
     QList<QtOrganizer::QOrganizerItem> m_workingItems;
-    QString m_currentCollection;
+    QByteArray m_currentSourceId;
 };
 
 #endif

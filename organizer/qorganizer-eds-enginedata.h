@@ -46,15 +46,15 @@ public:
         }
     }
 
-    ViewWatcher* watch(const QString &collectionId);
-    void unWatch(const QString &collectionId);
+    ViewWatcher* watch(const QtOrganizer::QOrganizerCollectionId &collectionId);
+    void unWatch(const QByteArray &sourceId);
 
     QAtomicInt m_refCount;
     SourceRegistry *m_sourceRegistry;
     QSet<QtOrganizer::QOrganizerManagerEngine*> m_sharedEngines;
 
 private:
-    QMap<QString, ViewWatcher*> m_viewWatchers;
+    QMap<QByteArray, ViewWatcher*> m_viewWatchers;
 
 };
 

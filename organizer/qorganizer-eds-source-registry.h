@@ -45,16 +45,16 @@ public:
     void load(const QString &managerUri);
     QtOrganizer::QOrganizerCollection defaultCollection() const;
     void setDefaultCollection(QtOrganizer::QOrganizerCollection &collection);
-    QtOrganizer::QOrganizerCollection collection(const QString &collectionId) const;
+    QtOrganizer::QOrganizerCollection collection(const QByteArray &sourceId) const;
     QList<QtOrganizer::QOrganizerCollection> collections() const;
-    QStringList collectionsIds() const;
-    ESource *source(const QString &collectionId) const;
-    QtOrganizer::QOrganizerCollectionId collectionId(const QString &cid) const;
+    QByteArrayList sourceIds() const;
+    ESource *source(const QByteArray &sourceId) const;
+    QtOrganizer::QOrganizerCollectionId collectionId(const QByteArray &sourceId) const;
     QtOrganizer::QOrganizerCollection collection(ESource *source) const;
     QtOrganizer::QOrganizerCollection insert(ESource *source);
     void remove(ESource *source);
-    void remove(const QString &collectionId);
-    EClient *client(const QString &collectionId);
+    void remove(const QByteArray &sourceId);
+    EClient *client(const QByteArray &sourceId);
     void clear();
 
     static QtOrganizer::QOrganizerCollection parseSource(const QString &managerUri,
@@ -63,18 +63,18 @@ public:
     static ESource *newSourceFromCollection(const QtOrganizer::QOrganizerCollection &collection);
 
 Q_SIGNALS:
-    void sourceAdded(const QString &collectionId);
-    void sourceRemoved(const QString &collectionId);
-    void sourceUpdated(const QString &collectionId);
+    void sourceAdded(const QByteArray &sourceId);
+    void sourceRemoved(const QByteArray &sourceId);
+    void sourceUpdated(const QByteArray &sourceId);
 
 private:
     QSettings m_settings;
     QString m_managerUri;
     ESourceRegistry *m_sourceRegistry;
     QtOrganizer::QOrganizerCollection m_defaultCollection;
-    QMap<QString, EClient*> m_clients;
-    QMap<QString, ESource*> m_sources;
-    QMap<QString, QtOrganizer::QOrganizerCollection> m_collections;
+    QMap<QByteArray, EClient*> m_clients;
+    QMap<QByteArray, ESource*> m_sources;
+    QMap<QByteArray, QtOrganizer::QOrganizerCollection> m_collections;
 
     // handler id
     int m_sourceAddedId;
@@ -84,8 +84,8 @@ private:
     int m_sourceDisabledId;
     int m_defaultSourceChangedId;
 
-    QByteArray defaultCollectionId() const;
-    QString findCollection(ESource *source) const;
+    QByteArray defaultSourceId() const;
+    QByteArray findSource(ESource *source) const;
     QtOrganizer::QOrganizerCollection registerSource(ESource *source, bool isDefault = false);
     void updateDefaultCollection(QtOrganizer::QOrganizerCollection *collection);
     static void updateCollection(QtOrganizer::QOrganizerCollection *collection,

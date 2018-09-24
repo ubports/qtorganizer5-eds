@@ -30,15 +30,12 @@ SaveRequestData::SaveRequestData(QOrganizerEDSEngine *engine,
                                  QtOrganizer::QOrganizerAbstractRequest *req)
     : RequestData(engine, req)
 {
-    // map items by collection
+    // map items by source
     Q_FOREACH(const QOrganizerItem &i, request<QOrganizerItemSaveRequest>()->items()) {
-        QString collectionId = i.collectionId().toString();
-        if (collectionId == QStringLiteral("qtorganizer:::"))  {
-            collectionId = QStringLiteral("");
-        }
-        QList<QOrganizerItem> li = m_items[collectionId];
+        QByteArray sourceId = i.collectionId().localId();
+        QList<QOrganizerItem> li = m_items[sourceId];
         li << i;
-        m_items.insert(collectionId, li);
+        m_items.insert(sourceId, li);
     }
 }
 
@@ -64,22 +61,22 @@ void SaveRequestData::appendResults(QList<QOrganizerItem> result)
     m_result += result;
 }
 
-QString SaveRequestData::nextCollection()
+QByteArray SaveRequestData::nextSourceId()
 {
     if (m_items.isEmpty()) {
-        m_currentCollection = QString(QString::null);
+        m_currentSourceId = QByteArray();
         m_currentItems.clear();
     } else {
-        m_currentCollection = m_items.keys().first();
-        m_currentItems = m_items.take(m_currentCollection);
+        m_currentSourceId = m_items.keys().first();
+        m_currentItems = m_items.take(m_currentSourceId);
     }
     m_workingItems.clear();
-    return m_currentCollection;
+    return m_currentSourceId;
 }
 
-QString SaveRequestData::currentCollection() const
+QByteArray SaveRequestData::currentSourceId() const
 {
-    return m_currentCollection;
+    return m_currentSourceId;
 }
 
 QList<QOrganizerItem> SaveRequestData::takeItemsToCreate()

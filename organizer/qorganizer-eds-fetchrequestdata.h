@@ -28,13 +28,13 @@ class FetchRequestData : public RequestData
 {
 public:
     FetchRequestData(QOrganizerEDSEngine *engine,
-                     QStringList collections,
+                     const QByteArrayList &sourceIds,
                      QtOrganizer::QOrganizerAbstractRequest *req);
     ~FetchRequestData();
 
-    QString nextCollection();
-    QString nextParentId();
-    QString collection() const;
+    QByteArray nextSourceId();
+    QByteArray nextParentId();
+    QByteArray sourceId() const;
     time_t startDate() const;
     time_t endDate() const;
     bool hasDateInterval() const;
@@ -51,16 +51,16 @@ public:
 
 private:
     FetchRequestDataParseListener *m_parseListener;
-    QMap<QString, GSList*> m_components;
-    QStringList m_collections;
-    QSet<QString> m_currentParentIds;
-    QStringList m_deatachedIds;
-    QString m_current;
+    QMap<QByteArray, GSList*> m_components;
+    QByteArrayList m_sourceIds;
+    QSet<QByteArray> m_currentParentIds;
+    QByteArrayList m_deatachedIds;
+    QByteArray m_current;
     GSList* m_currentComponents;
     QList<QtOrganizer::QOrganizerItem> m_results;
 
-    QStringList filterCollections(const QStringList &collections) const;
-    QStringList collectionsFromFilter(const QtOrganizer::QOrganizerItemFilter &f) const;
+    QByteArrayList filterSourceIds(const QByteArrayList &collections) const;
+    QByteArrayList sourceIdsFromFilter(const QtOrganizer::QOrganizerItemFilter &f) const;
     void finishContinue(QtOrganizer::QOrganizerManager::Error error,
                         QtOrganizer::QOrganizerAbstractRequest::State state);
 

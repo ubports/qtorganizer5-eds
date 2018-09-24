@@ -30,13 +30,12 @@ RemoveByIdRequestData::RemoveByIdRequestData(QOrganizerEDSEngine *engine, QtOrga
       m_currentCompIds(0)
 {
     Q_FOREACH(const QOrganizerItemId &id, request<QOrganizerItemRemoveByIdRequest>()->itemIds()) {
-        QString strId = id.toString();
-        QString collectionId;
-        if (strId.contains("/")) {
-            collectionId = strId.split("/").first();
-            QSet<QOrganizerItemId> ids = m_pending.value(collectionId);
+        QByteArray sourceId;
+        QOrganizerEDSEngine::idToEds(id, &sourceId);
+        if (!sourceId.isEmpty()) {
+            QSet<QOrganizerItemId> ids = m_pending.value(sourceId);
             ids << id;
-            m_pending.insert(collectionId, ids);
+            m_pending.insert(sourceId, ids);
         }
     }
 }
@@ -87,26 +86,26 @@ GSList *RemoveByIdRequestData::parseIds(QSet<QOrganizerItemId> iids)
     return ids;
 }
 
-QString RemoveByIdRequestData::next()
+QByteArray RemoveByIdRequestData::next()
 {
     Q_ASSERT(!m_sessionStaterd);
 
     if (m_pending.count() > 0) {
         m_sessionStaterd = true;
-        m_currentCollectionId = m_pending.keys().first();
-        m_currentIds = m_pending[m_currentCollectionId];
+        m_currentSourceId = m_pending.keys().first();
+        m_currentIds = m_pending[m_currentSourceId];
         m_currentCompIds = parseIds(m_currentIds);
-        m_pending.remove(m_currentCollectionId);
-        return m_currentCollectionId;
+        m_pending.remove(m_currentSourceId);
+        return m_currentSourceId;
     }
-    return QString(QString::null);
+    return QByteArray();
 }
 
 
 void RemoveByIdRequestData::reset()
 {
     m_currentIds.clear();
-    m_currentCollectionId = QString(QString::null);
+    m_currentSourceId = QByteArray();
     if (m_currentCompIds) {
         g_slist_free_full(m_currentCompIds, (GDestroyNotify)e_cal_component_free_id);
         m_currentCompIds = 0;
@@ -128,7 +127,7 @@ void RemoveByIdRequestData::clear()
     setClient(0);
 }
 
-QString RemoveByIdRequestData::collectionId() const
+QByteArray RemoveByIdRequestData::sourceId() const
 {
-    return m_currentCollectionId;
+    return m_currentSourceId;
 }

@@ -56,7 +56,7 @@ void RemoveCollectionRequestData::commit(QtOrganizer::QOrganizerManager::Error e
         m_errorMap.insert(m_currentCollection, error);
     } else {
         QOrganizerCollectionId cId = m_pendingCollections.at(m_currentCollection);
-        parent()->d->m_sourceRegistry->remove(cId.toString());
+        parent()->d->m_sourceRegistry->remove(cId.localId());
     }
 
     m_currentCollection++;
@@ -77,7 +77,7 @@ ESource *RemoveCollectionRequestData::begin()
 {
     if (m_pendingCollections.count() > m_currentCollection) {
         QOrganizerCollectionId cId = m_pendingCollections.at(m_currentCollection);
-        return parent()->d->m_sourceRegistry->source(cId.toString());
+        return parent()->d->m_sourceRegistry->source(cId.localId());
     } else {
         return 0;
     }

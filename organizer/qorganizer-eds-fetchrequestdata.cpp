@@ -28,14 +28,14 @@
 using namespace QtOrganizer;
 
 FetchRequestData::FetchRequestData(QOrganizerEDSEngine *engine,
-                                   QStringList collections,
+                                   const QByteArrayList &sourceIds,
                                    QOrganizerAbstractRequest *req)
     : RequestData(engine, req),
       m_parseListener(0),
       m_currentComponents(0)
 {
     // filter collections related with the query
-    m_collections = filterCollections(collections);
+    m_sourceIds = filterSourceIds(sourceIds);
 }
 
 FetchRequestData::~FetchRequestData()
@@ -48,7 +48,7 @@ FetchRequestData::~FetchRequestData()
     m_components.clear();
 }
 
-QString FetchRequestData::nextCollection()
+QByteArray FetchRequestData::nextSourceId()
 {
     if (m_currentComponents) {
         m_components.insert(m_current, m_currentComponents);
@@ -56,17 +56,17 @@ QString FetchRequestData::nextCollection()
     }
     m_current = "";
     setClient(0);
-    if (m_collections.size()) {
-        m_current = m_collections.takeFirst();
+    if (m_sourceIds.size()) {
+        m_current = m_sourceIds.takeFirst();
         return m_current;
     } else {
-        return QString();
+        return QByteArray();
     }
 }
 
-QString FetchRequestData::nextParentId()
+QByteArray FetchRequestData::nextParentId()
 {
-    QString nextId;
+    QByteArray nextId;
     if (!m_currentParentIds.isEmpty()) {
         nextId = m_currentParentIds.values().first();
         m_currentParentIds.remove(nextId);
@@ -74,7 +74,7 @@ QString FetchRequestData::nextParentId()
     return nextId;
 }
 
-QString FetchRequestData::collection() const
+QByteArray FetchRequestData::sourceId() const
 {
     return m_current;
 }
@@ -134,7 +134,7 @@ void FetchRequestData::compileCurrentIds()
     for(GSList *e = m_currentComponents; e != NULL; e = e->next) {
         icalcomponent *icalComp = static_cast<icalcomponent *>(e->data);
         if (e_cal_util_component_has_recurrences (icalComp)) {
-            m_currentParentIds.insert(QString::fromUtf8(icalcomponent_get_uid(icalComp)));
+            m_currentParentIds.insert(QByteArray(icalcomponent_get_uid(icalComp)));
         }
     }
 }
@@ -198,9 +198,6 @@ void FetchRequestData::appendDeatachedResult(icalcomponent *comp)
     uid = icalcomponent_get_uid(comp);
     rid = icalcomponent_get_recurrenceid(comp);
 
-    QString collectionIdString =
-        QString::fromUtf8(QOrganizerCollectionId::fromString(m_current).localId().toHex());
-
     for(GSList *e=m_currentComponents; e != NULL; e = e->next) {
         icalcomponent *ical = static_cast<icalcomponent *>(e->data);
         if ((g_strcmp0(uid, icalcomponent_get_uid(ical)) == 0) &&
@@ -209,10 +206,9 @@ void FetchRequestData::appendDeatachedResult(icalcomponent *comp)
             // replace instance event
             icalcomponent_free (ical);
             e->data = icalcomponent_new_clone(comp);
-            QString itemId = QString("%1/%2#%3")
-                    .arg(collectionIdString)
-                    .arg(QString::fromUtf8(uid))
-                    .arg(QString::fromUtf8(icaltime_as_ical_string(rid)));
+            QByteArray itemId = m_current + '/' +
+                QByteArray(uid) + '#' +
+                QByteArray(icaltime_as_ical_string(rid));
             m_deatachedIds.append(itemId);
             break;
         }
@@ -268,16 +264,16 @@ QString FetchRequestData::dateFilter()
     return query;
 }
 
-QStringList FetchRequestData::filterCollections(const QStringList &collections) const
+QByteArrayList FetchRequestData::filterSourceIds(const QByteArrayList &sourceIds) const
 {
-    QStringList result;
+    QByteArrayList result;
     if (filterIsValid()) {
         QOrganizerItemFilter f = request<QOrganizerItemFetchRequest>()->filter();
-        QStringList cFilters = collectionsFromFilter(f);
+        QByteArrayList cFilters = sourceIdsFromFilter(f);
         if (cFilters.contains("*") || cFilters.isEmpty()) {
-            result = collections;
+            result = sourceIds;
         } else {
-            Q_FOREACH(const QString &f, collections) {
+            Q_FOREACH(const QByteArray &f, sourceIds) {
                 if (cFilters.contains(f)) {
                     result << f;
                 }
@@ -287,16 +283,16 @@ QStringList FetchRequestData::filterCollections(const QStringList &collections) 
     return result;
 }
 
-QStringList FetchRequestData::collectionsFromFilter(const QOrganizerItemFilter &f) const
+QByteArrayList FetchRequestData::sourceIdsFromFilter(const QOrganizerItemFilter &f) const
 {
-    QStringList result;
+    QByteArrayList result;
 
     switch(f.type()) {
     case QOrganizerItemFilter::CollectionFilter:
     {
         QOrganizerItemCollectionFilter cf = static_cast<QOrganizerItemCollectionFilter>(f);
         Q_FOREACH(const QOrganizerCollectionId &id, cf.collectionIds()) {
-            result << id.toString();
+            result << id.localId();
         }
         break;
     }
@@ -304,7 +300,7 @@ QStringList FetchRequestData::collectionsFromFilter(const QOrganizerItemFilter &
     {
         QOrganizerItemIntersectionFilter intersec = static_cast<QOrganizerItemIntersectionFilter>(f);
         Q_FOREACH(const QOrganizerItemFilter &f, intersec.filters()) {
-            result << collectionsFromFilter(f);
+            result << sourceIdsFromFilter(f);
         }
         break;
     }
