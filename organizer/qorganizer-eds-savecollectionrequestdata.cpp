@@ -166,7 +166,7 @@ void SaveCollectionRequestData::parseCollections()
         if (isNew) {
             source = SourceRegistry::newSourceFromCollection(collection);
         } else {
-            source = m_parent->d->m_sourceRegistry->source(collection.id().toString());
+            source = m_parent->d->m_sourceRegistry->source(collection.id().localId());
         }
 
         QVariant callendarType = collection.extendedMetaData(COLLECTION_CALLENDAR_TYPE_METADATA);

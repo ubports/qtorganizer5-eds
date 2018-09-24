@@ -29,7 +29,7 @@
 
 using namespace QtOrganizer;
 
-ViewWatcher::ViewWatcher(const QString &collectionId,
+ViewWatcher::ViewWatcher(const QOrganizerCollectionId &collectionId,
                          QOrganizerEDSEngineData *data,
                          EClient *client)
     : m_collectionId(collectionId),
@@ -147,9 +147,7 @@ QList<QOrganizerItemId> ViewWatcher::parseItemIds(GSList *objects)
             qWarning() << "Fail to parse component ID";
         }
 
-        QOrganizerCollectionId collectionId =
-            QOrganizerCollectionId::fromString(m_collectionId);
-        QOrganizerItemId itemId(collectionId.managerUri(), uid);
+        QOrganizerItemId itemId = QOrganizerEDSEngine::idFromEds(m_collectionId, uid);
         result << itemId;
     }
     return result;
@@ -183,9 +181,7 @@ void ViewWatcher::onObjectsRemoved(ECalClientView *view,
 
     for (GSList *l = objects; l; l = l->next) {
         ECalComponentId *id = static_cast<ECalComponentId*>(l->data);
-        QOrganizerCollectionId collectionId =
-            QOrganizerCollectionId::fromString(self->m_collectionId);
-        QOrganizerItemId itemId(collectionId.managerUri(), id->uid);
+        QOrganizerItemId itemId = QOrganizerEDSEngine::idFromEds(self->m_collectionId, id->uid);
         self->m_changeSet.insertRemovedItem(itemId);
     }
     self->notify();

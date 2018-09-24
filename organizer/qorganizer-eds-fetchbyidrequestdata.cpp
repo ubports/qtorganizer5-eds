@@ -34,29 +34,31 @@ FetchByIdRequestData::~FetchByIdRequestData()
 {
 }
 
-QString FetchByIdRequestData::nextId()
+QOrganizerItemId FetchByIdRequestData::nextId()
 {
-    QString id;
+    QOrganizerItemId id;
     QList<QOrganizerItemId> ids = request<QOrganizerItemFetchByIdRequest>()->ids();
     m_current++;
     if (m_current < ids.count()) {
-        id = ids[m_current].toString();
+        id = ids[m_current];
     }
     return id;
 }
 
-QString FetchByIdRequestData::currentId() const
+QOrganizerItemId FetchByIdRequestData::currentId() const
 {
-    return request<QOrganizerItemFetchByIdRequest>()->ids()[m_current].toString();
+    return request<QOrganizerItemFetchByIdRequest>()->ids()[m_current];
 }
 
-QString FetchByIdRequestData::currentCollectionId() const
+QByteArray FetchByIdRequestData::currentSourceId() const
 {
-    QString itemId = currentId();
-    if (!itemId.isEmpty()) {
-        return itemId.contains("/") ? itemId.split("/").first() : QString();
+    QOrganizerItemId itemId = currentId();
+    if (!itemId.isNull()) {
+        QByteArray sourceId;
+        QOrganizerEDSEngine::idToEds(itemId, &sourceId);
+        return sourceId;
     }
-    return QString();
+    return QByteArray();
 }
 
 bool FetchByIdRequestData::end() const

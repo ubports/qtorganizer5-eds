@@ -69,8 +69,8 @@ void FetchOcurrenceData::finish(QOrganizerManager::Error error,
 
     if (m_components) {
         QOrganizerItemOccurrenceFetchRequest *req = request<QOrganizerItemOccurrenceFetchRequest>();
-        QString collectionId = req->parentItem().collectionId().toString();
-        results = parent()->parseEvents(collectionId, m_components, true,
+        QByteArray sourceId = req->parentItem().collectionId().localId();
+        results = parent()->parseEvents(sourceId, m_components, true,
                                         req->fetchHint().detailTypesHint());
         g_slist_free_full(m_components, (GDestroyNotify)icalcomponent_free);
         m_components = 0;

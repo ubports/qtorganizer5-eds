@@ -42,21 +42,22 @@ QOrganizerEDSEngineData::~QOrganizerEDSEngineData()
     }
 }
 
-ViewWatcher* QOrganizerEDSEngineData::watch(const QString &collectionId)
+ViewWatcher* QOrganizerEDSEngineData::watch(const QOrganizerCollectionId &collectionId)
 {
-    ViewWatcher *vw = m_viewWatchers[collectionId];
+    QByteArray sourceId = collectionId.localId();
+    ViewWatcher *vw = m_viewWatchers[sourceId];
     if (!vw) {
-        EClient *client = m_sourceRegistry->client(collectionId);
+        EClient *client = m_sourceRegistry->client(sourceId);
         vw = new ViewWatcher(collectionId, this, client);
-        m_viewWatchers.insert(collectionId, vw);
+        m_viewWatchers.insert(sourceId, vw);
         g_object_unref(client);
     }
     return vw;
 }
 
-void QOrganizerEDSEngineData::unWatch(const QString &collectionId)
+void QOrganizerEDSEngineData::unWatch(const QByteArray &sourceId)
 {
-    ViewWatcher *viewW = m_viewWatchers.take(collectionId);
+    ViewWatcher *viewW = m_viewWatchers.take(sourceId);
     if (viewW) {
         delete viewW;
     }

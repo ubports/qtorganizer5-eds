@@ -29,21 +29,22 @@ public:
     RemoveByIdRequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbstractRequest *req);
     ~RemoveByIdRequestData();
 
-    QString collectionId() const;
+    QByteArray sourceId() const;
 
     void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError,
                 QtOrganizer::QOrganizerAbstractRequest::State state = QtOrganizer::QOrganizerAbstractRequest::FinishedState);
 
     GSList *compIds() const;
 
-    QString next();
+    QByteArray next();
     void commit();
     virtual void cancel();
 
 private:
-    QHash<QString, QSet<QtOrganizer::QOrganizerItemId> > m_pending;
+    // Map source IDs to sets of items
+    QHash<QByteArray, QSet<QtOrganizer::QOrganizerItemId> > m_pending;
     QSet<QtOrganizer::QOrganizerItemId> m_currentIds;
-    QString m_currentCollectionId;
+    QByteArray m_currentSourceId;
 
     bool m_sessionStaterd;
     GSList *m_currentCompIds;

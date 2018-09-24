@@ -34,7 +34,7 @@ class ViewWatcher : public QObject
 {
     Q_OBJECT
 public:
-    ViewWatcher(const QString &collectionId,
+    ViewWatcher(const QOrganizerCollectionId &collectionId,
                 QOrganizerEDSEngineData *data,
                 EClient *client);
     virtual ~ViewWatcher();
@@ -45,7 +45,7 @@ private Q_SLOTS:
     void flush();
 
 private:
-    QString m_collectionId;
+    QOrganizerCollectionId m_collectionId;
     QOrganizerEDSEngineData *m_engineData;
     GCancellable *m_cancellable;
     ECalClient *m_eClient;
