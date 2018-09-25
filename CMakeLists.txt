@@ -2,6 +2,7 @@ project(qorganizer-eds)
 
 cmake_minimum_required(VERSION 2.8.9)
 
+include(CTest)
 include(FindPkgConfig)
 # Standard install paths
 include(GNUInstallDirs)
@@ -82,6 +83,7 @@ configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 add_subdirectory(organizer)
 if(DBUS_RUNNER)
     if(EVOLUTION_CALENDAR_FACTORY)
+        message(WARNING "Tests are enabled")
         enable_testing()
         add_subdirectory(tests)
     else(EVOLUTION_CALENDAR_FACTORY)
