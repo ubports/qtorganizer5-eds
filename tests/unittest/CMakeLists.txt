@@ -26,6 +26,7 @@ macro(declare_test TESTNAME)
              ${EVOLUTION_CALENDAR_FACTORY} ${EVOLUTION_CALENDAR_SERVICE_NAME}
              ${EVOLUTION_SOURCE_REGISTRY}  ${EVOLUTION_SOURCE_SERVICE_NAME}
              ${GVFSD})
+         message("Added test ${TESTNAME}")
 endmacro(declare_test testname)
 
 include_directories(
