@@ -176,10 +176,10 @@ void QOrganizerEDSEngine::itemsAsyncDone(FetchRequestData *data)
 
 void QOrganizerEDSEngine::itemsAsyncFetchDeatachedItems(FetchRequestData *data)
 {
-    QString parentId = data->nextParentId();
+    QByteArray parentId = data->nextParentId();
     if (!parentId.isEmpty()) {
         e_cal_client_get_objects_for_uid(E_CAL_CLIENT(data->client()),
-                                         parentId.toUtf8().data(),
+                                         parentId.data(),
                                          data->cancellable(),
                                          (GAsyncReadyCallback) QOrganizerEDSEngine::itemsAsyncListByIdListed,
                                          data);
@@ -2557,7 +2557,8 @@ void QOrganizerEDSEngine::parseId(ECalComponent *comp,
 
     if (!rId.isEmpty()) {
         QOrganizerItemParent itemParent = item->detail(QOrganizerItemDetail::TypeParent);
-        itemParent.setParentId(QOrganizerItemId(collectionId.managerUri(), rId));
+        QOrganizerItemId parentId(idFromEds(collectionId, QByteArray(id->uid)));
+        itemParent.setParentId(parentId);
         item->saveDetail(&itemParent);
     }
 
