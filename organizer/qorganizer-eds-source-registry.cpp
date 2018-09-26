@@ -446,10 +446,17 @@ void SourceRegistry::updateCollection(QOrganizerCollection *collection,
 
     // writable
     bool writable = e_source_get_writable(source);
+    /* For some reason the EDS we have in xenial (3.18.5) sets the "readable"
+     * property to false immediately after the object is retrieved: this can be
+     * verified by watching the "notify:readable" signal.
+     * This might be the bug recently fixed with EDS commit
+     * ff1af187f8bd608c85549aaa877cd03bcc54d7be, but in any case we cannot rely
+     * on the value of this property for the time being.
     // the source and client need to be writable
     if (client) {
         writable = writable && !e_client_is_readonly(client);
     }
+    */
     collection->setExtendedMetaData(COLLECTION_READONLY_METADATA, !writable);
 
     // default
