@@ -317,7 +317,7 @@ private Q_SLOTS:
         QTRY_COMPARE(createdCollection.count(), 1);
 
         // wait collection to became the default one
-        QTRY_COMPARE_WITH_TIMEOUT(m_engineRead->defaultCollection(0).id(), collection.id(), 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(m_engineRead->defaultCollectionId(), collection.id(), 5000);
     }
 
     void testUpdateDefaultCollection()
@@ -325,7 +325,7 @@ private Q_SLOTS:
         static QString newCollectionId = uniqueCollectionName();
 
         // store current default collection
-        QOrganizerCollection defaultCollection = m_engineRead->defaultCollection(0);
+        QOrganizerCollectionId defaultCollectionId = m_engineRead->defaultCollectionId();
 
         // Create a collection
         QOrganizerCollection collection;
@@ -340,7 +340,7 @@ private Q_SLOTS:
         // make sure that the new collection is not default
         QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), 0);
         QCOMPARE(newCollection.extendedMetaData(QStringLiteral("collection-default")).toBool(), false);
-        QVERIFY(newCollection.id() != defaultCollection.id());
+        QVERIFY(newCollection.id() != defaultCollectionId);
 
         // mark new collection as default
         QSignalSpy changedCollection(m_engineRead, SIGNAL(collectionsChanged(QList<QOrganizerCollectionId>)));
@@ -350,7 +350,7 @@ private Q_SLOTS:
         QTRY_COMPARE(changedCollection.count() , 3);
 
         // wait collection to became the default one
-        QTRY_COMPARE_WITH_TIMEOUT(m_engineRead->defaultCollection(0).id(), newCollection.id(), 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(m_engineRead->defaultCollectionId(), newCollection.id(), 5000);
     }
 
     void testSaveCollectionWithAccountId()

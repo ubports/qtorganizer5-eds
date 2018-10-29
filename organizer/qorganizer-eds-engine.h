@@ -104,7 +104,7 @@ public:
                      QtOrganizer::QOrganizerManager::Error *error);
 
     // collections
-    QtOrganizer::QOrganizerCollection defaultCollection(QtOrganizer::QOrganizerManager::Error* error);
+    QtOrganizer::QOrganizerCollectionId defaultCollectionId() const override;
     QtOrganizer::QOrganizerCollection collection(const QtOrganizer::QOrganizerCollectionId &collectionId,
                                                   QtOrganizer::QOrganizerManager::Error *error);
     QList<QtOrganizer::QOrganizerCollection> collections(QtOrganizer::QOrganizerManager::Error* error);
