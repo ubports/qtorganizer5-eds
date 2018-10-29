@@ -376,8 +376,8 @@ private Q_SLOTS:
         ids << items[0].id();
         items = m_engine->items(ids, hint, 0, 0);
         QCOMPARE(items.count(), 1);
-        QOrganizerCollection collection = m_engine->defaultCollection(0);
-        QCOMPARE(items[0].collectionId(), collection.id());
+        QOrganizerCollectionId collectionId = m_engine->defaultCollectionId();
+        QCOMPARE(items[0].collectionId(), collectionId);
     }
 
     void testCreateMultipleItemsWithSameCollection()
