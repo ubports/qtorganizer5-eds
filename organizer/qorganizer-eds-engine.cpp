@@ -356,7 +356,8 @@ void QOrganizerEDSEngine::itemOcurrenceAsync(QOrganizerItemOccurrenceFetchReques
     FetchOcurrenceData *data = new FetchOcurrenceData(this, req);
 
     QByteArray rId;
-    QByteArray cId = toComponentId(req->parentItem().id().toString().toUtf8(), &rId);
+    QByteArray edsItemId = idToEds(req->parentItem().id());
+    QByteArray cId = toComponentId(edsItemId, &rId);
 
     EClient *client = data->parent()->d->m_sourceRegistry->client(req->parentItem().collectionId().localId());
     if (client) {
