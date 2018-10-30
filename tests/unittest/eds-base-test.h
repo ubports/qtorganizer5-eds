@@ -44,4 +44,8 @@ protected:
     QString uniqueCollectionName() const;
 };
 
+typedef QList<QPair<QtOrganizer::QOrganizerCollectionId, QtOrganizer::QOrganizerManager::Operation>> CollectionOperations;
+Q_DECLARE_METATYPE(CollectionOperations)
+Q_DECLARE_METATYPE(QList<QtOrganizer::QOrganizerItemDetail::DetailType>)
+
 #endif
