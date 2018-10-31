@@ -482,7 +482,7 @@ private Q_SLOTS:
         QOrganizerEvent ev;
         QOrganizerCollectionId cid(m_engine->managerUri(), "XXXXXX");
         QVERIFY(!cid.isNull());
-        QCOMPARE(cid.toString(), QStringLiteral("qtorganizer:eds::XXXXXX"));
+        QCOMPARE(cid.toString(), QStringLiteral("qtorganizer:eds::585858585858"));
         ev.setCollectionId(cid);
         ev.setStartDateTime(QDateTime(QDate(2013, 10, 2), QTime(0,30,0)));
         ev.setDisplayLabel(displayLabelValue.arg(2));
