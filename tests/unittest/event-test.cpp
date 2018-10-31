@@ -820,6 +820,8 @@ private Q_SLOTS:
 
     void testFloatingTime()
     {
+        QSKIP("Floating time is no longer supported");
+
         static QString displayLabelValue = QStringLiteral("event with floating time");
         static QString descriptionValue = QStringLiteral("event with floating time descs");
 
