@@ -692,7 +692,7 @@ void QOrganizerEDSEngine::saveItemsAsyncCreated(GObject *source_object,
     } else if (data->isLive()) {
         QByteArray currentSourceId = data->currentSourceId();
         if (currentSourceId.isEmpty()) {
-            currentSourceId = data->parent()->defaultCollection(0).id().localId();
+            currentSourceId = data->parent()->defaultCollectionId().localId();
         }
         QList<QOrganizerItem> items = data->workingItems();
         QString managerUri = data->parent()->managerUri();
@@ -842,12 +842,9 @@ bool QOrganizerEDSEngine::removeItems(const QList<QOrganizerItemId> &itemIds,
     return (*error == QOrganizerManager::NoError);
 }
 
-QOrganizerCollection QOrganizerEDSEngine::defaultCollection(QOrganizerManager::Error* error)
+QOrganizerCollectionId QOrganizerEDSEngine::defaultCollectionId() const
 {
-    if (error) {
-        *error = QOrganizerManager::NoError;
-    }
-    return d->m_sourceRegistry->defaultCollection();
+    return d->m_sourceRegistry->defaultCollection().id();
 }
 
 QOrganizerCollection QOrganizerEDSEngine::collection(const QOrganizerCollectionId& collectionId,

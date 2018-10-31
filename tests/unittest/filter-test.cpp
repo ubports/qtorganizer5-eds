@@ -110,7 +110,7 @@ private Q_SLOTS:
         QOrganizerItemCollectionFilter filter;
 
         // filter items from default collection
-        filter.setCollectionId(m_engine->defaultCollection(0).id());
+        filter.setCollectionId(m_engine->defaultCollectionId());
         items = m_engine->items(filter,
                       QDateTime(),
                       QDateTime(),
@@ -141,7 +141,7 @@ private Q_SLOTS:
 
         // filter items from both collections
         QSet<QOrganizerCollectionId> ids;
-        ids << m_engine->defaultCollection(0).id()
+        ids << m_engine->defaultCollectionId()
             << collection->id();
 
         filter.setCollectionIds(ids);
