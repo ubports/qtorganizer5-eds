@@ -864,7 +864,7 @@ private Q_SLOTS:
         QCOMPARE(newTodo.startDateTime().time().minute(), startDate.time().minute());
 
         // Update floating event
-        QSignalSpy updateItem(m_engine, SIGNAL(itemsChanged(QList<QOrganizerItemId>)));
+        QSignalSpy updateItem(m_engine, &QOrganizerManagerEngine::itemsChanged);
         startDate = QDateTime::currentDateTime();
         startDate.addSecs(360);
         startDate = QDateTime(startDate.date(), startDate.time(), QTimeZone());
