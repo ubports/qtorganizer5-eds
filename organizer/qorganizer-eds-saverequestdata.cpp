@@ -33,6 +33,14 @@ SaveRequestData::SaveRequestData(QOrganizerEDSEngine *engine,
     // map items by source
     Q_FOREACH(const QOrganizerItem &i, request<QOrganizerItemSaveRequest>()->items()) {
         QByteArray sourceId = i.collectionId().localId();
+        if (sourceId.isNull()) {
+            /* We use an empty bytearray to indicate that the item has no
+             * associated collection; we cannot leave it to null here, as the
+             * caller of nextSourceId() would consider that as having reached
+             * the end of the list.
+             */
+            sourceId = "";
+        }
         QList<QOrganizerItem> li = m_items[sourceId];
         li << i;
         m_items.insert(sourceId, li);

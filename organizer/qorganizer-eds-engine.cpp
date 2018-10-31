@@ -582,6 +582,13 @@ void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
             return;
         }
 
+        /* We have entered this code path because sourceId is not null;
+         * however, it can still be empty: that's because the SaveRequestData
+         * class returns an empty (but not null!) sourceId for those items
+         * which don't have a collection set, and that therefore should be
+         * stored into the default collection.
+         * The next "if" condition checks exactly for this situation.
+         */
         if (sourceId.isEmpty() && createItems) {
             sourceId = data->parent()->d->m_sourceRegistry->defaultCollection().id().localId();
         }
