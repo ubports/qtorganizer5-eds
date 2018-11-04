@@ -1,5 +1,8 @@
 #!/bin/sh
 
+WRAPPER=  # For example, to use valgrind uncomment the next line
+#WRAPPER="valgrind --trace-children=yes"
+
 echo ARG0=$0 # this script
 echo ARG1=$1 # full executable path of dbus-test-runner
 echo ARG2=$2 # full executable path of test app
@@ -37,9 +40,17 @@ export GIO_USE_VFS=local # needed to ensure GVFS shuts down cleanly after the te
 echo HOMEDIR=${HOME}
 rm -rf ${XDG_DATA_HOME}
 
+SCRIPT="./run-testcase.sh"
+cat <<EOF > $SCRIPT
+#! /bin/sh
+export G_SLICE=always-malloc
+exec $WRAPPER $2
+EOF
+chmod a+x $SCRIPT
+
 # run dbus-test-runner
 $1 --keep-env --max-wait=90 \
---task $2 --task-name $3 --wait-until-complete --wait-for=$5 \
+--task "$SCRIPT" --task-name $3 --wait-until-complete --wait-for=$5 \
 --task $4 --task-name "evolution" --wait-until-complete --wait-for=$7 -r \
 --task $6 --task-name "source-registry" -r
 rv=$?
