@@ -448,7 +448,6 @@ private Q_SLOTS:
         // Modify collection on EDS
         const QString metadataValue = QStringLiteral("new metadata");
         QTRY_COMPARE(collectionsChanged.count(), 0);
-        qDebug() << "WIll update metadata";
         setCollectionMetadata(collection.id(), metadataValue);
 
         // it will fire two signals
