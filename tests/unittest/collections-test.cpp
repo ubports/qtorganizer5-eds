@@ -344,7 +344,7 @@ private Q_SLOTS:
         newCollection.setExtendedMetaData(QStringLiteral("collection-default"), true);
         QVERIFY(m_engineWrite->saveCollection(&newCollection, &error));
         // old default collection will change, and the new one
-        QTRY_COMPARE(changedCollection.count() , 3);
+        QTRY_VERIFY(changedCollection.count() >= 2);
 
         // wait collection to became the default one
         QTRY_COMPARE_WITH_TIMEOUT(m_engineRead->defaultCollectionId(), newCollection.id(), 5000);
@@ -453,8 +453,9 @@ private Q_SLOTS:
         // it will fire two signals
         //  1- Property change
         //  2- Source write
-        QTRY_COMPARE(collectionsChanged.count(), 2);
-        QTRY_COMPARE(collectionsModified.count(), 2);
+        // However, EDS might compress them into a single one
+        QTRY_VERIFY(collectionsChanged.count() > 0);
+        QTRY_VERIFY(collectionsModified.count() > 0);
 
         // check if the metadata was changed
         QOrganizerCollection newCollection = m_engineRead->collection(collection.id(), 0);
