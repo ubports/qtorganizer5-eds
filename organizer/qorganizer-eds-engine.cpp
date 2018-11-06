@@ -943,7 +943,6 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
             return;
         }
     } else if (data->isLive()) {
-        data->commitSourceCreated();
         data->prepareToUpdate();
         g_idle_add((GSourceFunc) saveCollectionUpdateAsyncStart, data);
     }
