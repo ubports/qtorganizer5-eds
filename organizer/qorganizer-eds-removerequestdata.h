@@ -39,7 +39,7 @@ public:
 
     QtOrganizer::QOrganizerCollectionId next();
     void commit();
-    virtual void cancel();
+    void cancel() override;
 
 private:
     QSet<QtOrganizer::QOrganizerCollectionId> m_pendingCollections;

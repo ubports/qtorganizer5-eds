@@ -63,7 +63,7 @@ public:
     QList<QtOrganizer::QOrganizerItem> items(const QList<QtOrganizer::QOrganizerItemId> &itemIds,
                                               const QtOrganizer::QOrganizerItemFetchHint &fetchHint,
                                               QMap<int, QtOrganizer::QOrganizerManager::Error> *errorMap,
-                                              QtOrganizer::QOrganizerManager::Error *error);
+                                              QtOrganizer::QOrganizerManager::Error *error) override;
 
     QList<QtOrganizer::QOrganizerItem> items(const QtOrganizer::QOrganizerItemFilter &filter,
                                               const QDateTime &startDateTime,
@@ -71,56 +71,56 @@ public:
                                               int maxCount,
                                               const QList<QtOrganizer::QOrganizerItemSortOrder> &sortOrders,
                                               const QtOrganizer::QOrganizerItemFetchHint &fetchHint,
-                                              QtOrganizer::QOrganizerManager::Error *error);
+                                              QtOrganizer::QOrganizerManager::Error *error) override;
 
 
     QList<QtOrganizer::QOrganizerItemId> itemIds(const QtOrganizer::QOrganizerItemFilter &filter,
                                                   const QDateTime &startDateTime,
                                                   const QDateTime &endDateTime,
                                                   const QList<QtOrganizer::QOrganizerItemSortOrder> &sortOrders,
-                                                  QtOrganizer::QOrganizerManager::Error *error);
+                                                  QtOrganizer::QOrganizerManager::Error *error) override;
 
     QList<QtOrganizer::QOrganizerItem> itemOccurrences(const QtOrganizer::QOrganizerItem &parentItem,
                                                         const QDateTime &startDateTime,
                                                         const QDateTime &endDateTime,
                                                         int maxCount,
                                                         const QtOrganizer::QOrganizerItemFetchHint &fetchHint,
-                                                        QtOrganizer::QOrganizerManager::Error *error);
+                                                        QtOrganizer::QOrganizerManager::Error *error) override;
 
     QList<QtOrganizer::QOrganizerItem> itemsForExport(const QDateTime &startDateTime,
                                                        const QDateTime &endDateTime,
                                                        const QtOrganizer::QOrganizerItemFilter &filter,
                                                        const QList<QtOrganizer::QOrganizerItemSortOrder> &sortOrders,
                                                        const QtOrganizer::QOrganizerItemFetchHint &fetchHint,
-                                                       QtOrganizer::QOrganizerManager::Error *error);
+                                                       QtOrganizer::QOrganizerManager::Error *error) override;
 
     bool saveItems(QList<QtOrganizer::QOrganizerItem> *items,
                    const QList<QtOrganizer::QOrganizerItemDetail::DetailType> &detailMask,
                    QMap<int, QtOrganizer::QOrganizerManager::Error> *errorMap,
-                   QtOrganizer::QOrganizerManager::Error *error);
+                   QtOrganizer::QOrganizerManager::Error *error) override;
 
     bool removeItems(const QList<QtOrganizer::QOrganizerItemId> &itemIds,
                      QMap<int, QtOrganizer::QOrganizerManager::Error> *errorMap,
-                     QtOrganizer::QOrganizerManager::Error *error);
+                     QtOrganizer::QOrganizerManager::Error *error) override;
 
     // collections
     QtOrganizer::QOrganizerCollectionId defaultCollectionId() const override;
     QtOrganizer::QOrganizerCollection collection(const QtOrganizer::QOrganizerCollectionId &collectionId,
-                                                  QtOrganizer::QOrganizerManager::Error *error);
-    QList<QtOrganizer::QOrganizerCollection> collections(QtOrganizer::QOrganizerManager::Error* error);
-    bool saveCollection(QtOrganizer::QOrganizerCollection* collection, QtOrganizer::QOrganizerManager::Error* error);
-    bool removeCollection(const QtOrganizer::QOrganizerCollectionId& collectionId, QtOrganizer::QOrganizerManager::Error* error);
+                                                  QtOrganizer::QOrganizerManager::Error *error) override;
+    QList<QtOrganizer::QOrganizerCollection> collections(QtOrganizer::QOrganizerManager::Error* error) override;
+    bool saveCollection(QtOrganizer::QOrganizerCollection* collection, QtOrganizer::QOrganizerManager::Error* error) override;
+    bool removeCollection(const QtOrganizer::QOrganizerCollectionId& collectionId, QtOrganizer::QOrganizerManager::Error* error) override;
 
     // Asynchronous Request Support
-    virtual void requestDestroyed(QtOrganizer::QOrganizerAbstractRequest* req);
-    virtual bool startRequest(QtOrganizer::QOrganizerAbstractRequest* req);
-    virtual bool cancelRequest(QtOrganizer::QOrganizerAbstractRequest* req);
-    virtual bool waitForRequestFinished(QtOrganizer::QOrganizerAbstractRequest* req, int msecs);
+    void requestDestroyed(QtOrganizer::QOrganizerAbstractRequest* req) override;
+    bool startRequest(QtOrganizer::QOrganizerAbstractRequest* req) override;
+    bool cancelRequest(QtOrganizer::QOrganizerAbstractRequest* req) override;
+    bool waitForRequestFinished(QtOrganizer::QOrganizerAbstractRequest* req, int msecs) override;
 
     // Capabilities reporting
-    virtual QList<QtOrganizer::QOrganizerItemFilter::FilterType> supportedFilters() const;
-    virtual QList<QtOrganizer::QOrganizerItemDetail::DetailType> supportedItemDetails(QtOrganizer::QOrganizerItemType::ItemType itemType) const;
-    virtual QList<QtOrganizer::QOrganizerItemType::ItemType> supportedItemTypes() const;
+    QList<QtOrganizer::QOrganizerItemFilter::FilterType> supportedFilters() const override;
+    QList<QtOrganizer::QOrganizerItemDetail::DetailType> supportedItemDetails(QtOrganizer::QOrganizerItemType::ItemType itemType) const override;
+    QList<QtOrganizer::QOrganizerItemType::ItemType> supportedItemTypes() const override;
 
     /* Map between EDS items (source + uid) and QtOrganizer items
      * (QOrganizerCollectionId + QOrganizerItemId):
