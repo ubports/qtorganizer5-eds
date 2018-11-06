@@ -74,7 +74,7 @@ void SourceRegistry::load(const QString &managerUri)
                      this);
     m_sourceEnabledId = g_signal_connect(m_sourceRegistry,
                      "source-enabled",
-                     (GCallback) SourceRegistry::onSourceAdded,
+                     (GCallback) SourceRegistry::onSourceEnabled,
                      this);
     m_sourceRemovedId = g_signal_connect(m_sourceRegistry,
                      "source-removed",
@@ -153,9 +153,34 @@ QOrganizerCollection SourceRegistry::collection(ESource *source) const
     return m_collections[sourceId];
 }
 
-QOrganizerCollection SourceRegistry::insert(ESource *source)
+void SourceRegistry::expectSourceCreation(ESource *source)
 {
-    return registerSource(source);
+    m_expectedNewSources.append((ESource*)g_object_ref(source));
+}
+
+void SourceRegistry::insert(ESource *source)
+{
+    bool isDefault = false;
+
+    for (auto i = m_expectedNewSources.begin();
+         i != m_expectedNewSources.end();
+         i++) {
+        ESource *expectedSource = *i;
+        if (e_source_equal(expectedSource, source)) {
+            /* SaveCollectionRequestData stored the "default" flag into the
+             * source's GObject data */
+            isDefault = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(expectedSource), "is-default"));
+
+            m_expectedNewSources.erase(i);
+            g_object_unref(expectedSource);
+            break;
+        }
+    }
+
+    QOrganizerCollection collection = registerSource(source, isDefault);
+    if (isDefault) {
+        setDefaultCollection(collection);
+    }
 }
 
 void SourceRegistry::remove(ESource *source)
@@ -245,6 +270,11 @@ void SourceRegistry::clear()
     m_sources.clear();
     m_collections.clear();
     m_clients.clear();
+
+    for (ESource *source: m_expectedNewSources) {
+        g_object_unref(source);
+    }
+    m_expectedNewSources.clear();
 }
 
 QByteArray SourceRegistry::findSource(ESource *source) const
@@ -362,7 +392,16 @@ void SourceRegistry::onSourceAdded(ESourceRegistry *registry,
                                    SourceRegistry *self)
 {
     Q_UNUSED(registry);
+    qDebug() << Q_FUNC_INFO << source;
     self->insert(source);
+}
+
+void SourceRegistry::onSourceEnabled(ESourceRegistry *registry,
+                                     ESource *source,
+                                     SourceRegistry *self)
+{
+    Q_UNUSED(registry);
+    self->registerSource(source);
 }
 
 void SourceRegistry::onSourceChanged(ESourceRegistry *registry,

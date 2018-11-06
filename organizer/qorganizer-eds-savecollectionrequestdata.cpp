@@ -34,13 +34,16 @@ SaveCollectionRequestData::SaveCollectionRequestData(QOrganizerEDSEngine *engine
                                                      QtOrganizer::QOrganizerAbstractRequest *req)
     : RequestData(engine, req),
       m_currentSources(0),
-      m_registry(0)
+      m_registry(0),
+      m_finishWasCalled(false)
 {
     parseCollections();
 }
 
 SaveCollectionRequestData::~SaveCollectionRequestData()
 {
+    QObject::disconnect(m_registryConnection);
+
     if (m_registry) {
         g_object_unref(m_registry);
         m_registry = 0;
@@ -55,6 +58,13 @@ SaveCollectionRequestData::~SaveCollectionRequestData()
 void SaveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error error,
                                        QtOrganizer::QOrganizerAbstractRequest::State state)
 {
+    if (error == QtOrganizer::QOrganizerManager::NoError &&
+        !m_sourcesToCreate.isEmpty()) {
+        // Not all sources have been created yet; let's wait
+        m_finishWasCalled = true;
+        return;
+    }
+
     QOrganizerManagerEngine::updateCollectionSaveRequest(request<QOrganizerCollectionSaveRequest>(),
                                                          m_results.values(),
                                                          error,
@@ -66,24 +76,6 @@ void SaveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error err
     m_changeSet.clearAll();
 
     RequestData::finish(error, state);
-}
-
-void SaveCollectionRequestData::commitSourceCreated()
-{
-    GList *i = g_list_first(m_currentSources);
-
-    for(; i != 0; i = i->next) {
-        ESource *source = E_SOURCE(i->data);
-        SourceRegistry *registry = parent()->d->m_sourceRegistry;
-        Q_ASSERT(registry);
-        QOrganizerCollection collection = registry->insert(source);
-        bool isDefault = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(source), "is-default"));
-        if (isDefault) {
-            registry->setDefaultCollection(collection);
-        }
-        m_results.insert(m_sources.key(source), collection);
-        m_changeSet.insertAddedCollection(collection.id());
-    }
 }
 
 void SaveCollectionRequestData::commitSourceUpdated(ESource *source,
@@ -154,10 +146,43 @@ GList *SaveCollectionRequestData::sourcesToCreate() const
     return m_currentSources;
 }
 
+void SaveCollectionRequestData::onSourceCreated(ESource *newSource)
+{
+    bool createdByUs = false;
+    for (auto i = m_sourcesToCreate.begin();
+         i != m_sourcesToCreate.end();
+         i++) {
+        ESource *source = *i;
+        if (e_source_equal(source, newSource)) {
+            createdByUs = true;
+            m_sourcesToCreate.erase(i);
+            break;
+        }
+    }
+
+    if (!createdByUs) return;
+
+    SourceRegistry *registry = parent()->d->m_sourceRegistry;
+    Q_ASSERT(registry);
+    QOrganizerCollection collection = registry->collection(newSource);
+    m_results.insert(m_sources.key(newSource), collection);
+
+    if (m_sourcesToCreate.isEmpty() && m_finishWasCalled) {
+        finish();
+    }
+}
+
 void SaveCollectionRequestData::parseCollections()
 {
     m_sources.clear();
     m_errorMap.clear();
+
+    SourceRegistry *registry = m_parent->d->m_sourceRegistry;
+    m_registryConnection =
+        QObject::connect(registry, &SourceRegistry::sourceAdded,
+                         [this,registry](const QByteArray &sourceId) {
+            onSourceCreated(registry->source(sourceId));
+        });
 
     int index = 0;
     Q_FOREACH(const QOrganizerCollection &collection, request<QOrganizerCollectionSaveRequest>()->collections()) {
@@ -166,7 +191,7 @@ void SaveCollectionRequestData::parseCollections()
         if (isNew) {
             source = SourceRegistry::newSourceFromCollection(collection);
         } else {
-            source = m_parent->d->m_sourceRegistry->source(collection.id().localId());
+            source = registry->source(collection.id().localId());
         }
 
         QVariant callendarType = collection.extendedMetaData(COLLECTION_CALLENDAR_TYPE_METADATA);
@@ -222,6 +247,7 @@ void SaveCollectionRequestData::parseCollections()
 
             m_sources.insert(index, source);
             if (isNew) {
+                registry->expectSourceCreation(source);
                 m_sourcesToCreate.insert(index, source);
             } else {
                 m_sourcesToUpdate.insert(index, source);
