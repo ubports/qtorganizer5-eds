@@ -39,11 +39,6 @@ RemoveRequestData::~RemoveRequestData()
 {
 }
 
-QList<QtOrganizer::QOrganizerCollectionId> RemoveRequestData::pendingCollections() const
-{
-    return m_pendingCollections.toList();
-}
-
 GSList *RemoveRequestData::takeItemsIds(QOrganizerCollectionId collectionId)
 {
     GSList *ids = 0;
@@ -130,9 +125,4 @@ void RemoveRequestData::clear()
 {
     reset();
     setClient(0);
-}
-
-QOrganizerCollectionId RemoveRequestData::collectionId() const
-{
-    return m_currentCollectionId;
 }

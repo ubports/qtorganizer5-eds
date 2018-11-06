@@ -138,7 +138,6 @@ protected Q_SLOTS:
     void onSourceAdded(const QByteArray &sourceId);
     void onSourceRemoved(const QByteArray &sourceId);
     void onSourceUpdated(const QByteArray &sourceId);
-    void onViewChanged(QtOrganizer::QOrganizerItemChangeSet *change);
 
 protected:
     QOrganizerEDSEngine(QOrganizerEDSEngineData *data);
