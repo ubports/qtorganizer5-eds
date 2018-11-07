@@ -220,10 +220,11 @@ EClient* SourceRegistry::client(const QByteArray &sourceId)
 
     EClient *client = m_clients.value(sourceId, 0);
     if (!client) {
-        ESource *source = m_sources[sourceId];
-        if (source) {
+        const auto i = m_sources.find(sourceId);
+        if (i != m_sources.end()) {
             GError *gError = 0;
 
+            ESource *source = i.value();
             ECalClientSourceType sourceType;
             if (e_source_has_extension(source, E_SOURCE_EXTENSION_CALENDAR)) {
                 sourceType = E_CAL_CLIENT_SOURCE_TYPE_EVENTS;
