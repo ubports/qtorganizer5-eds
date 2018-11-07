@@ -71,10 +71,6 @@ void SaveCollectionRequestData::finish(QtOrganizer::QOrganizerManager::Error err
                                                          m_errorMap,
                                                          state);
 
-
-    // changes will be fired by source-registry
-    m_changeSet.clearAll();
-
     RequestData::finish(error, state);
 }
 
@@ -95,8 +91,6 @@ void SaveCollectionRequestData::commitSourceUpdated(ESource *source,
             Q_ASSERT(registry);
             registry->setDefaultCollection(collection);
         }
-
-        m_changeSet.insertChangedCollection(collection.id());
     } else {
         m_errorMap.insert(index, error);
     }

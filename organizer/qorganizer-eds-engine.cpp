@@ -1299,11 +1299,6 @@ void QOrganizerEDSEngine::onSourceUpdated(const QByteArray &sourceId)
     Q_EMIT collectionsModified(ops);
 }
 
-void QOrganizerEDSEngine::onViewChanged(QOrganizerItemChangeSet *change)
-{
-    change->emitSignals(this);
-}
-
 QDateTime QOrganizerEDSEngine::fromIcalTime(struct icaltimetype value, const char *tzId)
 {
     uint tmTime;

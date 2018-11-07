@@ -38,7 +38,7 @@ public:
 
     QByteArray next();
     void commit();
-    virtual void cancel();
+    void cancel() override;
 
 private:
     // Map source IDs to sets of items

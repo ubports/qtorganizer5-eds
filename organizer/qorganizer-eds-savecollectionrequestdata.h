@@ -30,7 +30,6 @@ public:
 
     void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError,
                 QtOrganizer::QOrganizerAbstractRequest::State state = QtOrganizer::QOrganizerAbstractRequest::FinishedState);
-    bool isNew(int index) const;
     bool prepareToCreate();
     bool prepareToUpdate();
     void setRegistry(ESourceRegistry *registry);
@@ -54,7 +53,6 @@ private:
     QMap<int, ESource*> m_sourcesToCreate;
     QMap<int, ESource*> m_sourcesToUpdate;
     bool m_finishWasCalled;
-    QtOrganizer::QOrganizerCollectionChangeSet m_changeSet;
 
     void parseCollections();
 

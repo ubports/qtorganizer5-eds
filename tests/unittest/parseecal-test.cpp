@@ -387,7 +387,7 @@ private Q_SLOTS:
         QVERIFY(icalcomponent_is_valid(ical));
 
         QList<QOrganizerItemDetail::DetailType> detailsHint;
-        GSList *events = g_slist_append(events, ical);
+        GSList *events = g_slist_append(NULL, ical);
         QMap<QByteArray, GSList*> eventMap;
         eventMap.insert(engine->defaultCollectionId().localId(), events);
         engine->parseEventsAsync(eventMap, true, detailsHint, this, SLOT(onEventAsyncParsed(QList<QOrganizerItem>)));

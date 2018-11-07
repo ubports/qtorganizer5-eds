@@ -29,9 +29,6 @@ public:
     RemoveRequestData(QOrganizerEDSEngine *engine, QtOrganizer::QOrganizerAbstractRequest *req);
     ~RemoveRequestData();
 
-    QList<QtOrganizer::QOrganizerCollectionId> pendingCollections() const;
-    QtOrganizer::QOrganizerCollectionId collectionId() const;
-
     void finish(QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError,
                 QtOrganizer::QOrganizerAbstractRequest::State state = QtOrganizer::QOrganizerAbstractRequest::FinishedState);
 
@@ -39,7 +36,7 @@ public:
 
     QtOrganizer::QOrganizerCollectionId next();
     void commit();
-    virtual void cancel();
+    void cancel() override;
 
 private:
     QSet<QtOrganizer::QOrganizerCollectionId> m_pendingCollections;
