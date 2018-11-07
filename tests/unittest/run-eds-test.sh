@@ -44,6 +44,7 @@ SCRIPT="./run-testcase.sh"
 cat <<EOF > $SCRIPT
 #! /bin/sh
 export G_SLICE=always-malloc
+export G_DEBUG=fatal-criticals
 exec $WRAPPER $2
 EOF
 chmod a+x $SCRIPT
