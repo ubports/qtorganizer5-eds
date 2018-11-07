@@ -37,19 +37,23 @@ public:
     ESourceRegistry *registry() const;
 
     GList *sourcesToCreate() const;
-    void commitSourceCreated();
     void commitSourceUpdated(ESource *source, QtOrganizer::QOrganizerManager::Error error = QtOrganizer::QOrganizerManager::NoError);
     ESource *nextSourceToUpdate();
+
+protected:
+    void onSourceCreated(ESource*);
 
 private:
     GList *m_currentSources;
     ESourceRegistry *m_registry;
+    QMetaObject::Connection m_registryConnection;
 
     QMap<int, QtOrganizer::QOrganizerManager::Error> m_errorMap;
     QMap<int, QtOrganizer::QOrganizerCollection> m_results;
     QMap<int, ESource*> m_sources;
     QMap<int, ESource*> m_sourcesToCreate;
     QMap<int, ESource*> m_sourcesToUpdate;
+    bool m_finishWasCalled;
     QtOrganizer::QOrganizerCollectionChangeSet m_changeSet;
 
     void parseCollections();

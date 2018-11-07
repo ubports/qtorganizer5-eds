@@ -51,7 +51,7 @@ public:
     ESource *source(const QByteArray &sourceId) const;
     QtOrganizer::QOrganizerCollectionId collectionId(const QByteArray &sourceId) const;
     QtOrganizer::QOrganizerCollection collection(ESource *source) const;
-    QtOrganizer::QOrganizerCollection insert(ESource *source);
+    void expectSourceCreation(ESource *source);
     void remove(ESource *source);
     void remove(const QByteArray &sourceId);
     EClient *client(const QByteArray &sourceId);
@@ -75,6 +75,7 @@ private:
     QMap<QByteArray, EClient*> m_clients;
     QMap<QByteArray, ESource*> m_sources;
     QMap<QByteArray, QtOrganizer::QOrganizerCollection> m_collections;
+    QList<ESource*> m_expectedNewSources;
 
     // handler id
     int m_sourceAddedId;
@@ -86,6 +87,7 @@ private:
 
     QByteArray defaultSourceId() const;
     QByteArray findSource(ESource *source) const;
+    void insert(ESource *source);
     QtOrganizer::QOrganizerCollection registerSource(ESource *source, bool isDefault = false);
     void updateDefaultCollection(QtOrganizer::QOrganizerCollection *collection);
     static void updateCollection(QtOrganizer::QOrganizerCollection *collection,
@@ -98,6 +100,9 @@ private:
     static void onSourceAdded(ESourceRegistry *registry,
                               ESource *source,
                               SourceRegistry *self);
+    static void onSourceEnabled(ESourceRegistry *registry,
+                                ESource *source,
+                                SourceRegistry *self);
     static void onSourceChanged(ESourceRegistry *registry,
                                 ESource *source,
                                 SourceRegistry *self);

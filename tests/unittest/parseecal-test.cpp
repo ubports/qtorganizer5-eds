@@ -415,7 +415,6 @@ private Q_SLOTS:
         QCOMPARE(vreminder.message(), QStringLiteral("alarm to parse"));
 
         g_slist_free_full(events, (GDestroyNotify)icalcomponent_free);
-        icalcomponent_free(ical);
         delete engine;
     }
 };

@@ -36,6 +36,8 @@ EDSBaseTest::EDSBaseTest()
     qRegisterMetaType<QList<QOrganizerCollectionId> >();
     qRegisterMetaType<QList<QOrganizerItemId> >();
     qRegisterMetaType<QList<QOrganizerItem> >();
+    qRegisterMetaType<CollectionOperations>("QList<QPair<QOrganizerCollectionId,QOrganizerManager::Operation>>");
+    qRegisterMetaType<QList<QOrganizerItemDetail::DetailType>>("QList<QOrganizerItemDetail::DetailType>");
     QCoreApplication::addLibraryPath(QORGANIZER_DEV_PATH);
 }
 
@@ -68,7 +70,7 @@ void EDSBaseTest::setCollectionMetadata(const QOrganizerCollectionId &collection
         return;
     }
     GScopedPointer<ESource> calendar(e_source_registry_ref_source(sourceRegistry.data(),
-                                                                  collectionId.toString().split(":").last().toUtf8().data()));
+                                                                  collectionId.localId().data()));
     ESourceUbuntu *ubuntu = E_SOURCE_UBUNTU(e_source_get_extension(calendar.data(), E_SOURCE_EXTENSION_UBUNTU));
     e_source_ubuntu_set_metadata(ubuntu, metaData.toUtf8().constData());
     e_source_write_sync(calendar.data(), NULL, NULL);
@@ -89,7 +91,7 @@ QString EDSBaseTest::getEventFromEvolution(const QOrganizerItemId &id,
         calendar.reset(e_source_registry_ref_default_calendar(sourceRegistry.data()));
     } else {
         calendar.reset(e_source_registry_ref_source(sourceRegistry.data(),
-                                                    collectionId.toString().split(":").last().toUtf8().data()));
+                                                    collectionId.localId().data()));
     }
     GScopedPointer<EClient> client(E_CAL_CLIENT_CONNECT_SYNC(calendar.data(),
                                                              E_CAL_CLIENT_SOURCE_TYPE_EVENTS,
@@ -102,19 +104,19 @@ QString EDSBaseTest::getEventFromEvolution(const QOrganizerItemId &id,
     }
 
     icalcomponent *obj = 0;
-    QString uid = id.toString().split("/").last();
-    QString ruid;
+    QByteArray uid = id.localId().split('/').last();
+    QByteArray ruid;
 
     // recurrence id
     if (uid.contains("#")) {
-        QStringList ids = uid.split("#");
+        QByteArrayList ids = uid.split('#');
         uid = ids[0];
         ruid = ids[1];
     }
 
     e_cal_client_get_object_sync(reinterpret_cast<ECalClient*>(client.data()),
-                                 uid.toUtf8().data(),
-                                 ruid.toUtf8().data(),
+                                 uid.data(),
+                                 ruid.data(),
                                  &obj, 0, &error);
     if (error) {
         qWarning() << "Fail to retrieve object:" << error->message;

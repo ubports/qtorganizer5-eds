@@ -374,7 +374,7 @@ private Q_SLOTS:
         QCOMPARE(items[0].displayLabel(), QStringLiteral("Updated item 2"));
 
         QString vcard = getEventFromEvolution(items[0].id(), m_collection.id());
-        QVERIFY(vcard.contains("RECURRENCE-ID;TZID=/freeassociation.sourceforge.net/Tzfile/America/Recife:\r\n 20131202T000000\r\n"));
+        QVERIFY(vcard.contains("RECURRENCE-ID;TZID=/freeassociation.sourceforge.net/America/Recife:\r\n 20131202T000000\r\n"));
     }
 
     void testQueryRecurrenceForAParentItem()

@@ -116,6 +116,7 @@ private Q_SLOTS:
         todo.saveDetail(&aReminder);
         todo.saveDetail(&vReminder);
 
+        QSignalSpy itemsAdded(m_engine, &QOrganizerManagerEngine::itemsAdded);
         QtOrganizer::QOrganizerManager::Error error;
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
@@ -126,6 +127,7 @@ private Q_SLOTS:
                                               &error);
         QVERIFY(saveResult);
         QCOMPARE(error, QtOrganizer::QOrganizerManager::NoError);
+        QTRY_COMPARE(itemsAdded.count(), 1);
 
         QOrganizerItemSortOrder sort;
         QOrganizerItemFetchHint hint;
@@ -298,6 +300,7 @@ private Q_SLOTS:
         todo.setDisplayLabel(displayLabelValue);
         todo.setDescription(descriptionValue);
 
+        QSignalSpy itemsAdded(m_engine, &QOrganizerManagerEngine::itemsAdded);
         QtOrganizer::QOrganizerManager::Error error;
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
@@ -311,6 +314,7 @@ private Q_SLOTS:
         QVERIFY(errorMap.isEmpty());
         QOrganizerItemId id = items[0].id();
         QVERIFY(!id.isNull());
+        QTRY_COMPARE(itemsAdded.count(), 1);
 
         QOrganizerItemRemoveByIdRequest req;
         connect(&req, SIGNAL(stateChanged(QOrganizerAbstractRequest::State)),
@@ -355,6 +359,7 @@ private Q_SLOTS:
         event.setDisplayLabel(displayLabelValue);
         event.setDescription(descriptionValue);
 
+        QSignalSpy itemsAdded(m_engine, &QOrganizerManagerEngine::itemsAdded);
         QtOrganizer::QOrganizerManager::Error error;
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
@@ -368,6 +373,7 @@ private Q_SLOTS:
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(errorMap.isEmpty());
         QVERIFY(!items[0].id().isNull());
+        QTRY_COMPARE(itemsAdded.count(), 1);
 
         // check if item was created on the default collection
         QOrganizerItemFetchHint hint;
@@ -395,6 +401,7 @@ private Q_SLOTS:
             evs << todo;
         }
 
+        QSignalSpy itemsAdded(m_engine, &QOrganizerManagerEngine::itemsAdded);
         QtOrganizer::QOrganizerManager::Error error;
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         bool saveResult = m_engine->saveItems(&evs,
@@ -408,6 +415,7 @@ private Q_SLOTS:
         Q_FOREACH(const QOrganizerItem &i, evs) {
             QVERIFY(!i.id().isNull());
         }
+        QTRY_VERIFY(!itemsAdded.isEmpty());
     }
 
     void testCreateMultipleItemsWithDiffCollections()
@@ -440,6 +448,7 @@ private Q_SLOTS:
             evs << ev;
         }
 
+        QSignalSpy itemsAdded(m_engine, &QOrganizerManagerEngine::itemsAdded);
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         saveResult = m_engine->saveItems(&evs,
                                          QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
@@ -452,6 +461,7 @@ private Q_SLOTS:
         Q_FOREACH(const QOrganizerItem &i, evs) {
             QVERIFY(!i.id().isNull());
         }
+        QTRY_VERIFY(!itemsAdded.isEmpty());
     }
 
     void testCauseErrorDuringCreateMultipleItems()
@@ -472,7 +482,7 @@ private Q_SLOTS:
         QOrganizerEvent ev;
         QOrganizerCollectionId cid(m_engine->managerUri(), "XXXXXX");
         QVERIFY(!cid.isNull());
-        QCOMPARE(cid.toString(), QStringLiteral("qtorganizer:eds::XXXXXX"));
+        QCOMPARE(cid.toString(), QStringLiteral("qtorganizer:eds::585858585858"));
         ev.setCollectionId(cid);
         ev.setStartDateTime(QDateTime(QDate(2013, 10, 2), QTime(0,30,0)));
         ev.setDisplayLabel(displayLabelValue.arg(2));
@@ -484,6 +494,7 @@ private Q_SLOTS:
         todo.setDescription(descriptionValue.arg(3));
         evs << todo;
 
+        QSignalSpy itemsAdded(m_engine, &QOrganizerManagerEngine::itemsAdded);
         QtOrganizer::QOrganizerManager::Error error;
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         bool saveResult = m_engine->saveItems(&evs,
@@ -495,6 +506,7 @@ private Q_SLOTS:
         QCOMPARE(evs.count(), 2);
         QCOMPARE(errorMap.size(), 1);
         QCOMPARE(errorMap[1], QOrganizerManager::InvalidCollectionError);
+        QTRY_VERIFY(!itemsAdded.isEmpty());
     }
 
     void testCreateAllDayTodo()
@@ -510,6 +522,7 @@ private Q_SLOTS:
         todo.setDisplayLabel(displayLabelValue);
         todo.setDescription(descriptionValue);
 
+        QSignalSpy itemsAdded(m_engine, &QOrganizerManagerEngine::itemsAdded);
         QtOrganizer::QOrganizerManager::Error error;
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
@@ -523,6 +536,7 @@ private Q_SLOTS:
         QVERIFY(errorMap.isEmpty());
         QOrganizerItemId id = items[0].id();
         QVERIFY(!id.isNull());
+        QTRY_COMPARE(itemsAdded.count(), 1);
 
         QOrganizerItemFetchHint hint;
         QList<QOrganizerItemId> ids;
@@ -549,6 +563,7 @@ private Q_SLOTS:
         event.setDescription(descriptionValue);
         event.setAllDay(true);
 
+        QSignalSpy itemsAdded(m_engine, &QOrganizerManagerEngine::itemsAdded);
         QtOrganizer::QOrganizerManager::Error error;
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
@@ -562,6 +577,7 @@ private Q_SLOTS:
         QVERIFY(errorMap.isEmpty());
         QOrganizerItemId id = items[0].id();
         QVERIFY(!id.isNull());
+        QTRY_COMPARE(itemsAdded.count(), 1);
 
         QOrganizerItemFetchHint hint;
         QList<QOrganizerItemId> ids;
@@ -590,6 +606,7 @@ private Q_SLOTS:
         event.setDescription(descriptionValue);
         event.setAllDay(true);
 
+        QSignalSpy itemsAdded(m_engine, &QOrganizerManagerEngine::itemsAdded);
         QtOrganizer::QOrganizerManager::Error error;
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
@@ -608,6 +625,7 @@ private Q_SLOTS:
                                          QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
                                          &errorMap,
                                          &error);
+        QTRY_COMPARE(itemsAdded.count(), 1);
 
         QOrganizerItemFetchHint hint;
         QList<QOrganizerItemId> ids;
@@ -641,6 +659,7 @@ private Q_SLOTS:
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
         items << event;
+        QSignalSpy itemsAdded(m_engine, &QOrganizerManagerEngine::itemsAdded);
         bool saveResult = m_engine->saveItems(&items,
                                             QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
                                             &errorMap,
@@ -648,6 +667,7 @@ private Q_SLOTS:
         QVERIFY(saveResult);
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(errorMap.isEmpty());
+        QTRY_COMPARE(itemsAdded.count(), 1);
         QOrganizerItemId id = items[0].id();
         QVERIFY(!id.isNull());
 
@@ -682,6 +702,7 @@ private Q_SLOTS:
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
         items << todo;
+        QSignalSpy itemsAdded(m_engine, &QOrganizerManagerEngine::itemsAdded);
         bool saveResult = m_engine->saveItems(&items,
                                               QList<QtOrganizer::QOrganizerItemDetail::DetailType>(),
                                               &errorMap,
@@ -689,6 +710,7 @@ private Q_SLOTS:
         QVERIFY(saveResult);
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(errorMap.isEmpty());
+        QTRY_COMPARE(itemsAdded.count(), 1);
 
         // query by the new item
         QOrganizerItemFetchHint hint;
@@ -715,6 +737,7 @@ private Q_SLOTS:
         todo.setDisplayLabel(displayLabelValue);
         todo.setDescription(descriptionValue);
 
+        QSignalSpy itemsAdded(m_engine, &QOrganizerManagerEngine::itemsAdded);
         QtOrganizer::QOrganizerManager::Error error;
         QMap<int, QtOrganizer::QOrganizerManager::Error> errorMap;
         QList<QOrganizerItem> items;
@@ -726,6 +749,7 @@ private Q_SLOTS:
         QVERIFY(saveResult);
         QCOMPARE(error, QOrganizerManager::NoError);
         QVERIFY(errorMap.isEmpty());
+        QTRY_COMPARE(itemsAdded.count(), 1);
 
         // query by the new item
         QOrganizerItemFetchHint hint;
@@ -796,6 +820,8 @@ private Q_SLOTS:
 
     void testFloatingTime()
     {
+        QSKIP("Floating time is no longer supported");
+
         static QString displayLabelValue = QStringLiteral("event with floating time");
         static QString descriptionValue = QStringLiteral("event with floating time descs");
 
@@ -838,7 +864,7 @@ private Q_SLOTS:
         QCOMPARE(newTodo.startDateTime().time().minute(), startDate.time().minute());
 
         // Update floating event
-        QSignalSpy updateItem(m_engine, SIGNAL(itemsChanged(QList<QOrganizerItemId>)));
+        QSignalSpy updateItem(m_engine, &QOrganizerManagerEngine::itemsChanged);
         startDate = QDateTime::currentDateTime();
         startDate.addSecs(360);
         startDate = QDateTime(startDate.date(), startDate.time(), QTimeZone());

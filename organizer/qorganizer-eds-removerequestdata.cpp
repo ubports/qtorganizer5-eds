@@ -99,8 +99,8 @@ QOrganizerCollectionId RemoveRequestData::next()
     if (m_pendingCollections.count() > 0) {
         m_sessionStaterd = true;
         QSet<QtOrganizer::QOrganizerCollectionId>::const_iterator i = m_pendingCollections.constBegin();
-        m_pendingCollections.remove(*i);
         m_currentCollectionId = *i;
+        m_pendingCollections.remove(*i);
         m_currentCompIds = takeItemsIds(m_currentCollectionId);
         return m_currentCollectionId;
     }

@@ -356,7 +356,8 @@ void QOrganizerEDSEngine::itemOcurrenceAsync(QOrganizerItemOccurrenceFetchReques
     FetchOcurrenceData *data = new FetchOcurrenceData(this, req);
 
     QByteArray rId;
-    QByteArray cId = toComponentId(req->parentItem().id().toString().toUtf8(), &rId);
+    QByteArray edsItemId = idToEds(req->parentItem().id());
+    QByteArray cId = toComponentId(edsItemId, &rId);
 
     EClient *client = data->parent()->d->m_sourceRegistry->client(req->parentItem().collectionId().localId());
     if (client) {
@@ -581,6 +582,13 @@ void QOrganizerEDSEngine::saveItemsAsyncStart(SaveRequestData *data)
             return;
         }
 
+        /* We have entered this code path because sourceId is not null;
+         * however, it can still be empty: that's because the SaveRequestData
+         * class returns an empty (but not null!) sourceId for those items
+         * which don't have a collection set, and that therefore should be
+         * stored into the default collection.
+         * The next "if" condition checks exactly for this situation.
+         */
         if (sourceId.isEmpty() && createItems) {
             sourceId = data->parent()->d->m_sourceRegistry->defaultCollection().id().localId();
         }
@@ -935,7 +943,6 @@ void QOrganizerEDSEngine::saveCollectionAsyncCommited(ESourceRegistry *registry,
             return;
         }
     } else if (data->isLive()) {
-        data->commitSourceCreated();
         data->prepareToUpdate();
         g_idle_add((GSourceFunc) saveCollectionUpdateAsyncStart, data);
     }
