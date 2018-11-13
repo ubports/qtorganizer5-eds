@@ -1,3 +1,13 @@
+qtorganizer5-eds (0.1.5~0ubports1) xenial; urgency=medium
+
+  * Fixed unit tests, made them more robust and fixed a few issues uncovered
+    thanks to them.
+  * Fix loading of recurrent events
+  * Properly remembers the default collection; really fixes
+    https://github.com/ubports/ubuntu-touch/issues/919
+
+ -- Alberto Mardegan <mardy@users.sourceforge.net>  Tue, 13 Nov 2018 22:34:49 +0300
+
 qtorganizer5-eds (0.1.4~0ubports1) xenial; urgency=medium
 
   * Fix handling of item IDs. Fixes:
