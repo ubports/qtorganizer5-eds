@@ -1,3 +1,9 @@
+qtorganizer5-eds (0.1.5~0ubports18.04.1) bionic; urgency=medium
+
+  * No change rebuild.
+
+ -- Rodney Dawes <dobey@ubuntu.com>  Fri, 01 Feb 2019 14:40:20 -0500
+
 qtorganizer5-eds (0.1.5~0ubports1) xenial; urgency=medium
 
   * Fixed unit tests, made them more robust and fixed a few issues uncovered
