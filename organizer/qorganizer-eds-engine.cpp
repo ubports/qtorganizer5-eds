@@ -1384,7 +1384,8 @@ icaltimetype QOrganizerEDSEngine::fromQDateTime(const QDateTime &dateTime,
                               Qt::UTC);
 
         *tzId = "";
-        return icaltime_from_timet(finalDate.toTime_t(), allDay);
+        return icaltime_from_timet_with_zone(finalDate.toTime_t(), allDay,
+                                             icaltimezone_get_utc_timezone());
     }
 }
 
@@ -2298,7 +2299,9 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
         GSList *periodList = NULL;
         Q_FOREACH(const QDate &dt, rec.recurrenceDates()) {
             ECalComponentPeriod *period = g_new0(ECalComponentPeriod, 1);
-            period->start = icaltime_from_timet(QDateTime(dt).toTime_t(), FALSE);
+            period->start = icaltime_from_timet_with_zone(QDateTime(dt).toTime_t(),
+                                                          FALSE,
+                                                          icaltimezone_get_utc_timezone());
             periodList = g_slist_append(periodList, period);
             //TODO: period.end, period.duration
         }
@@ -2309,7 +2312,9 @@ void QOrganizerEDSEngine::parseRecurrence(const QOrganizerItem &item, ECalCompon
         Q_FOREACH(const QDate &dt, rec.exceptionDates()) {
             ECalComponentDateTime *dateTime = g_new0(ECalComponentDateTime, 1);
             struct icaltimetype *itt = g_new0(struct icaltimetype, 1);
-            *itt = icaltime_from_timet(QDateTime(dt).toTime_t(), FALSE);
+            *itt = icaltime_from_timet_with_zone(QDateTime(dt).toTime_t(),
+                                                 FALSE,
+                                                 icaltimezone_get_utc_timezone());
             dateTime->value = itt;
             exdateList = g_slist_append(exdateList, dateTime);
         }

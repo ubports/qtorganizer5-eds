@@ -63,7 +63,7 @@ private Q_SLOTS:
 
         ECalComponentDateTime dt;
 
-        struct icaltimetype itt = icaltime_from_timet(startTime.toTime_t(), FALSE);
+        struct icaltimetype itt = icaltime_from_timet_with_zone(startTime.toTime_t(), FALSE, icaltimezone_get_utc_timezone());
         dt.value = &itt;
         dt.tzid = "";
         e_cal_component_set_dtstart(comp.data(), &dt);
@@ -72,7 +72,8 @@ private Q_SLOTS:
         QOrganizerEDSEngine::parseStartTime(comp.data(), &item);
         QCOMPARE(item.startDateTime().toTime_t(), startTime.toTime_t());
 
-        itt = icaltime_from_timet(endTime.toTime_t(), FALSE);
+        itt = icaltime_from_timet_with_zone(endTime.toTime_t(), FALSE,
+                                            icaltimezone_get_utc_timezone());
         dt.value = &itt;
         e_cal_component_set_dtend(comp.data(), &dt);
 
