@@ -856,7 +856,7 @@ QOrganizerCollectionId QOrganizerEDSEngine::defaultCollectionId() const
 }
 
 QOrganizerCollection QOrganizerEDSEngine::collection(const QOrganizerCollectionId& collectionId,
-                                                     QOrganizerManager::Error* error)
+                                                     QOrganizerManager::Error* error) const
 {
     QOrganizerCollection collection = d->m_sourceRegistry->collection(collectionId.localId());
     if (collection.id().isNull() && error) {
@@ -864,6 +864,11 @@ QOrganizerCollection QOrganizerEDSEngine::collection(const QOrganizerCollectionI
     }
 
     return collection;
+}
+
+QList<QOrganizerCollection> QOrganizerEDSEngine::collections(QOrganizerManager::Error* error) const
+{
+    return const_cast<QOrganizerEDSEngine*>(this)->collections(error);
 }
 
 QList<QOrganizerCollection> QOrganizerEDSEngine::collections(QOrganizerManager::Error* error)
